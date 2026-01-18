@@ -1,0 +1,131 @@
+import { request } from "../axios";
+
+export type DocumentUploadInitRequest = {
+  title: string;
+  fileName: string;
+  fileSize: number;
+  fileMd5: string;
+  category: string;
+  tags: string[];
+  description?: string;
+  isPublic: boolean;
+  price?: number;
+};
+
+export type DocumentUploadInitResponse = {
+  uploadId: string;
+  needUpload: boolean;
+  presignedUrl?: string;
+};
+
+export async function initDocumentUpload(data: DocumentUploadInitRequest) {
+  return request.post<DocumentUploadInitResponse>(
+    "/admin/content/doc/upload/init",
+    data
+  );
+}
+
+export type DocumentUploadTaskItem = {
+  id: string;
+  title: string;
+  fileName: string;
+  size: number;
+  status: "waiting" | "uploading" | "processing" | "success" | "error";
+  progress: number;
+  createdAt: string;
+};
+
+export type DocumentUploadTaskListResponse = {
+  list: DocumentUploadTaskItem[];
+  total: number;
+};
+
+export async function fetchDocumentUploadTaskList(params: {
+  page: number;
+  pageSize: number;
+  status?: string;
+}) {
+  return request.get<DocumentUploadTaskListResponse>(
+    "/admin/content/doc/upload/list",
+    { params }
+  );
+}
+
+export type DocumentItem = {
+  id: string;
+  title: string;
+  category: string;
+  status: "draft" | "published" | "offline";
+  readCount: number;
+  likeCount: number;
+  commentCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DocumentListResponse = {
+  list: DocumentItem[];
+  total: number;
+};
+
+export async function fetchDocumentList(params: {
+  page: number;
+  pageSize: number;
+  status?: string;
+  category?: string;
+  keyword?: string;
+}) {
+  return request.get<DocumentListResponse>(
+    "/admin/content/doc/list",
+    { params }
+  );
+}
+
+export async function batchUpdateDocumentStatus(data: {
+  ids: string[];
+  status: "published" | "offline";
+}) {
+  return request.post<boolean>(
+    "/admin/content/doc/status/batch",
+    data
+  );
+}
+
+export type DocumentReviewItem = {
+  id: string;
+  title: string;
+  uploader: string;
+  category: string;
+  status: "pending" | "approved" | "rejected";
+  riskLevel: "low" | "medium" | "high";
+  isAiChecked: boolean;
+  createdAt: string;
+};
+
+export type DocumentReviewQueueResponse = {
+  list: DocumentReviewItem[];
+  total: number;
+};
+
+export async function fetchDocumentReviewQueue(params: {
+  page: number;
+  pageSize: number;
+  status?: string;
+  keyword?: string;
+}) {
+  return request.get<DocumentReviewQueueResponse>(
+    "/admin/content/doc/review/list",
+    { params }
+  );
+}
+
+export async function submitDocumentReview(data: {
+  reviewId: string;
+  status: "approved" | "rejected";
+  reason?: string;
+}) {
+  return request.post<boolean>(
+    "/admin/content/doc/review/submit",
+    data
+  );
+}
