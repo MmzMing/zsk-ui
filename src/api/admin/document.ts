@@ -129,3 +129,38 @@ export async function submitDocumentReview(data: {
     data
   );
 }
+
+export type DocumentDetail = {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  status: "draft" | "published" | "offline" | "pending";
+  tags: string[];
+  cover?: string;
+  seo?: {
+    title: string;
+    description: string;
+    keywords: string[];
+  };
+};
+
+export async function getDocumentDetail(id: string) {
+  return request.get<DocumentDetail>(`/admin/content/doc/${id}`);
+}
+
+export async function createDocument(data: Partial<DocumentDetail>) {
+  return request.post<string>("/admin/content/doc/create", data);
+}
+
+export async function updateDocument(id: string, data: Partial<DocumentDetail>) {
+  return request.put<boolean>(`/admin/content/doc/${id}`, data);
+}
+
+export async function deleteDocument(ids: string[]) {
+  return request.delete("/admin/content/doc/batch", { data: { ids } });
+}
+
+export async function moveDocumentCategory(ids: string[], category: string) {
+  return request.post("/admin/content/doc/category/batch", { ids, category });
+}

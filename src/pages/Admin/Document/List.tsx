@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Autocomplete,
   AutocompleteItem,
@@ -24,12 +25,19 @@ import {
   FiFilter,
   FiSearch,
   FiSlash,
-  FiUpload
+  FiGrid,
+  FiList,
+  FiTrash2,
+  FiMove,
+  FiCheckSquare,
+  FiPlus
 } from "react-icons/fi";
 
 import {
   fetchDocumentList,
-  batchUpdateDocumentStatus
+  batchUpdateDocumentStatus,
+  deleteDocument,
+  moveDocumentCategory
 } from "../../../api/admin/document";
 import { useAppStore } from "../../../store";
 
@@ -171,6 +179,8 @@ function DocumentListPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const navigate = useNavigate();
 
   const { themeMode } = useAppStore();
 
@@ -270,6 +280,25 @@ function DocumentListPage() {
       return;
     }
     setSelectedIds(Array.from(keys).map(String));
+  };
+
+  const handleBatchDelete = async () => {
+    if (!hasSelection) return;
+    if (!window.confirm("确认批量删除选中的文档吗？此操作不可恢复。")) return;
+    
+    await deleteDocument(selectedIds).catch(() => undefined);
+    setDocuments(prev => prev.filter(item => !selectedIds.includes(item.id)));
+    setSelectedIds([]);
+  };
+
+  const handleBatchMove = async () => {
+    if (!hasSelection) return;
+    const category = window.prompt("请输入目标分类名称：", "前端基础");
+    if (!category) return;
+
+    await moveDocumentCategory(selectedIds, category).catch(() => undefined);
+    setDocuments(prev => prev.map(item => selectedIds.includes(item.id) ? { ...item, category } : item));
+    setSelectedIds([]);
   };
 
   const handleBatchOffline = async () => {
@@ -424,9 +453,10 @@ function DocumentListPage() {
               <Button
                 size="sm"
                 className="h-8 text-[0.6875rem]"
-                startContent={<FiUpload className="text-xs" />}
+                startContent={<FiPlus className="text-xs" />}
+                onPress={() => navigate("/admin/document/edit/new")}
               >
-                新建文档占位
+                新建文档
               </Button>
               <Button
                 size="sm"
@@ -528,6 +558,7 @@ function DocumentListPage() {
                 variant="light"
                 className="h-8 text-[0.6875rem]"
                 isDisabled={!hasSelection}
+                startContent={<FiCheckSquare className="text-xs" />}
                 onPress={handleBatchPublish}
               >
                 批量上架
@@ -543,6 +574,31 @@ function DocumentListPage() {
               >
                 批量下架
               </Button>
+              <Button
+                size="sm"
+                variant="light"
+                className="h-8 text-[0.6875rem]"
+                isDisabled={!hasSelection}
+                startContent={<FiMove className="text-xs" />}
+                onPress={handleBatchMove}
+              >
+                批量移动
+              </Button>
+              <Button
+                size="sm"
+                variant="light"
+                color="danger"
+                className="h-8 text-[0.6875rem]"
+                isDisabled={!hasSelection}
+                startContent={<FiTrash2 className="text-xs" />}
+                onPress={handleBatchDelete}
+              >
+                批量删除
+              </Button>
+            </div>
+            <div className="flex items-center gap-1">
+                 <Button isIconOnly size="sm" variant={viewMode === "list" ? "solid" : "light"} onPress={() => setViewMode("list")}><FiList /></Button>
+                 <Button isIconOnly size="sm" variant={viewMode === "grid" ? "solid" : "light"} onPress={() => setViewMode("grid")}><FiGrid /></Button>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-[0.6875rem] text-[var(--text-color-secondary)]">
@@ -622,6 +678,7 @@ function DocumentListPage() {
             </div>
           </div>
 
+          {viewMode === "list" ? (
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
             <Table
               aria-label="文档列表"
@@ -730,8 +787,9 @@ function DocumentListPage() {
                           variant="light"
                           className="h-7 text-[0.625rem]"
                           startContent={<FiEdit2 className="text-[0.6875rem]" />}
+                          onPress={() => navigate(`/admin/document/edit/${item.id}`)}
                         >
-                          编辑占位
+                          编辑
                         </Button>
                         <Button
                           size="sm"
@@ -774,6 +832,38 @@ function DocumentListPage() {
               </TableBody>
             </Table>
           </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {pageItems.map(item => (
+                <Card key={item.id} className="p-4 hover:shadow-md transition-shadow border border-[var(--border-color)]">
+                   <div className="flex justify-between items-start mb-3">
+                      <Chip size="sm" color={getStatusColor(item.status)} variant="flat" className="text-[0.625rem]">{getStatusLabel(item.status)}</Chip>
+                      <div className="flex gap-1">
+                         <Button isIconOnly size="sm" variant="light" className="h-6 w-6 min-w-6" onPress={() => navigate(`/admin/document/edit/${item.id}`)}><FiEdit2 className="text-xs" /></Button>
+                         <Button isIconOnly size="sm" variant="light" className="h-6 w-6 min-w-6" onPress={() => handleOpenSidebar(item.id)}><FiBarChart2 className="text-xs" /></Button>
+                      </div>
+                   </div>
+                   <div className="mb-2">
+                       <h3 className="font-bold text-sm mb-1 line-clamp-1" title={item.title}>{item.title}</h3>
+                       <div className="text-[0.6875rem] text-[var(--text-color-secondary)] flex gap-2">
+                           <span>{item.category}</span>
+                           <span>{item.updatedAt.split(" ")[0]}</span>
+                       </div>
+                   </div>
+                   <div className="flex justify-between items-center text-[0.6875rem] text-[var(--text-color-secondary)] border-t border-[var(--border-color)] pt-2 mt-2">
+                      <div className="flex gap-3">
+                          <span>阅读 {item.reads}</span>
+                          <span>点赞 {item.likes}</span>
+                      </div>
+                      <div className="flex gap-1">
+                          {item.pinned && <span className="text-danger">置顶</span>}
+                          {item.recommended && <span className="text-primary">推荐</span>}
+                      </div>
+                   </div>
+                </Card>
+              ))}
+            </div>
+          )}
 
           <div className="mt-3 flex flex-col gap-2 text-[0.6875rem] md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">

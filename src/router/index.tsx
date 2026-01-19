@@ -33,6 +33,7 @@ import VideoReviewPage from "../pages/Admin/Video/Review";
 import DocumentUploadPage from "../pages/Admin/Document/Upload";
 import DocumentListPage from "../pages/Admin/Document/List";
 import DocumentReviewPage from "../pages/Admin/Document/Review";
+import DocumentEditPage from "../pages/Admin/Document/Edit";
 import NapCatPage from "../pages/Admin/Bot/NapCat";
 import QQBotPage from "../pages/Admin/Bot/QQBot";
 import WeChatBotPage from "../pages/Admin/Bot/WeChatBot";
@@ -78,6 +79,7 @@ function AppRouter() {
           <Route path={`${routes.admin}/document/upload`} element={<DocumentUploadPage />} />
           <Route path={`${routes.admin}/document/list`} element={<DocumentListPage />} />
           <Route path={`${routes.admin}/document/review`} element={<DocumentReviewPage />} />
+          <Route path={`${routes.admin}/document/edit/:id`} element={<DocumentEditPage />} />
           <Route path={`${routes.admin}/bot/napcat`} element={<NapCatPage />} />
           <Route path={`${routes.admin}/bot/qq`} element={<QQBotPage />} />
           <Route path={`${routes.admin}/bot/wechat`} element={<WeChatBotPage />} />

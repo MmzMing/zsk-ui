@@ -9,6 +9,8 @@ import {
   FiPlus,
   FiTrash2
 } from "react-icons/fi";
+import Tree from "rc-tree";
+import "rc-tree/assets/index.css";
 
 type MenuNode = {
   id: string;
@@ -26,6 +28,12 @@ type IconOption = {
   id: string;
   name: string;
   icon: React.ReactNode;
+};
+
+type RcTreeDataNode = {
+  key: string;
+  title: React.ReactNode;
+  children?: RcTreeDataNode[];
 };
 
 const iconOptions: IconOption[] = [
@@ -224,6 +232,161 @@ function findNode(nodes: MenuNode[], id: string): MenuNode | null {
   return null;
 }
 
+function findParentInfo(
+  nodes: MenuNode[],
+  id: string,
+  parentId: string | null = null
+): { parentId: string | null; index: number } | null {
+  const index = nodes.findIndex(node => node.id === id);
+  if (index !== -1) {
+    return { parentId, index };
+  }
+  for (const node of nodes) {
+    if (node.children && node.children.length) {
+      const found = findParentInfo(node.children, id, node.id);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
+}
+
+function removeNode(
+  nodes: MenuNode[],
+  id: string
+): { tree: MenuNode[]; removed: MenuNode | null } {
+  let removed: MenuNode | null = null;
+  const next = nodes
+    .map(node => {
+      if (node.id === id) {
+        removed = node;
+        return null;
+      }
+      if (node.children && node.children.length) {
+        const { tree: children, removed: childRemoved } = removeNode(node.children, id);
+        if (childRemoved) {
+          removed = childRemoved;
+        }
+        return {
+          ...node,
+          children
+        };
+      }
+      return node;
+    })
+    .filter((node): node is MenuNode => node !== null);
+  return { tree: next, removed };
+}
+
+function insertNodeAt(
+  nodes: MenuNode[],
+  parentId: string | null,
+  index: number,
+  newNode: MenuNode
+): MenuNode[] {
+  if (parentId === null) {
+    const list = [...nodes];
+    const position = index < 0 ? list.length : index;
+    list.splice(position, 0, newNode);
+    return list;
+  }
+  return nodes.map(node => {
+    if (node.id === parentId) {
+      const children = node.children ? [...node.children] : [];
+      const position = index < 0 ? children.length : index;
+      children.splice(position, 0, newNode);
+      return {
+        ...node,
+        children
+      };
+    }
+    if (node.children && node.children.length) {
+      const children = insertNodeAt(node.children, parentId, index, newNode);
+      if (children !== node.children) {
+        return {
+          ...node,
+          children
+        };
+      }
+    }
+    return node;
+  });
+}
+
+function recalcOrder(nodes: MenuNode[], parentId: string | null = null): MenuNode[] {
+  return nodes.map((node, index) => {
+    const next: MenuNode = {
+      ...node,
+      parentId,
+      order: index + 1
+    };
+    if (node.children && node.children.length) {
+      next.children = recalcOrder(node.children, node.id);
+    }
+    return next;
+  });
+}
+
+function collectNodeAndDescendants(node: MenuNode): string[] {
+  const ids = [node.id];
+  if (node.children && node.children.length) {
+    node.children.forEach(child => {
+      ids.push(...collectNodeAndDescendants(child));
+    });
+  }
+  return ids;
+}
+
+function buildTreeData(
+  nodes: MenuNode[],
+  selectedIds: string[],
+  toggleNodeChecked: (id: string, checked: boolean) => void
+): RcTreeDataNode[] {
+  return nodes
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map(node => ({
+      key: node.id,
+      title: (
+        <div className="flex items-center gap-2 text-[11px] pr-2">
+          <span
+            className="inline-flex items-center"
+            onClick={event => {
+              event.stopPropagation();
+            }}
+          >
+            <Checkbox
+              isSelected={selectedIds.includes(node.id)}
+              onValueChange={value => toggleNodeChecked(node.id, value)}
+              size="sm"
+              classNames={{
+                wrapper: "mr-1 scale-90",
+                label: "hidden"
+              }}
+            />
+          </span>
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--bg-elevated)] border border-[var(--border-color)] text-[10px]">
+            {node.parentId === null ? (
+              <FiMoreHorizontal className="w-3 h-3" />
+            ) : (
+              <FiList className="w-3 h-3" />
+            )}
+          </span>
+          <span>{node.name}</span>
+          <span className="text-[10px] text-[var(--text-color-secondary)]">{node.path}</span>
+          <span className="ml-auto text-[10px] text-[var(--text-color-secondary)]">
+            排序 {node.order}
+          </span>
+        </div>
+      ),
+      children:
+        node.children && node.children.length
+          ? buildTreeData(node.children, selectedIds, toggleNodeChecked)
+          : undefined
+    }));
+}
+
 function getIconLabel(iconName: string) {
   const match = iconOptions.find(item => item.id === iconName);
   return match ? match.name : "未设置";
@@ -245,15 +408,6 @@ function MenuPage() {
     () => (activeId ? findNode(menuTree, activeId) : null),
     [activeId, menuTree]
   );
-
-  const handleToggleRow = (id: string) => {
-    setSelectedIds(previous => {
-      if (previous.includes(id)) {
-        return previous.filter(item => item !== id);
-      }
-      return [...previous, id];
-    });
-  };
 
   const handleAddRootMenu = () => {
     const nextId = `m_${(flatMenu.length + 1).toString().padStart(3, "0")}`;
@@ -325,6 +479,70 @@ function MenuPage() {
       setActiveId(null);
     }
     setSelectedIds([]);
+  };
+
+  const handleTreeSelect = (keys: React.Key[]) => {
+    const first = keys[0];
+    if (typeof first === "string") {
+      setActiveId(first);
+    } else if (typeof first === "number") {
+      setActiveId(String(first));
+    }
+  };
+
+  const handleToggleNodeChecked = (id: string, checked: boolean) => {
+    const target = findNode(menuTree, id);
+    if (!target) {
+      return;
+    }
+    const ids = collectNodeAndDescendants(target);
+    setSelectedIds(previous => {
+      const set = new Set(previous);
+      if (checked) {
+        ids.forEach(item => set.add(item));
+      } else {
+        ids.forEach(item => set.delete(item));
+      }
+      return Array.from(set);
+    });
+  };
+
+  const handleTreeDrop = (info: {
+    dragNode: { key: React.Key };
+    node: { key: React.Key };
+    dropToGap?: boolean;
+    dropPosition?: number;
+  }) => {
+    const dragKey = String(info.dragNode.key);
+    const dropKey = String(info.node.key);
+    if (dragKey === dropKey) {
+      return;
+    }
+
+    const { tree: withoutDrag, removed } = removeNode(menuTree, dragKey);
+    if (!removed) {
+      return;
+    }
+
+    let parentId: string | null;
+    let index: number;
+
+    if (!info.dropToGap) {
+      parentId = dropKey;
+      index = -1;
+    } else {
+      const parentInfo = findParentInfo(withoutDrag, dropKey);
+      if (!parentInfo) {
+        return;
+      }
+      parentId = parentInfo.parentId;
+      const dropPosition = info.dropPosition ?? 0;
+      index = dropPosition < 0 ? parentInfo.index : parentInfo.index + 1;
+    }
+
+    const nextTree = recalcOrder(insertNodeAt(withoutDrag, parentId, index, removed));
+    setMenuTree(nextTree);
+    setMessage("已通过拖拽调整菜单层级与排序，仅更新前端示例数据。");
   };
 
   const handleFieldChange = (patch: Partial<MenuNode>) => {
@@ -410,7 +628,7 @@ function MenuPage() {
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-color-secondary)]">
-              <span>拖拽排序与展开 / 折叠全部等高级交互可在接入实际菜单组件时实现。</span>
+              <span>已支持拖拽调整菜单层级与排序，当前仅为前端示例数据，未落库。</span>
             </div>
           </div>
           {message && (
@@ -440,62 +658,24 @@ function MenuPage() {
                   共 {flatMenu.length} 个菜单项
                 </Chip>
               </div>
-              <div className="mt-1 max-h-[420px] overflow-auto rounded-md border border-[var(--border-color)]">
-                <ul className="divide-y divide-[var(--border-color)]">
-                  {flatMenu.map(item => {
-                    const paddingLeft = 12 + item.depth * 16;
-                    const selected = selectedIds.includes(item.id);
-                    const isActive = item.id === activeId;
-                    return (
-                      <li
-                        key={item.id}
-                        className={
-                          "flex items-center gap-2 px-2 py-1.5 text-[11px] cursor-pointer hover:bg-[var(--bg-elevated)]/60 " +
-                          (isActive ? "bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)]" : "")
-                        }
-                        onClick={() => setActiveId(item.id)}
-                      >
-                        <div onClick={event => event.stopPropagation()}>
-                          <Checkbox
-                            size="sm"
-                            className="scale-90"
-                            isSelected={selected}
-                            onValueChange={() => handleToggleRow(item.id)}
-                            aria-label={`选择菜单 ${item.name}`}
-                          />
-                        </div>
-                        <div
-                          className="flex items-center gap-2 flex-1"
-                          style={{ paddingLeft }}
-                          onClick={event => {
-                            event.stopPropagation();
-                            setActiveId(item.id);
-                          }}
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--bg-elevated)] border border-[var(--border-color)] text-[10px]">
-                            {item.depth === 0 ? (
-                              <FiMoreHorizontal className="w-3 h-3" />
-                            ) : (
-                              <FiList className="w-3 h-3" />
-                            )}
-                          </span>
-                          <span>{item.name}</span>
-                          <span className="text-[10px] text-[var(--text-color-secondary)]">
-                            {item.path}
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-[var(--text-color-secondary)]">
-                          排序 {item.order}
-                        </span>
-                      </li>
-                    );
-                  })}
-                  {flatMenu.length === 0 && (
-                    <li className="px-3 py-4 text-center text-[11px] text-[var(--text-color-secondary)]">
-                      当前暂无菜单项，可通过上方按钮新增一级菜单。
-                    </li>
-                  )}
-                </ul>
+              <div className="mt-1 max-h-[420px] overflow-auto rounded-md border border-[var(--border-color)] bg-[var(--bg-elevated)]/40">
+                {flatMenu.length === 0 ? (
+                  <div className="px-3 py-4 text-center text-[11px] text-[var(--text-color-secondary)]">
+                    当前暂无菜单项，可通过上方按钮新增一级菜单。
+                  </div>
+                ) : (
+                  <Tree
+                    selectable
+                    selectedKeys={activeId ? [activeId] : []}
+                    onSelect={handleTreeSelect}
+                    treeData={buildTreeData(menuTree, selectedIds, handleToggleNodeChecked)}
+                    draggable
+                    onDrop={handleTreeDrop}
+                    defaultExpandAll
+                    showLine
+                    showIcon={false}
+                  />
+                )}
               </div>
             </div>
           </Card>

@@ -116,13 +116,17 @@ function BasicLayout() {
   const activePath = location.pathname;
   const isAdmin = activePath.startsWith(routes.admin);
   const effectiveLayoutMode = isAdmin ? layoutMode : "horizontal";
+  const effectiveBoxBorderEnabled = isAdmin ? boxBorderEnabled : false;
+  const effectiveBoxShadowEnabled = isAdmin ? boxShadowEnabled : false;
+  const effectiveMultiTabEnabled = isAdmin ? multiTabEnabled : false;
+  const effectiveBreadcrumbEnabled = isAdmin ? breadcrumbEnabled : false;
 
   const containerClassName =
     "w-full" +
-    (boxBorderEnabled || boxShadowEnabled
+    (effectiveBoxBorderEnabled || effectiveBoxShadowEnabled
       ? " bg-[var(--bg-elevated)] rounded-[var(--radius-base)] px-4 py-4"
       : "") +
-    (boxBorderEnabled ? " border border-[var(--border-color)]" : "");
+    (effectiveBoxBorderEnabled ? " border border-[var(--border-color)]" : "");
 
   const handleNavClick = (path: string) => {
     if (path === activePath) {
@@ -399,7 +403,7 @@ function BasicLayout() {
           </div>
         </div>
       </motion.header>
-      {multiTabEnabled && (
+      {effectiveMultiTabEnabled && (
         <div className="h-9 flex items-center gap-2 px-6 border-b border-[var(--border-color)] bg-[var(--bg-elevated)]">
           {tabs.map(item => (
             <button
@@ -429,7 +433,7 @@ function BasicLayout() {
           ))}
         </div>
       )}
-      {breadcrumbEnabled && (
+      {effectiveBreadcrumbEnabled && (
         <div className="h-8 flex items-center px-6 text-xs text-[var(--text-color-secondary)]">
           <span
             className="cursor-pointer"
@@ -471,7 +475,7 @@ function BasicLayout() {
               key={activePath}
               className={containerClassName}
               style={
-                boxShadowEnabled
+                effectiveBoxShadowEnabled
                   ? { boxShadow: "var(--shadow-color)" }
                   : undefined
               }
