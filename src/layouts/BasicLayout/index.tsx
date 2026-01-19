@@ -15,6 +15,7 @@ import { useAppStore } from "../../store";
 import { useUserStore } from "../../store/modules/userStore";
 import StickerPeel from "../../components/Motion/StickerPeel";
 import WordRotate from "../../components/Motion/WordRotate";
+import { ThemeToggler } from "../../components/MagicUI/ThemeToggler";
 import {
   FiHelpCircle,
   FiMail,
@@ -29,9 +30,6 @@ import {
   FiBookOpen,
   FiUser,
   FiLogOut,
-  FiSun,
-  FiMoon,
-  FiMonitor,
   FiGlobe
 } from "react-icons/fi";
 
@@ -71,8 +69,8 @@ function BasicLayout() {
     multiTabEnabled,
     breadcrumbEnabled,
     pageTransition,
-    themeMode,
-    setThemeMode,
+    // themeMode,
+    // setThemeMode,
     language,
     setLanguage,
     primaryColor,
@@ -265,24 +263,7 @@ function BasicLayout() {
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <div className="hidden md:flex items-center gap-2">
-              <button
-                type="button"
-                className={headerIconButtonClass}
-                onClick={() => {
-                  if (themeMode === "light") setThemeMode("dark");
-                  else if (themeMode === "dark") setThemeMode("system");
-                  else setThemeMode("light");
-                }}
-                aria-label="切换主题"
-              >
-                {themeMode === "light" ? (
-                  <FiSun />
-                ) : themeMode === "dark" ? (
-                  <FiMoon />
-                ) : (
-                  <FiMonitor />
-                )}
-              </button>
+              <ThemeToggler />
               <button
                 type="button"
                 className={headerIconButtonClass}

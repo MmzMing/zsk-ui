@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import {
   ThemeMode,
   useAppStore
@@ -27,7 +27,7 @@ export const useTheme = () => {
     hydrateFromStorage();
   }, [hydrateFromStorage]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
     const mode = themeMode === "system" ? getSystemMode() : themeMode;
     root.setAttribute("data-theme", mode);

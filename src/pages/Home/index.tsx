@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
+import { Spinner } from "@heroui/react";
 import {
   fetchHomeArticles,
   fetchHomeReviews,
@@ -18,6 +19,15 @@ const ArticleRecommendSection = React.lazy(() =>
   import("./components/ArticleRecommendSection")
 );
 const ReviewSection = React.lazy(() => import("./components/ReviewSection"));
+
+const LoadingFallback = ({ height }: { height: string }) => (
+  <div
+    className="flex w-full items-center justify-center"
+    style={{ height }}
+  >
+    <Spinner size="lg" color="primary" label="加载中..." />
+  </div>
+);
 
 function HomePage() {
   const navigate = useNavigate();
@@ -273,32 +283,20 @@ function HomePage() {
     <div className="space-y-0">
       <HomeBanner />
 
-      <LazyLoadWrapper minHeight="400px">
-        <Suspense
-          fallback={
-            <div className="h-[400px] w-full animate-pulse bg-gray-100/50" />
-          }
-        >
+      <LazyLoadWrapper minHeight="400px" rootMargin="800px">
+        <Suspense fallback={<LoadingFallback height="400px" />}>
           <VideoRecommend items={videos} />
         </Suspense>
       </LazyLoadWrapper>
 
-      <LazyLoadWrapper minHeight="500px">
-        <Suspense
-          fallback={
-            <div className="h-[500px] w-full animate-pulse bg-gray-100/50" />
-          }
-        >
+      <LazyLoadWrapper minHeight="500px" rootMargin="800px">
+        <Suspense fallback={<LoadingFallback height="500px" />}>
           <HomeFeatures />
         </Suspense>
       </LazyLoadWrapper>
 
-      <LazyLoadWrapper minHeight="600px">
-        <Suspense
-          fallback={
-            <div className="h-[600px] w-full animate-pulse bg-gray-100/50" />
-          }
-        >
+      <LazyLoadWrapper minHeight="600px" rootMargin="800px">
+        <Suspense fallback={<LoadingFallback height="600px" />}>
           <ArticleRecommendSection
             articles={articles}
             activeArticle={activeArticle}
@@ -308,12 +306,8 @@ function HomePage() {
         </Suspense>
       </LazyLoadWrapper>
 
-      <LazyLoadWrapper minHeight="400px">
-        <Suspense
-          fallback={
-            <div className="h-[400px] w-full animate-pulse bg-gray-100/50" />
-          }
-        >
+      <LazyLoadWrapper minHeight="400px" rootMargin="800px">
+        <Suspense fallback={<LoadingFallback height="400px" />}>
           <ReviewSection reviews={reviews} />
         </Suspense>
       </LazyLoadWrapper>
