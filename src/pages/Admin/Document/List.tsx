@@ -1,15 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Autocomplete,
-  AutocompleteItem,
   Button,
   Card,
   Chip,
   Input,
   Pagination,
+  Select,
+  SelectItem,
   Tab,
-  Tabs,
   Table,
   TableBody,
   TableCell,
@@ -17,6 +16,7 @@ import {
   TableHeader,
   TableRow
 } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { Column } from "@ant-design/plots";
 import {
   FiBarChart2,
@@ -494,45 +494,38 @@ function DocumentListPage() {
                   input: "text-xs"
                 }}
               />
-              <Autocomplete
+              <Select
                 aria-label="文档分类筛选"
                 size="sm"
-                variant="bordered"
                 className="w-40"
-                selectedKey={categoryFilter}
-                onSelectionChange={key => {
-                  if (key === null) {
-                    return;
-                  }
-                  setCategoryFilter(String(key));
+                selectedKeys={[categoryFilter]}
+                onSelectionChange={keys => {
+                  const key = Array.from(keys)[0];
+                  setCategoryFilter(key ? String(key) : "all");
                   setPage(1);
                 }}
-                defaultItems={[
+                items={[
                   { label: "全部分类", value: "all" },
                   ...documentCategories.map(item => ({ label: item, value: item }))
                 ]}
+                isClearable
               >
                 {item => (
-                  <AutocompleteItem key={item.value}>
+                  <SelectItem key={item.value}>
                     {item.label}
-                  </AutocompleteItem>
+                  </SelectItem>
                 )}
-              </Autocomplete>
-              <Tabs
+              </Select>
+              <AdminTabs
                 aria-label="文档状态筛选"
                 size="sm"
                 radius="full"
-                variant="bordered"
+                color="primary"
                 selectedKey={statusFilter}
                 onSelectionChange={key => {
                   const value = key as StatusFilter;
                   setStatusFilter(value);
                   setPage(1);
-                }}
-                classNames={{
-                  tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                  cursor: "bg-[var(--primary-color)]",
-                  tab: "h-8 px-3 text-[0.625rem] data-[selected=true]:text-white"
                 }}
               >
                 <Tab key="all" title="全部状态" />
@@ -542,7 +535,7 @@ function DocumentListPage() {
                 <Tab key="rejected" title="已驳回" />
                 <Tab key="offline" title="已下架" />
                 <Tab key="scheduled" title="定时发布" />
-              </Tabs>
+              </AdminTabs>
               <Button
                 size="sm"
                 variant="light"

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { Button, Card, Chip, DateRangePicker, Input, Tabs, Tab } from "@heroui/react";
+import { Button, Card, Chip, DateRangePicker, Input, Tab } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import type { LineConfig } from "@ant-design/plots";
 import { Line } from "@ant-design/plots";
 import { FiSearch } from "react-icons/fi";
@@ -211,6 +212,7 @@ function UserBehaviorPage() {
   const [activeUserId, setActiveUserId] = useState<string>("u_admin");
   const [range, setRange] = useState<BehaviorRange>("today");
   const [keyword, setKeyword] = useState("");
+  const [activeView, setActiveView] = useState<"timeline" | "list">("timeline");
   const { themeMode } = useAppStore();
 
   const chartTheme =
@@ -313,27 +315,19 @@ function UserBehaviorPage() {
         <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
           <div className="p-4 space-y-3 text-xs">
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-wrap gap-2">
-                {behaviorUsers.map(user => {
-                  const isActive = user.id === activeUser.id;
-                  return (
-                    <Button
-                      key={user.id}
-                      size="sm"
-                      variant={isActive ? "solid" : "light"}
-                      className={
-                        "h-7 text-[11px] px-3 " +
-                        (isActive
-                          ? ""
-                          : "bg-[var(--bg-elevated)] text-[var(--text-color-secondary)]")
-                      }
-                      onPress={() => setActiveUserId(user.id)}
-                    >
-                      {user.name}
-                    </Button>
-                  );
-                })}
-              </div>
+              <AdminTabs
+                aria-label="选择用户"
+                selectedKey={activeUserId}
+                onSelectionChange={(key) => setActiveUserId(key as string)}
+                classNames={{
+                  tabList: "gap-2",
+                  tab: "h-7 px-3",
+                }}
+              >
+                {behaviorUsers.map((user) => (
+                  <Tab key={user.id} title={user.name} />
+                ))}
+              </AdminTabs>
               <div className="flex flex-wrap gap-2">
                 <Input
                   size="sm"
@@ -353,11 +347,16 @@ function UserBehaviorPage() {
               </div>
             </div>
 
-            <Tabs
+            <AdminTabs
               aria-label="用户行为分析视图"
               size="sm"
-              variant="underlined"
+              selectedKey={activeView}
+              onSelectionChange={(key: React.Key) => setActiveView(key as "timeline" | "list")}
               className="mt-1"
+              classNames={{
+                tabList: "p-0 h-8 gap-0",
+                tab: "h-8 px-3 text-xs"
+              }}
             >
               <Tab key="timeline" title="行为轨迹时序图">
                 <div className="mt-2 space-y-2">
@@ -461,7 +460,7 @@ function UserBehaviorPage() {
                   </div>
                 </div>
               </Tab>
-            </Tabs>
+            </AdminTabs>
           </div>
         </Card>
 

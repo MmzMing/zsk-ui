@@ -1,21 +1,21 @@
 import React, { useMemo, useState } from "react";
 import {
-  Autocomplete,
-  AutocompleteItem,
   Button,
   Card,
   Chip,
   Input,
   Pagination,
+  Select,
+  SelectItem,
   Table,
   TableBody,
   TableCell,
   TableColumn,
   TableHeader,
   TableRow,
-  Tabs,
   Tab
 } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { Column } from "@ant-design/plots";
 import {
   FiBarChart2,
@@ -393,35 +393,31 @@ function VideoListPage() {
                   input: "text-xs"
                 }}
               />
-              <Autocomplete
+              <Select
                 aria-label="视频分类筛选"
                 size="sm"
-                variant="bordered"
                 className="w-40"
-                selectedKey={categoryFilter}
-                onSelectionChange={key => {
-                  if (key === null) {
-                    return;
-                  }
-                  setCategoryFilter(String(key));
+                selectedKeys={[categoryFilter]}
+                onSelectionChange={keys => {
+                  const key = Array.from(keys)[0];
+                  setCategoryFilter(key ? String(key) : "all");
                   setPage(1);
                 }}
-                defaultItems={[
+                items={[
                   { label: "全部分类", value: "all" },
                   ...videoCategories.map(item => ({ label: item, value: item }))
                 ]}
+                isClearable
               >
                 {item => (
-                  <AutocompleteItem key={item.value}>
+                  <SelectItem key={item.value}>
                     {item.label}
-                  </AutocompleteItem>
+                  </SelectItem>
                 )}
-              </Autocomplete>
-              <Tabs
+              </Select>
+              <AdminTabs
                 aria-label="视频状态筛选"
                 size="sm"
-                radius="full"
-                variant="bordered"
                 selectedKey={statusFilter}
                 onSelectionChange={key => {
                   const value = key as StatusFilter;
@@ -429,16 +425,15 @@ function VideoListPage() {
                   setPage(1);
                 }}
                 classNames={{
-                  tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                  cursor: "bg-[var(--primary-color)]",
-                  tab: "h-8 px-3 text-[0.625rem] data-[selected=true]:text-white"
+                  tabList: "p-0 h-8 gap-0",
+                  tab: "h-8 px-3 text-[0.625rem]"
                 }}
               >
                 <Tab key="all" title="全部状态" />
                 <Tab key="draft" title="草稿" />
                 <Tab key="published" title="已发布" />
                 <Tab key="offline" title="已下架" />
-              </Tabs>
+              </AdminTabs>
               <Button
                 size="sm"
                 variant="light"

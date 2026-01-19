@@ -13,10 +13,10 @@ import {
   TableHeader,
   TableRow,
   Textarea,
-  Tabs,
   Tab,
   Slider
 } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
   FiAlertCircle,
   FiCheckCircle,
@@ -769,22 +769,19 @@ function VideoUploadPage() {
               </div>
             </div>
           </div>
-          <Tabs
+          <AdminTabs
             aria-label="视频配置标签页"
             size="sm"
-            radius="full"
-            variant="bordered"
             selectedKey={configTab}
             onSelectionChange={handleConfigTabChange}
             classNames={{
-              tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-              cursor: "bg-[var(--primary-color)]",
-              tab: "h-8 px-4 text-[10px] data-[selected=true]:text-white"
+              tabList: "p-0 h-8 gap-0",
+              tab: "h-8 px-4 text-[10px]"
             }}
           >
             <Tab key="advanced" title="高级功能" />
             <Tab key="permission" title="权限设置" />
-          </Tabs>
+          </AdminTabs>
 
           <div className={configTab === "advanced" ? "grid gap-3 md:grid-cols-2" : "hidden"}>
               <div className="space-y-3">
@@ -796,25 +793,22 @@ function VideoUploadPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Tabs
+                    <AdminTabs
                       aria-label="水印类型选择"
                       size="sm"
-                      radius="full"
-                      variant="bordered"
                       selectedKey={watermarkType}
                       onSelectionChange={key => {
                         const value = key as WatermarkType;
                         setWatermarkType(value);
                       }}
                       classNames={{
-                        tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                        cursor: "bg-[var(--primary-color)]",
-                        tab: "h-8 px-4 text-xs data-[selected=true]:text-white"
+                        tabList: "p-0 h-8 gap-0",
+                        tab: "h-8 px-4 text-xs"
                       }}
                     >
                       <Tab key="text" title="文字水印" />
                       <Tab key="image" title="图片水印" />
-                    </Tabs>
+                    </AdminTabs>
                     {watermarkType === "text" && (
                       <div className="space-y-2">
                         <Input
@@ -1188,23 +1182,20 @@ function VideoUploadPage() {
                   可按「公开 / 私有 / 密码访问」控制视频的可见范围。
                 </div>
               </div>
-              <Tabs
+              <AdminTabs
                 aria-label="权限类型选择"
                 size="sm"
-                radius="full"
-                variant="bordered"
                 selectedKey={permissionType}
                 onSelectionChange={handlePermissionTypeChange}
                 classNames={{
-                  tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                  cursor: "bg-[var(--primary-color)]",
-                  tab: "h-8 px-4 text-[10px] data-[selected=true]:text-white"
+                  tabList: "p-0 h-8 gap-0",
+                  tab: "h-8 px-4 text-[10px]"
                 }}
               >
                 <Tab key="public" title="公开" />
                 <Tab key="private" title="私有" />
                 <Tab key="password" title="密码访问" />
-              </Tabs>
+              </AdminTabs>
 
               {permissionType === "public" && (
                 <div className="text-[11px] text-[var(--text-color-secondary)]">
@@ -1351,11 +1342,9 @@ function VideoUploadPage() {
                   input: "text-xs"
                 }}
               />
-              <Tabs
+              <AdminTabs
                 aria-label="上传状态筛选"
                 size="sm"
-                radius="full"
-                variant="bordered"
                 selectedKey={statusFilter}
                 onSelectionChange={key => {
                   const value = key as StatusFilter;
@@ -1363,9 +1352,8 @@ function VideoUploadPage() {
                   setPage(1);
                 }}
                 classNames={{
-                  tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                  cursor: "bg-[var(--primary-color)]",
-                  tab: "h-8 px-3 text-[10px] data-[selected=true]:text-white"
+                  tabList: "p-0 h-8 gap-0",
+                  tab: "h-8 px-3 text-[10px]"
                 }}
               >
                 <Tab key="all" title="全部状态" />
@@ -1373,7 +1361,7 @@ function VideoUploadPage() {
                 <Tab key="uploading" title="上传中" />
                 <Tab key="success" title="已完成" />
                 <Tab key="error" title="失败" />
-              </Tabs>
+              </AdminTabs>
               <Button
                 size="sm"
                 variant="light"

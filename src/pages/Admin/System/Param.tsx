@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
-  Autocomplete,
-  AutocompleteItem,
+  Select,
+  SelectItem,
   Button,
   Card,
   Chip,
@@ -282,33 +282,31 @@ function ParamPage() {
                   input: "text-xs"
                 }}
               />
-              <Autocomplete
+              <Select
                 aria-label="作用域筛选"
                 size="sm"
-                variant="bordered"
                 className="w-40"
-                selectedKey={scopeFilter}
-                onSelectionChange={key => {
-                  if (key === null) {
-                    return;
-                  }
-                  setScopeFilter(String(key) as ParamScope | "all");
+                selectedKeys={[scopeFilter]}
+                onSelectionChange={keys => {
+                  const key = Array.from(keys)[0];
+                  setScopeFilter(key ? String(key) as ParamScope | "all" : "all");
                   setPage(1);
                 }}
-                defaultItems={[
+                items={[
                   { label: "全部作用域", value: "all" },
                   { label: "全局配置", value: "global" },
                   { label: "前台配置", value: "frontend" },
                   { label: "后台配置", value: "backend" },
                   { label: "任务调度", value: "task" }
                 ]}
+                isClearable
               >
                 {item => (
-                  <AutocompleteItem key={item.value}>
+                  <SelectItem key={item.value}>
                     {item.label}
-                  </AutocompleteItem>
+                  </SelectItem>
                 )}
-              </Autocomplete>
+              </Select>
               <Button
                 size="sm"
                 variant="light"
@@ -517,31 +515,31 @@ function ParamPage() {
               </div>
               <div className="space-y-1">
                 <div>作用域</div>
-                <Autocomplete
+                <Select
                   aria-label="参数作用域"
                   size="sm"
-                  variant="bordered"
-                  selectedKey={formState.scope}
-                  onSelectionChange={key => {
-                    if (key === null) {
-                      return;
+                  selectedKeys={[formState.scope]}
+                  onSelectionChange={keys => {
+                    const key = Array.from(keys)[0];
+                    if (key) {
+                      handleFormChange({ scope: String(key) as ParamScope });
                     }
-                    handleFormChange({ scope: String(key) as ParamScope });
                   }}
-                  defaultItems={[
+                  items={[
                     { label: "全局配置", value: "global" },
                     { label: "前台配置", value: "frontend" },
                     { label: "后台配置", value: "backend" },
                     { label: "任务调度", value: "task" }
                   ]}
                   className="w-full"
+                  disallowEmptySelection
                 >
                   {item => (
-                    <AutocompleteItem key={item.value}>
+                    <SelectItem key={item.value}>
                       {item.label}
-                    </AutocompleteItem>
+                    </SelectItem>
                   )}
-                </Autocomplete>
+                </Select>
               </div>
               <div className="flex items-center justify-between pt-1">
                 <div className="text-xs">是否敏感参数</div>

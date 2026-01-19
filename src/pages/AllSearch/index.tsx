@@ -1,7 +1,13 @@
 import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@heroui/react";
+import {
+  Button,
+  Chip,
+  Avatar,
+  Tab
+} from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { routes } from "../../router/routes";
 import Shuffle from "../../components/Motion/Shuffle";
 import TextType from "../../components/Motion/TextType";
@@ -350,97 +356,89 @@ function AllSearchPage() {
                 }
               }}
               placeholder="输入关键词，按下回车开始搜索"
-              className="w-full rounded-[var(--radius-base)] border border-[var(--border-color)] bg-[var(--bg-elevated)] px-3 py-2 text-sm outline-none focus-visible:border-[var(--primary-color)]"
+              className="w-full rounded-none border border-[var(--border-color)] bg-[var(--bg-elevated)] px-3 py-2 text-sm outline-none focus-visible:border-[var(--primary-color)]"
             />
           </div>
           <Button
             type="button"
-            className="inline-flex items-center justify-center rounded-[var(--radius-base)] bg-[var(--primary-color)] px-4 py-2 text-xs md:text-sm font-medium text-[var(--bg-elevated)] shadow-sm hover:bg-[color-mix(in_srgb,var(--primary-color)_88%,black_12%)]"
+            className="inline-flex items-center justify-center rounded-none bg-[var(--primary-color)] px-4 py-2 text-xs md:text-sm font-medium text-[var(--bg-elevated)] shadow-sm hover:bg-[color-mix(in_srgb,var(--primary-color)_88%,black_12%)]"
             color="primary"
             onPress={() => setAppliedKeyword(keyword.trim())}
           >
             综合搜索
           </Button>
         </div>
-        <div className="flex flex-wrap gap-4 border-b border-[var(--border-color)] text-xs md:text-sm">
-          {categories.map(item => {
-            const isActive = item.key === activeCategory;
-            return (
-              <Button
-                key={item.key}
-                type="button"
-                className={
-                  "relative pb-2 pt-1 transition-colors bg-transparent shadow-none hover:shadow-none " +
-                  (isActive
-                    ? "text-[var(--primary-color)] font-medium"
-                    : "text-[var(--text-color-secondary)] hover:text-[var(--text-color)]")
-                }
-                variant="light"
-                onPress={() => {
-                  setActiveCategory(item.key);
-                  const next = new URLSearchParams(searchParams);
-                  if (item.key === "all") {
-                    next.delete("category");
-                  } else {
-                    next.set("category", item.key);
-                  }
-                  setSearchParams(next);
-                }}
-              >
-                <span className="inline-flex min-h-[32px] items-center">
-                  {item.label}
-                </span>
-                {isActive ? (
-                  <motion.span
-                    layoutId="allsearch-tab-underline"
-                    transition={{
-                      type: "spring",
-                      stiffness: 380,
-                      damping: 30
-                    }}
-                    className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-[var(--primary-color)]"
-                  />
-                ) : null}
-              </Button>
-            );
-          })}
+        <div className="border-b border-[var(--border-color)]">
+          <AdminTabs
+            aria-label="搜索分类"
+            variant="underlined"
+            radius="none"
+            selectedKey={activeCategory}
+            onSelectionChange={key => {
+              const category = key as SearchCategory;
+              setActiveCategory(category);
+
+              // 重置筛选和排序条件为默认（第一个）
+              const categorySortOptions = sortOptionsByCategory[category];
+              if (categorySortOptions && categorySortOptions.length > 0) {
+                setActiveSort(categorySortOptions[0].key);
+              }
+              setDuration(null);
+              setTimeRange(null);
+              setActiveTag(null);
+
+              const next = new URLSearchParams(searchParams);
+              if (category === "all") {
+                next.delete("category");
+              } else {
+                next.set("category", category);
+              }
+              setSearchParams(next);
+            }}
+            classNames={{
+              tabList: "p-0 gap-10 border-none",
+              tab: "h-11 px-0 min-w-0 text-lg",
+              cursor: "h-[2px] w-full bg-[var(--primary-color)]",
+              tabContent: "group-data-[selected=true]:text-[var(--primary-color)] font-medium"
+            }}
+          >
+            {categories.map(item => (
+              <Tab key={item.key} title={item.label} />
+            ))}
+          </AdminTabs>
         </div>
       </section>
 
       <section className="space-y-4 pb-3">
         <div className="flex flex-col">
           <div className="flex flex-col gap-3 text-xs md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="flex flex-wrap gap-2">
                 {currentSortOptions.map(option => {
                   const isActive = option.key === activeSort;
                   return (
-                    <motion.button
+                    <Button
                       key={option.key}
                       type="button"
                       className={
-                        "inline-flex min-h-[34px] items-center justify-center rounded-[var(--radius-base)] border px-3 py-2 text-xs transition-colors md:px-4 " +
+                        "rounded-full border px-3 py-1 text-xs bg-transparent shadow-none hover:shadow-none " +
                         (isActive
                           ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
                           : "border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]")
                       }
-                      onClick={() => setActiveSort(option.key)}
-                      whileTap={{ scale: 0.96 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 420,
-                        damping: 28
-                      }}
+                      size="sm"
+                      variant={isActive ? "solid" : "bordered"}
+                      onPress={() => setActiveSort(option.key)}
                     >
                       {option.label}
-                    </motion.button>
+                    </Button>
                   );
                 })}
               </div>
             </div>
             <motion.button
               type="button"
-              className="inline-flex min-h-[34px] items-center justify-center rounded-[var(--radius-base)] border border-[var(--border-color)] bg-[var(--bg-elevated)] px-3 py-2 text-xs text-[var(--text-color)] md:px-4"
+              className="inline-flex min-h-[34px] items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--bg-elevated)] px-3 py-2 text-xs text-[var(--text-color)] md:px-4"
               onClick={() => setAdvancedOpen(open => !open)}
               whileTap={{ scale: 0.96 }}
               transition={{
@@ -617,9 +615,6 @@ function AllSearchPage() {
                     >
                       重置条件
                     </Button>
-                    <div className="text-[var(--text-color-secondary)]">
-                      当前所有条件将作为查询参数传递给后端接口。
-                    </div>
                   </div>
                 </div>
               </motion.div>

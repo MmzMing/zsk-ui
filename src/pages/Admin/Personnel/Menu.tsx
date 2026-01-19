@@ -581,6 +581,34 @@ function MenuPage() {
 
   return (
     <div className="space-y-4">
+      <style>{`
+        .menu-tree-custom .rc-tree-node-content-wrapper {
+          border-radius: 6px;
+          padding: 2px 4px;
+          transition: all 0.2s;
+          border: 1px solid transparent;
+        }
+        .menu-tree-custom .rc-tree-node-content-wrapper.rc-tree-node-selected {
+           background-color: color-mix(in srgb, var(--primary-color) 12%, transparent) !important;
+           border-color: var(--primary-color) !important;
+           color: var(--primary-color) !important;
+           outline: none !important;
+           box-shadow: none !important;
+         }
+        .menu-tree-custom .rc-tree-node-content-wrapper:hover {
+          background-color: color-mix(in srgb, var(--primary-color) 6%, transparent);
+        }
+        .menu-tree-custom .rc-tree-node-content-wrapper.rc-tree-node-selected .rc-tree-title {
+           color: var(--primary-color) !important;
+           font-weight: 500;
+        }
+        /* 移除默认的焦点轮廓 */
+        .menu-tree-custom .rc-tree-node-content-wrapper:focus,
+        .menu-tree-custom .rc-tree-node-content-wrapper:active {
+           outline: none !important;
+           box-shadow: none !important;
+        }
+      `}</style>
       <div className="space-y-1">
         <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] px-3 py-1 text-[11px] text-[var(--primary-color)]">
           <span>人员管理 · 菜单管理</span>
@@ -658,7 +686,7 @@ function MenuPage() {
                   共 {flatMenu.length} 个菜单项
                 </Chip>
               </div>
-              <div className="mt-1 max-h-[420px] overflow-auto rounded-md border border-[var(--border-color)] bg-[var(--bg-elevated)]/40">
+              <div className="menu-tree-custom mt-1 max-h-[420px] overflow-auto rounded-md border border-[var(--border-color)] bg-[var(--bg-elevated)]/40">
                 {flatMenu.length === 0 ? (
                   <div className="px-3 py-4 text-center text-[11px] text-[var(--text-color-secondary)]">
                     当前暂无菜单项，可通过上方按钮新增一级菜单。

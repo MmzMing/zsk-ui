@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Autocomplete,
-  AutocompleteItem,
+  Select,
+  SelectItem,
   Button,
   Card,
   Chip,
@@ -18,9 +18,9 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-  Tabs,
   Tab
 } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
   FiAlertCircle,
   FiCheck,
@@ -591,34 +591,32 @@ function VideoReviewPage() {
                           input: "text-xs"
                         }}
                       />
-                      <Autocomplete
+                      <Select
                         aria-label="视频分类筛选"
                         size="sm"
-                        variant="bordered"
                         className="w-40"
-                        selectedKey={categoryFilter}
-                        onSelectionChange={key => {
-                          if (key === null) {
-                            return;
-                          }
-                          setCategoryFilter(String(key));
+                        selectedKeys={[categoryFilter]}
+                        onSelectionChange={keys => {
+                          const key = Array.from(keys)[0];
+                          setCategoryFilter(key ? String(key) : "all");
                           setPage(1);
                           setSelectedIds([]);
                         }}
-                        defaultItems={[
+                        items={[
                           { label: "全部分类", value: "all" },
                           ...allCategories.map(item => ({
                             label: item,
                             value: item
                           }))
                         ]}
+                        isClearable
                       >
                         {item => (
-                          <AutocompleteItem key={item.value}>
+                          <SelectItem key={item.value}>
                             {item.label}
-                          </AutocompleteItem>
+                          </SelectItem>
                         )}
-                      </Autocomplete>
+                      </Select>
                       <DateRangePicker
                         aria-label="上传时间筛选"
                         size="sm"
@@ -627,11 +625,9 @@ function VideoReviewPage() {
                       />
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Tabs
+                        <AdminTabs
                         aria-label="审核状态筛选"
                         size="sm"
-                        radius="full"
-                        variant="bordered"
                         selectedKey={statusFilter}
                         onSelectionChange={key => {
                           const value = key as StatusFilter;
@@ -640,16 +636,15 @@ function VideoReviewPage() {
                           setSelectedIds([]);
                         }}
                         classNames={{
-                          tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                          cursor: "bg-[var(--primary-color)]",
-                          tab: "h-8 px-3 text-xs data-[selected=true]:text-white"
+                          tabList: "p-0 h-8 gap-0",
+                          tab: "h-8 px-3 text-xs"
                         }}
                       >
                         <Tab key="all" title="全部" />
                         <Tab key="pending" title="待审核" />
                         <Tab key="approved" title="已通过" />
                         <Tab key="rejected" title="已驳回" />
-                      </Tabs>
+                      </AdminTabs>
                       <Button
                         size="sm"
                         variant="light"
@@ -665,30 +660,25 @@ function VideoReviewPage() {
                     <span>支持按审核状态、上传时间、上传人、分类等多条件组合筛选。</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Tabs
+                    <AdminTabs
                       aria-label="视频审核子模块"
                       size="sm"
-                      radius="full"
-                      variant="bordered"
                       selectedKey={videoTab}
                       onSelectionChange={key => {
                         const value = key as "queue" | "logs";
                         setVideoTab(value);
                       }}
                       classNames={{
-                        tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                        cursor: "bg-[var(--primary-color)]",
-                        tab: "h-8 px-4 text-xs data-[selected=true]:text-white"
+                        tabList: "p-0 h-8 gap-0",
+                        tab: "h-8 px-4 text-xs"
                       }}
                     >
                       <Tab key="queue" title="审核队列" />
                       <Tab key="logs" title="审核日志" />
-                    </Tabs>
-                    <Tabs
+                    </AdminTabs>
+                    <AdminTabs
                       aria-label="审核队列切换"
                       size="sm"
-                      radius="full"
-                      variant="bordered"
                       selectedKey={queueType}
                       onSelectionChange={key => {
                         const value = key as QueueType;
@@ -697,14 +687,13 @@ function VideoReviewPage() {
                         setSelectedIds([]);
                       }}
                       classNames={{
-                        tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                        cursor: "bg-[var(--primary-color)]",
-                        tab: "h-8 px-4 text-xs data-[selected=true]:text-white"
+                        tabList: "p-0 h-8 gap-0",
+                        tab: "h-8 px-4 text-xs"
                       }}
                     >
                       <Tab key="ai" title="AI 预审核队列" />
                       <Tab key="manual" title="人工审核队列" />
-                    </Tabs>
+                    </AdminTabs>
                   </div>
                 </div>
 
@@ -1132,7 +1121,7 @@ function VideoReviewPage() {
                         顶部支持多维度筛选，列表展示评论内容、敏感词等级与关联视频信息。
                       </div>
                     </div>
-                    <Tabs
+                    <AdminTabs
                       aria-label="评论审核子模块"
                       size="sm"
                       radius="full"
@@ -1146,7 +1135,7 @@ function VideoReviewPage() {
                     >
                       <Tab key="pending" title="待审核" />
                       <Tab key="reviewed" title="已审核" />
-                    </Tabs>
+                    </AdminTabs>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
@@ -1347,16 +1336,13 @@ function VideoReviewPage() {
                       按「AI 预审核规则 / 自动审核规则 / 审核通知配置 / 审核权限配置」分标签页展示，后续可接入真实表单配置。
                     </div>
                   </div>
-                  <Tabs
+                  <AdminTabs
                     aria-label="审核规则配置标签"
                     size="sm"
-                    radius="full"
-                    variant="bordered"
                     defaultSelectedKey="ai"
                     classNames={{
-                      tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                      cursor: "bg-[var(--primary-color)]",
-                      tab: "h-8 px-3 text-[10px] data-[selected=true]:text-white"
+                      tabList: "p-0 h-8 gap-0",
+                      tab: "h-8 px-3 text-[10px]"
                     }}
                   >
                     <Tab key="ai" title="AI 预审核规则">
@@ -1376,11 +1362,11 @@ function VideoReviewPage() {
                       </div>
                     </Tab>
                     <Tab key="permission" title="审核权限配置">
-                      <div className="mt-3 space-y-2 text-[11px]">
-                        <div>示例：只允许具备「审核负责人」角色的账号调整规则，普通审核员仅可查看。</div>
-                      </div>
-                    </Tab>
-                  </Tabs>
+                        <div className="mt-3 space-y-2 text-[11px]">
+                          <div>示例：只允许具备「审核负责人」角色的账号调整规则，普通审核员仅可查看。</div>
+                        </div>
+                      </Tab>
+                    </AdminTabs>
                 </div>
               </Card>
             )}

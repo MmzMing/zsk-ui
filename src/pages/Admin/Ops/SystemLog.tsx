@@ -1,22 +1,22 @@
 import React, { useMemo, useState } from "react";
 import {
-  Autocomplete,
-  AutocompleteItem,
   Button,
   Card,
   Chip,
   DateRangePicker,
   Input,
   Pagination,
+  Select,
+  SelectItem,
   Table,
   TableHeader,
   TableColumn,
   TableBody,
   TableRow,
   TableCell,
-  Tabs,
   Tab
 } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { FiDownload, FiSearch } from "react-icons/fi";
 
 type LogLevel = "INFO" | "WARN" | "ERROR";
@@ -209,49 +209,44 @@ function SystemLogPage() {
         <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-2">
-              <Tabs
+              <AdminTabs
                 aria-label="日志级别"
                 size="sm"
-                radius="full"
-                variant="bordered"
                 selectedKey={activeLevel}
-                onSelectionChange={key => setActiveLevel(key as LogLevel | "all")}
+                onSelectionChange={(key: React.Key) => setActiveLevel(key as LogLevel | "all")}
                 classNames={{
-                  tabList: "p-0 h-6 border-[var(--border-color)] gap-0",
-                  cursor: "bg-[var(--primary-color)]",
-                  tab: "h-6 px-3 text-xs data-[selected=true]:text-white"
+                  tabList: "p-0 h-6 gap-0",
+                  tab: "h-6 px-3 text-xs"
                 }}
               >
                 <Tab key="all" title="全部级别" />
                 <Tab key="INFO" title="INFO" />
                 <Tab key="WARN" title="WARN" />
                 <Tab key="ERROR" title="ERROR" />
-              </Tabs>
+              </AdminTabs>
 
-              <Autocomplete
+              <Select
                 aria-label="模块筛选"
                 size="sm"
-                variant="bordered"
                 className="w-40"
-                selectedKey={activeModule}
-                onSelectionChange={key => {
-                  if (key === null) {
-                    return;
-                  }
-                  setActiveModule(String(key));
+                selectedKeys={[activeModule]}
+                onSelectionChange={keys => {
+                  const key = Array.from(keys)[0];
+                  setActiveModule(key ? String(key) : "全部模块");
                   setPage(1);
                 }}
-                defaultItems={logModules.map(item => ({
+                items={logModules.map(item => ({
                   label: item,
                   value: item
                 }))}
+                isClearable
               >
                 {item => (
-                  <AutocompleteItem key={item.value}>
+                  <SelectItem key={item.value}>
                     {item.label}
-                  </AutocompleteItem>
+                  </SelectItem>
                 )}
-              </Autocomplete>
+              </Select>
 
               <DateRangePicker
                 aria-label="日志时间范围筛选"

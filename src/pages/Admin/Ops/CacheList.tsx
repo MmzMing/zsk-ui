@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
-  Autocomplete,
-  AutocompleteItem,
+  Select,
+  SelectItem,
   Button,
   Card,
   Chip,
@@ -301,58 +301,54 @@ function CacheListPage() {
                   input: "text-xs"
                 }}
               />
-              <Autocomplete
+              <Select
                 aria-label="实例筛选"
                 size="sm"
-                variant="bordered"
                 className="w-40"
-                selectedKey={instanceFilter}
-                onSelectionChange={key => {
-                  if (key === null) {
-                    return;
-                  }
-                  setInstanceFilter(String(key));
+                selectedKeys={[instanceFilter]}
+                onSelectionChange={keys => {
+                  const key = Array.from(keys)[0];
+                  setInstanceFilter(key ? String(key) : "all");
                   setPage(1);
                 }}
-                defaultItems={[
+                items={[
                   { label: "全部实例", value: "all" },
                   ...cacheInstances.map(item => ({
                     label: item.name,
                     value: item.id
                   }))
                 ]}
+                isClearable
               >
                 {item => (
-                  <AutocompleteItem key={item.value}>
+                  <SelectItem key={item.value}>
                     {item.label}
-                  </AutocompleteItem>
+                  </SelectItem>
                 )}
-              </Autocomplete>
-              <Autocomplete
+              </Select>
+              <Select
                 aria-label="过期时间筛选"
                 size="sm"
-                variant="bordered"
                 className="w-44"
-                selectedKey={ttlFilter}
-                onSelectionChange={key => {
-                  if (key === null) {
-                    return;
-                  }
-                  setTtlFilter(String(key) as TtlFilter);
+                selectedKeys={[ttlFilter]}
+                onSelectionChange={keys => {
+                  const key = Array.from(keys)[0];
+                  setTtlFilter(key ? String(key) as TtlFilter : "all");
                   setPage(1);
                 }}
-                defaultItems={[
+                items={[
                   { label: "全部过期时间", value: "all" },
                   { label: "即将过期（≤5 分钟）", value: "expiring" },
                   { label: "永不过期", value: "no-expire" }
                 ]}
+                isClearable
               >
                 {item => (
-                  <AutocompleteItem key={item.value}>
+                  <SelectItem key={item.value}>
                     {item.label}
-                  </AutocompleteItem>
+                  </SelectItem>
                 )}
-              </Autocomplete>
+              </Select>
               <Button
                 size="sm"
                 variant="light"

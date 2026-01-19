@@ -488,7 +488,7 @@ const adminHeaderNavButtonClass =
                         className={
                           "w-full flex items-center justify-between gap-2 pl-6 pr-3 py-1.5 rounded-lg text-[11px] transition-colors border " +
                           (active
-                            ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
+                            ? "border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
                             : "border-transparent text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]")
                         }
                         onClick={() => handleMenuItemClick(child.key)}
@@ -530,7 +530,7 @@ const adminHeaderNavButtonClass =
                 className={
                   "w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-[11px] transition-colors border " +
                   (active
-                    ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
+                    ? "border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
                     : "border-transparent text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]")
                 }
                 onClick={() => handleMenuItemClick(child.key)}
@@ -614,7 +614,7 @@ const adminHeaderNavButtonClass =
                     className={
                       "w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-[11px] transition-colors border " +
                       (active
-                        ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
+                        ? "border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
                         : "border-transparent text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]")
                     }
                     onClick={() => handleMenuItemClick(child.key)}
@@ -822,10 +822,10 @@ const adminHeaderNavButtonClass =
                 key={item.key}
                 type="button"
                 className={
-                  "flex items-center gap-1 px-3 py-1 rounded-full text-xs border " +
+                  "flex items-center gap-1 px-3 py-1 rounded-full text-xs transition-colors border " +
                   (item.key === activeKey
-                    ? "border-[var(--primary-color)] text-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)]"
-                    : "border-[var(--border-color)] text-[var(--text-color-secondary)]")
+                    ? "border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)] font-medium"
+                    : "border-transparent text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--text-color)_6%,transparent)] hover:text-[var(--text-color)]")
                 }
                 onClick={() => handleTabClick(item.key)}
                 onDoubleClick={event => {

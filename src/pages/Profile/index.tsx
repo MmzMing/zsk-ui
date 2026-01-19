@@ -1,5 +1,6 @@
 import React from "react";
 import { Tabs, Tab, Card, Avatar, Button, Input, Switch } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { FiEdit2, FiSettings, FiHeart, FiStar, FiMessageSquare, FiShield, FiLock, FiLogOut } from "react-icons/fi";
 import { useUserStore } from "../../store/modules/userStore";
 import { useNavigate } from "react-router-dom";
@@ -56,7 +57,16 @@ function ProfilePage() {
 
         {/* Main Content */}
         <div className="flex-1">
-          <Tabs aria-label="Profile Tabs" color="primary" variant="underlined">
+          <AdminTabs
+            aria-label="Profile Tabs"
+            variant="underlined"
+            classNames={{
+              tabList: "p-0 gap-8 border-none",
+              tab: "h-11 px-0 min-w-0 text-lg",
+              cursor: "h-[2px] w-full bg-[var(--primary-color)]",
+              tabContent: "group-data-[selected=true]:text-[var(--primary-color)] font-medium"
+            }}
+          >
             <Tab key="collections" title={<div className="flex items-center gap-2"><FiStar /> 我的收藏</div>}>
               <Card className="p-6 mt-4 bg-[var(--bg-elevated)] border border-[var(--border-color)]">
                 <div className="text-center py-12 text-[var(--text-color-secondary)]">
@@ -102,7 +112,7 @@ function ProfilePage() {
                 </div>
               </Card>
             </Tab>
-          </Tabs>
+          </AdminTabs>
         </div>
       </div>
     </div>

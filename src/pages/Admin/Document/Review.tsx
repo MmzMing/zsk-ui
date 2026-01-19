@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Autocomplete,
-  AutocompleteItem,
+  Select,
+  SelectItem,
   Button,
   Card,
   Chip,
@@ -13,7 +13,6 @@ import {
   ModalHeader,
   Pagination,
   Tab,
-  Tabs,
   Table,
   TableBody,
   TableCell,
@@ -31,6 +30,8 @@ import {
   FiX,
   FiFileText
 } from "react-icons/fi";
+
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 
 import {
   fetchDocumentReviewQueue,
@@ -505,34 +506,32 @@ function DocumentReviewPage() {
                           input: "text-xs"
                         }}
                       />
-                      <Autocomplete
+                      <Select
                         aria-label="文档分类筛选"
                         size="sm"
-                        variant="bordered"
                         className="w-40"
-                        selectedKey={categoryFilter}
-                        onSelectionChange={key => {
-                          if (key === null) {
-                            return;
-                          }
-                          setCategoryFilter(String(key));
+                        selectedKeys={[categoryFilter]}
+                        onSelectionChange={keys => {
+                          const key = Array.from(keys)[0];
+                          setCategoryFilter(key ? String(key) : "all");
                           setPage(1);
                           setSelectedIds([]);
                         }}
-                        defaultItems={[
+                        items={[
                           { label: "全部分类", value: "all" },
                           ...allCategories.map(item => ({
                             label: item,
                             value: item
                           }))
                         ]}
+                        isClearable
                       >
                         {item => (
-                          <AutocompleteItem key={item.value}>
+                          <SelectItem key={item.value}>
                             {item.label}
-                          </AutocompleteItem>
+                          </SelectItem>
                         )}
-                      </Autocomplete>
+                      </Select>
                       <DateRangePicker
                         aria-label="提交时间筛选"
                         size="sm"
@@ -541,11 +540,9 @@ function DocumentReviewPage() {
                       />
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Tabs
+                      <AdminTabs
                         aria-label="审核状态筛选"
                         size="sm"
-                        radius="full"
-                        variant="bordered"
                         selectedKey={statusFilter}
                         onSelectionChange={key => {
                           const value = key as StatusFilter;
@@ -553,17 +550,12 @@ function DocumentReviewPage() {
                           setPage(1);
                           setSelectedIds([]);
                         }}
-                        classNames={{
-                          tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                          cursor: "bg-[var(--primary-color)]",
-                          tab: "h-8 px-3 text-xs data-[selected=true]:text-white"
-                        }}
                       >
                         <Tab key="all" title="全部" />
                         <Tab key="pending" title="待审核" />
                         <Tab key="approved" title="已通过" />
                         <Tab key="rejected" title="已驳回" />
-                      </Tabs>
+                      </AdminTabs>
                       <Button
                         size="sm"
                         variant="light"
@@ -579,25 +571,18 @@ function DocumentReviewPage() {
                     <span>支持按审核状态、提交时间、上传人、分类等多条件组合筛选。</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Tabs
+                    <AdminTabs
                       aria-label="文档审核子模块"
                       size="sm"
-                      radius="full"
-                      variant="bordered"
                       selectedKey={tab}
                       onSelectionChange={key => {
                         const value = key as "queue" | "logs";
                         setTab(value);
                       }}
-                      classNames={{
-                        tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                        cursor: "bg-[var(--primary-color)]",
-                        tab: "h-8 px-4 text-xs data-[selected=true]:text-white"
-                      }}
                     >
                       <Tab key="queue" title="审核队列" />
                       <Tab key="logs" title="审核日志" />
-                    </Tabs>
+                    </AdminTabs>
                   </div>
                 </div>
 
@@ -1009,21 +994,14 @@ function DocumentReviewPage() {
                         顶部支持多维度筛选，列表展示评论内容、敏感词等级与关联文档信息。
                       </div>
                     </div>
-                    <Tabs
+                    <AdminTabs
                       aria-label="评论审核子模块"
                       size="sm"
-                      radius="full"
-                      variant="bordered"
                       defaultSelectedKey="pending"
-                      classNames={{
-                        tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                        cursor: "bg-[var(--primary-color)]",
-                        tab: "h-8 px-3 text-[10px] data-[selected=true]:text-white"
-                      }}
                     >
                       <Tab key="pending" title="待审核" />
                       <Tab key="reviewed" title="已审核" />
-                    </Tabs>
+                    </AdminTabs>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
@@ -1224,18 +1202,11 @@ function DocumentReviewPage() {
                       按「文档审核规则 / 自动审核规则 / 审核通知配置 / 审核权限配置」分标签页展示，后续可接入真实表单配置。
                     </div>
                   </div>
-                  <Tabs
-                    aria-label="审核规则配置标签"
-                    size="sm"
-                    radius="full"
-                    variant="bordered"
-                    defaultSelectedKey="docRules"
-                    classNames={{
-                      tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                      cursor: "bg-[var(--primary-color)]",
-                      tab: "h-8 px-3 text-[10px] data-[selected=true]:text-white"
-                    }}
-                  >
+                    <AdminTabs
+                      aria-label="审核规则配置标签"
+                      size="sm"
+                      defaultSelectedKey="docRules"
+                    >
                     <Tab key="docRules" title="文档审核规则">
                       <div className="mt-3 space-y-2 text-[11px]">
                         <div>示例：配置文档审核的必选项、可见范围策略与高风险内容标记规则。</div>
@@ -1257,7 +1228,7 @@ function DocumentReviewPage() {
                         <div>示例：只允许具备「审核负责人」角色的账号调整规则，普通审核员仅可查看。</div>
                       </div>
                     </Tab>
-                  </Tabs>
+                  </AdminTabs>
                 </div>
               </Card>
             )}

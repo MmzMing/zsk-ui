@@ -1,5 +1,6 @@
 import React from "react";
-import { Card, Chip, Button, Tooltip, Tabs, Tab } from "@heroui/react";
+import { Card, Chip, Button, Tooltip, Tab } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
   FiBarChart2,
   FiTrendingUp,
@@ -263,11 +264,14 @@ function AdminPage() {
               </div>
             </div>
           </div>
-          <Tabs
+          <AdminTabs
             aria-label="最近操作记录"
             size="sm"
-            variant="underlined"
             className="mt-2"
+            classNames={{
+              tabList: "p-0 h-8 gap-0",
+              tab: "h-8 px-3 text-xs"
+            }}
           >
             <Tab key="content" title="内容调整">
               <ul className="space-y-2 text-xs text-[var(--text-color-secondary)]">
@@ -288,7 +292,7 @@ function AdminPage() {
                 <li>· 无异常告警记录，系统运行稳定</li>
               </ul>
             </Tab>
-          </Tabs>
+          </AdminTabs>
         </div>
       </Card>
     </div>

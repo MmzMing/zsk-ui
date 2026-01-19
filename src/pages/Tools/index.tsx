@@ -1,12 +1,12 @@
 import React from "react";
 import {
-  Tabs,
   Tab,
   Card,
   Button,
   Input,
   Chip
 } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
   FiExternalLink,
   FiSearch,
@@ -242,21 +242,23 @@ function ToolsPage() {
           </p>
         </div>
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <Tabs
+          <AdminTabs
             aria-label="Toolbox Categories"
             selectedKey={activeCategory}
             onSelectionChange={key =>
               setActiveCategory(key as ToolboxCategory)
             }
-            variant="underlined"
-            color="primary"
             className="w-full md:w-auto"
+            classNames={{
+              tab: "text-[1rem] h-10 px-5",
+              tabList: "gap-1"
+            }}
           >
             <Tab key="tool" title="实用工具" />
             <Tab key="learning" title="学习类" />
             <Tab key="resource" title="资源素材" />
             <Tab key="ai" title="AI 网站" />
-          </Tabs>
+          </AdminTabs>
           <div className="flex flex-1 items-center justify-end gap-3 w-full md:w-auto">
             <Input
               className="max-w-xs"

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { Card, Chip, Button, Tabs, Tab } from "@heroui/react";
+import { Card, Chip, Button, Tab } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import type { ColumnConfig, LineConfig } from "@ant-design/plots";
 import { Column, Line } from "@ant-design/plots";
 import { useAppStore } from "../../../store";
@@ -239,10 +240,9 @@ function CacheMonitorPage() {
                 命中率低于 90%，建议检查缓存键粒度、过期策略与热点数据是否合理。
               </div>
             )}
-            <Tabs
+            <AdminTabs
               aria-label="缓存监控图表"
               size="sm"
-              variant="underlined"
               className="mt-1"
             >
               <Tab key="hit" title="命中率趋势">
@@ -255,7 +255,7 @@ function CacheMonitorPage() {
                   <Column {...qpsColumnConfig} />
                 </div>
               </Tab>
-            </Tabs>
+            </AdminTabs>
           </div>
         </Card>
       </div>

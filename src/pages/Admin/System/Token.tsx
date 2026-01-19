@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
-  Autocomplete,
-  AutocompleteItem,
+  Select,
+  SelectItem,
   Button,
   Card,
   Chip,
@@ -229,31 +229,29 @@ function TokenPage() {
                   input: "text-xs"
                 }}
               />
-              <Autocomplete
+              <Select
                 aria-label="状态筛选"
                 size="sm"
-                variant="bordered"
                 className="w-40"
-                selectedKey={statusFilter}
-                onSelectionChange={key => {
-                  if (key === null) {
-                    return;
-                  }
-                  setStatusFilter(String(key) as StatusFilter);
+                selectedKeys={[statusFilter]}
+                onSelectionChange={keys => {
+                  const key = Array.from(keys)[0];
+                  setStatusFilter(key ? String(key) as StatusFilter : "all");
                   setPage(1);
                 }}
-                defaultItems={[
+                items={[
                   { label: "全部状态", value: "all" },
                   { label: "仅有效", value: "active" },
                   { label: "已过期 / 吊销", value: "no_active" }
                 ]}
+                isClearable
               >
                 {item => (
-                  <AutocompleteItem key={item.value}>
+                  <SelectItem key={item.value}>
                     {item.label}
-                  </AutocompleteItem>
+                  </SelectItem>
                 )}
-              </Autocomplete>
+              </Select>
               <Button
                 size="sm"
                 variant="light"

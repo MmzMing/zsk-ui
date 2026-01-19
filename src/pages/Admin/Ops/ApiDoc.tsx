@@ -4,7 +4,6 @@ import {
   Card,
   Chip,
   Input,
-  Tabs,
   Tab,
   Dropdown,
   DropdownTrigger,
@@ -18,6 +17,7 @@ import {
   TableCell,
   Textarea
 } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { FiSearch, FiFileText, FiDownload, FiLink, FiChevronDown, FiCopy, FiChevronUp } from "react-icons/fi";
 
 type ApiCategory = {
@@ -346,10 +346,9 @@ function ApiDocPage() {
           </div>
 
           <div className="h-[calc(100%-76px)]">
-            <Tabs
+            <AdminTabs
               aria-label="接口详情"
               size="sm"
-              variant="underlined"
               className="px-4 pt-1"
             >
               <Tab key="basic" title="基本信息">
@@ -591,7 +590,7 @@ function ApiDocPage() {
                   </div>
                 </div>
               </Tab>
-            </Tabs>
+            </AdminTabs>
           </div>
         </Card>
       </div>

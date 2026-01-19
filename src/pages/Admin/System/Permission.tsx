@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
-  Autocomplete,
-  AutocompleteItem,
+  Select,
+  SelectItem,
   Button,
   Card,
   Chip,
@@ -279,19 +279,16 @@ function PermissionPage() {
                   input: "text-xs"
                 }}
               />
-              <Autocomplete
+              <Select
                 aria-label="模块筛选"
                 size="sm"
-                variant="bordered"
                 className="w-40"
-                selectedKey={moduleFilter}
-                onSelectionChange={key => {
-                  if (key === null) {
-                    return;
-                  }
-                  setModuleFilter(String(key) as ModuleFilter);
+                selectedKeys={[moduleFilter]}
+                onSelectionChange={keys => {
+                  const key = Array.from(keys)[0];
+                  setModuleFilter(key ? String(key) as ModuleFilter : "all");
                 }}
-                defaultItems={[
+                items={[
                   { label: "全部模块", value: "all" },
                   { label: "仪表盘", value: "dashboard" },
                   { label: "系统运维", value: "ops" },
@@ -299,13 +296,14 @@ function PermissionPage() {
                   { label: "系统管理", value: "system" },
                   { label: "内容管理", value: "content" }
                 ]}
+                isClearable
               >
                 {item => (
-                  <AutocompleteItem key={item.value}>
+                  <SelectItem key={item.value}>
                     {item.label}
-                  </AutocompleteItem>
+                  </SelectItem>
                 )}
-              </Autocomplete>
+              </Select>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button

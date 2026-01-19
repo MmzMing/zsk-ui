@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
-  Autocomplete,
-  AutocompleteItem,
+  Select,
+  SelectItem,
   Button,
   Card,
   Input,
@@ -14,9 +14,10 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Tabs,
-  Tab
+  Tab,
+  addToast
 } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
   FiDownload,
   FiEdit2,
@@ -115,7 +116,6 @@ function UserPage() {
   const [page, setPage] = useState(1);
   const pageSize = 8;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [message, setMessage] = useState("");
 
   const [userForm, setUserForm] = useState<UserFormState | null>(null);
   const [userFormMode, setUserFormMode] = useState<"create" | "edit">("create");
@@ -172,7 +172,6 @@ function UserPage() {
     setStatusFilter("all");
     setPage(1);
     setSelectedIds([]);
-    setMessage("");
   };
 
   const handleOpenCreateUser = () => {
@@ -245,7 +244,11 @@ function UserPage() {
         createdAt
       };
       setUsers(previous => [nextUser, ...previous]);
-      setMessage(`已新增用户 ${nextUser.username}，实际保存逻辑待接入用户接口。`);
+      addToast({
+        title: "用户新增成功",
+        description: `已新增用户 ${nextUser.username}，实际保存逻辑待接入用户接口。`,
+        color: "success"
+      });
     } else {
       setUsers(previous =>
         previous.map(item =>
@@ -261,7 +264,11 @@ function UserPage() {
             : item
         )
       );
-      setMessage(`已更新用户 ${trimmedUsername} 的资料，实际保存逻辑待接入用户接口。`);
+      addToast({
+        title: "用户更新成功",
+        description: `已更新用户 ${trimmedUsername} 的资料，实际保存逻辑待接入用户接口。`,
+        color: "success"
+      });
     }
     setUserForm(null);
     setUserFormError("");
@@ -275,9 +282,11 @@ function UserPage() {
           : item
       )
     );
-    setMessage(
-      `已切换用户 ${user.username} 的启用状态，实际保存逻辑待接入用户接口。`
-    );
+    addToast({
+      title: "状态切换成功",
+      description: `已切换用户 ${user.username} 的启用状态，实际保存逻辑待接入用户接口。`,
+      color: "success"
+    });
   };
 
   const handleDeleteUser = (user: UserItem) => {
@@ -287,9 +296,11 @@ function UserPage() {
     }
     setUsers(previous => previous.filter(item => item.id !== user.id));
     setSelectedIds(previous => previous.filter(id => id !== user.id));
-    setMessage(
-      `已从当前列表中删除用户 ${user.username}，实际删除逻辑待接入用户接口。`
-    );
+    addToast({
+      title: "用户删除成功",
+      description: `已从当前列表中删除用户 ${user.username}，实际删除逻辑待接入用户接口。`,
+      color: "success"
+    });
   };
 
   const handleOpenAssignRole = (user: UserItem) => {
@@ -309,9 +320,11 @@ function UserPage() {
         item.id === roleAssign.userId ? { ...item, roles: [...roleAssign.roles] } : item
       )
     );
-    setMessage(
-      `已更新用户 ${roleAssign.name} 的角色配置，实际保存逻辑待接入角色分配接口。`
-    );
+    addToast({
+      title: "角色分配成功",
+      description: `已更新用户 ${roleAssign.name} 的角色配置，实际保存逻辑待接入角色分配接口。`,
+      color: "success"
+    });
     setRoleAssign(null);
   };
 
@@ -325,9 +338,11 @@ function UserPage() {
     if (!confirmed) {
       return;
     }
-    setMessage(
-      `已提交批量重置密码任务，共 ${selectedIds.length} 个用户，实际逻辑待接入重置密码接口。`
-    );
+    addToast({
+      title: "批量重置密码",
+      description: `已提交批量重置密码任务，共 ${selectedIds.length} 个用户，实际逻辑待接入重置密码接口。`,
+      color: "primary"
+    });
   };
 
   const handleSingleResetPassword = (user: UserItem) => {
@@ -337,9 +352,11 @@ function UserPage() {
     if (!confirmed) {
       return;
     }
-    setMessage(
-      `已提交用户 ${user.username} 的密码重置任务，实际逻辑待接入重置密码接口。`
-    );
+    addToast({
+      title: "重置密码",
+      description: `已提交用户 ${user.username} 的密码重置任务，实际逻辑待接入重置密码接口。`,
+      color: "primary"
+    });
   };
 
   const handleBatchDeleteUsers = () => {
@@ -353,22 +370,28 @@ function UserPage() {
       return;
     }
     setUsers(previous => previous.filter(item => !selectedIds.includes(item.id)));
-    setMessage(
-      `已从当前列表中删除 ${selectedIds.length} 个用户，实际删除逻辑待接入用户接口。`
-    );
+    addToast({
+      title: "批量删除成功",
+      description: `已从当前列表中删除 ${selectedIds.length} 个用户，实际删除逻辑待接入用户接口。`,
+      color: "success"
+    });
     setSelectedIds([]);
   };
 
   const handleBatchImport = () => {
-    setMessage(
-      "已触发批量导入占位操作，实际需通过上传文件并解析后调用 /api/admin/user/import 接口。"
-    );
+    addToast({
+      title: "批量导入",
+      description: "已触发批量导入占位操作，实际需通过上传文件并解析后调用 /api/admin/user/import 接口。",
+      color: "primary"
+    });
   };
 
   const handleBatchExport = () => {
-    setMessage(
-      `已提交导出当前筛选结果的任务，共 ${total} 个用户，实际导出逻辑待接入 /api/admin/user/export 接口。`
-    );
+    addToast({
+      title: "导出用户",
+      description: `已提交导出当前筛选结果的任务，共 ${total} 个用户，实际导出逻辑待接入 /api/admin/user/export 接口。`,
+      color: "primary"
+    });
   };
 
   const handlePageChange = (next: number) => {
@@ -477,51 +500,42 @@ function UserPage() {
                   input: "text-xs"
                 }}
               />
-              <Autocomplete
+              <Select
                 aria-label="角色筛选"
                 size="sm"
-                variant="bordered"
                 className="w-40"
-                selectedKey={roleFilter}
-                onSelectionChange={key => {
-                  if (key === null) {
-                    return;
-                  }
-                  setRoleFilter(String(key));
+                selectedKeys={[roleFilter]}
+                onSelectionChange={keys => {
+                  const key = Array.from(keys)[0];
+                  setRoleFilter(key ? String(key) : "all");
                   setPage(1);
                 }}
-                defaultItems={[
+                items={[
                   { label: "全部角色", value: "all" },
                   ...allRoles.map(role => ({ label: role, value: role }))
                 ]}
+                isClearable
               >
                 {item => (
-                  <AutocompleteItem key={item.value}>
+                  <SelectItem key={item.value}>
                     {item.label}
-                  </AutocompleteItem>
+                  </SelectItem>
                 )}
-              </Autocomplete>
-              <Tabs
+              </Select>
+              <AdminTabs
                 aria-label="用户状态筛选"
                 size="sm"
-                radius="full"
-                variant="bordered"
                 selectedKey={statusFilter}
                 onSelectionChange={key => {
                   const value = key as "all" | "enabled" | "disabled";
                   setStatusFilter(value);
                   setPage(1);
                 }}
-                classNames={{
-                  tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                  cursor: "bg-[var(--primary-color)]",
-                  tab: "h-8 px-3 text-xs data-[selected=true]:text-white"
-                }}
               >
                 <Tab key="all" title="全部状态" />
                 <Tab key="enabled" title="启用" />
                 <Tab key="disabled" title="禁用" />
-              </Tabs>
+              </AdminTabs>
               <Button
                 size="sm"
                 variant="light"
@@ -536,20 +550,6 @@ function UserPage() {
             <span>当前为示例数据，后续可与实际用户中心与权限系统对接。</span>
           </div>
         </div>
-
-        {message && (
-          <div className="px-4 py-2 flex items-center justify-between text-xs border-b border-[var(--border-color)] bg-[var(--bg-elevated)]/80">
-            <span className="text-[var(--text-color-secondary)]">{message}</span>
-            <Button
-              size="sm"
-              variant="light"
-              className="h-7 text-xs"
-              onPress={() => setMessage("")}
-            >
-              知道了
-            </Button>
-          </div>
-        )}
 
         <div className="p-3">
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
@@ -760,29 +760,28 @@ function UserPage() {
               </div>
               <div className="space-y-1">
                 <div>角色</div>
-                <Autocomplete
+                <Select
                   aria-label="用户角色"
                   size="sm"
-                  variant="bordered"
-                  selectedKey={userForm.role}
-                  onSelectionChange={key => {
-                    if (key === null) {
-                      return;
+                  selectedKeys={userForm.role ? [userForm.role] : []}
+                  onSelectionChange={keys => {
+                    const key = Array.from(keys)[0];
+                    if (key) {
+                      handleUserFormChange({ role: String(key) });
                     }
-                    handleUserFormChange({ role: String(key) });
                   }}
-                  defaultItems={allRoles.map(role => ({
+                  items={allRoles.map(role => ({
                     label: role,
                     value: role
                   }))}
                   className="w-full"
                 >
                   {item => (
-                    <AutocompleteItem key={item.value}>
+                    <SelectItem key={item.value}>
                       {item.label}
-                    </AutocompleteItem>
+                    </SelectItem>
                   )}
-                </Autocomplete>
+                </Select>
               </div>
               <div className="flex items-center justify-between pt-1">
                 <div className="text-xs">启用状态</div>

@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Autocomplete,
-  AutocompleteItem,
+  Select,
+  SelectItem,
   Button,
   Card,
   Chip,
   Input,
   Progress,
   Tab,
-  Tabs,
   Table,
   TableBody,
   TableCell,
@@ -16,6 +15,7 @@ import {
   TableHeader,
   TableRow
 } from "@heroui/react";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
   FiFilePlus,
   FiFilter,
@@ -385,18 +385,15 @@ function DocumentUploadPage() {
                     配置信息
                   </Chip>
                 </div>
-                <Tabs
-                  aria-label="文档配置标签"
-                  size="sm"
-                  radius="full"
-                  variant="bordered"
-                  defaultSelectedKey="basic"
-                  classNames={{
-                    tabList: "p-0 h-8 border-[var(--border-color)] gap-0",
-                    cursor: "bg-[var(--primary-color)]",
-                    tab: "h-8 px-3 text-xs data-[selected=true]:text-white"
-                  }}
-                >
+                <AdminTabs
+          aria-label="文档配置标签"
+          size="sm"
+          defaultSelectedKey="basic"
+          classNames={{
+            tabList: "p-0 h-8 gap-0",
+            tab: "h-8 px-3 text-xs"
+          }}
+        >
                   <Tab key="basic" title="基础信息">
                     <div className="mt-3 space-y-3">
                       <Input
@@ -412,31 +409,31 @@ function DocumentUploadPage() {
                           input: "text-xs"
                         }}
                       />
-                      <Autocomplete
+                      <Select
                         aria-label="文档分类"
                         size="sm"
-                        variant="bordered"
-                        selectedKey={category}
-                        onSelectionChange={key => {
-                          if (key === null) {
-                            return;
+                        selectedKeys={[category]}
+                        onSelectionChange={keys => {
+                          const key = Array.from(keys)[0];
+                          if (key) {
+                            setCategory(String(key));
                           }
-                          setCategory(String(key));
                         }}
-                        defaultItems={[
+                        items={[
                           { label: "未分类", value: "未分类" },
                           ...documentCategories.map(item => ({
                             label: item,
                             value: item
                           }))
                         ]}
+                        disallowEmptySelection
                       >
                         {item => (
-                          <AutocompleteItem key={item.value}>
+                          <SelectItem key={item.value}>
                             {item.label}
-                          </AutocompleteItem>
+                          </SelectItem>
                         )}
-                      </Autocomplete>
+                      </Select>
                       <div className="space-y-1">
                         <div className="text-[11px] text-[var(--text-color-secondary)]">
                           文档简介
@@ -489,7 +486,7 @@ function DocumentUploadPage() {
                       </div>
                     </div>
                   </Tab>
-                </Tabs>
+                </AdminTabs>
               </div>
             </Card>
           </div>
