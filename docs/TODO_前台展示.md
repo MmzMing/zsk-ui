@@ -67,14 +67,14 @@
 - 接口地址：`GET /api/search/all`  
 - 请求参数（Query）：
   - `keyword?`: string，搜索关键词  
-  - `category?`: `"all" | "video" | "document" | "tool" | "user"`，搜索类别  
+  - `category?`: `"all" | "video" | "document" | "tool" | "user"`，搜索类别（all 为综合搜索，仅包含视频和文档）  
   - `sort?`: `"hot" | "latest" | "like" | "usage" | "relevance" | "fans" | "active"`，排序规则  
   - `duration?`: string，可选，时长过滤（如 `"0-10"`、`"10-30"` 分钟）  
   - `timeRange?`: string，可选，时间范围（如 `"7d"`、`"30d"`、`"all"`）  
   - `tag?`: string，可选，标签过滤  
 - 请求参数处理约定（前端已在封装层实现）：
   - `keyword`、`duration`、`timeRange`、`tag` 为空字符串或 `null` 时不传给后端  
-  - `category="all"` 时不传 `category`，由后端默认返回全部类型  
+  - `category="all"` 时，由后端仅返回视频和文档类型的搜索结果  
 - 返回数据结构（data）：
   - 类型：`SearchAllApiData`
   - 可能形式：

@@ -1,5 +1,5 @@
 import React from "react";
-import { Accordion, AccordionItem, Card, Button } from "@heroui/react";
+import { Accordion, AccordionItem, Card, Button, Avatar } from "@heroui/react";
 import { FiMail, FiPhone, FiMapPin, FiGithub, FiTwitter } from "react-icons/fi";
 import { FaJava, FaReact, FaQq, FaDiscord } from "react-icons/fa6";
 import { SiSpringboot, SiTypescript, SiApacheecharts, SiApache } from "react-icons/si";
@@ -131,30 +131,36 @@ function AboutPage() {
           <div className="sticky top-24 space-y-6">
             <Card className="p-6 space-y-6 bg-[var(--bg-elevated)] border border-[var(--border-color)]">
               <div className="flex flex-col items-center text-center space-y-3">
-                <div className="w-20 h-20 rounded-full bg-[var(--primary-color)] flex items-center justify-center text-3xl text-white font-bold">
-                  博
-                </div>
+                <Avatar 
+                   src="/Avatar/MyAvatar.jpg"
+                   name="博"
+                   className="w-20 h-20 text-3xl"
+                   classNames={{
+                     base: "bg-[var(--primary-color)]",
+                     name: "font-bold text-white"
+                   }}
+                 />
                 <div>
                   <h3 className="text-xl font-bold">知库小站长</h3>
                   <p className="text-sm text-[var(--text-color-secondary)]">Full Stack Developer</p>
                 </div>
                 <p className="text-sm text-[var(--text-color-secondary)] leading-relaxed">
-                  热爱技术，喜欢折腾。致力于探索更高效的知识管理方式，分享开发经验与技术见解。
+                  一位不知名的JAVA后端开发者，热爱技术，喜欢折腾AI-BOT。致力于探索更高效的知识管理方式，分享开发经验与技术见解。
                 </p>
               </div>
 
               <div className="space-y-4 pt-4 border-t border-[var(--border-color)]">
                 <div className="flex items-center gap-3 text-sm text-[var(--text-color-secondary)]">
                   <FiMail className="text-lg" />
-                  <span>contact@example.com</span>
+                  <span>784774835@qq.com</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-[var(--text-color-secondary)]">
                   <FiPhone className="text-lg" />
-                  <span>+86 123 4567 8901</span>
+                  <span>+86 xxx-xxxx-xxxx</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-[var(--text-color-secondary)]">
                   <FiMapPin className="text-lg" />
-                  <span>China, Shenzhen</span>
+                  <span>China, GuangZhou</span>
                 </div>
               </div>
 

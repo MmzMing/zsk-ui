@@ -54,8 +54,9 @@ export async function searchAll(params: SearchAllParams) {
   return request.get<SearchAllApiData>("/search/all", {
     params: {
       keyword: params.keyword || undefined,
+      // 当 category 为 all 或未指定时，后端应默认只搜索视频和文档
       category:
-        params.category && params.category !== "all" ? params.category : undefined,
+        params.category && params.category !== "all" ? params.category : "all",
       sort: params.sort,
       duration: params.duration || undefined,
       timeRange: params.timeRange || undefined,

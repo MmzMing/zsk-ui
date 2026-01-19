@@ -1,9 +1,10 @@
 import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button, DateRangePicker } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { routes } from "../../router/routes";
-import { getLocalTimeZone } from "@internationalized/date";
+import Shuffle from "../../components/Motion/Shuffle";
+import TextType from "../../components/Motion/TextType";
 import { FiPlay, FiMessageSquare, FiEye, FiHeart, FiUsers } from "react-icons/fi";
 import {
   type SearchCategory,
@@ -20,7 +21,7 @@ const categories: {
   key: SearchCategory;
   label: string;
 }[] = [
-  { key: "all", label: "全部" },
+  { key: "all", label: "综合" },
   { key: "video", label: "视频" },
   { key: "document", label: "文档" },
   { key: "tool", label: "百宝袋" },
@@ -82,6 +83,12 @@ const documentTagFilters = ["设计稿", "需求文档", "使用手册", "随笔
 const toolboxTagFilters = ["实用工具", "模板素材", "学习资料", "插件应用"];
 
 const userTypeFilters = ["普通用户", "创作者", "官方账号", "机构账号"];
+
+const timeRangeOptions = [
+  { value: "7d", label: "一周内" },
+  { value: "1m", label: "一月内" },
+  { value: "1y", label: "一年内" }
+];
 
 const mockResults: SearchResult[] = [
   {
@@ -155,11 +162,8 @@ function AllSearchPage() {
   const [activeTag, setActiveTag] = React.useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = React.useState(true);
   const [results, setResults] = React.useState<SearchResult[]>([]);
-  const [total, setTotal] = React.useState<number | null>(null);
   const [visibleCount, setVisibleCount] = React.useState(8);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
-  const [isInitialLoading, setIsInitialLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
 
   const PAGE_SIZE = 8;
 
@@ -167,8 +171,6 @@ function AllSearchPage() {
     let cancelled = false;
 
     async function fetchResults() {
-      setIsInitialLoading(true);
-      setError(null);
       try {
         const data = await searchAll({
           keyword: appliedKeyword || undefined,
@@ -182,39 +184,28 @@ function AllSearchPage() {
           return;
         }
         let list: SearchResult[] = [];
-        let totalCount: number | null = null;
-
         if (Array.isArray(data)) {
           list = data;
-          totalCount = data.length;
         } else if (data && Array.isArray(data.list)) {
           list = data.list;
-          totalCount =
-            typeof data.total === "number" ? data.total : data.list.length;
         } else {
           list = [];
         }
 
         if (!list.length) {
           setResults(mockResults);
-          setTotal(mockResults.length);
         } else {
           setResults(list);
-          setTotal(totalCount);
         }
         setVisibleCount(PAGE_SIZE);
       } catch {
         if (cancelled) {
           return;
         }
-        setError("搜索接口暂不可用，当前展示示例数据");
         setResults(mockResults);
-        setTotal(mockResults.length);
         setVisibleCount(PAGE_SIZE);
       } finally {
-        if (!cancelled) {
-          setIsInitialLoading(false);
-        }
+        // no-op
       }
     }
 
@@ -234,7 +225,8 @@ function AllSearchPage() {
 
   const filteredResults = React.useMemo(() => {
     if (activeCategory === "all") {
-      return results;
+      // 综合搜索模式下，仅展示视频和文档
+      return results.filter(item => item.type === "video" || item.type === "document");
     }
     const targetType = categoryToResultType[activeCategory];
     if (!targetType) {
@@ -318,33 +310,29 @@ function AllSearchPage() {
     return [];
   }, [activeCategory]);
 
-  const displayTotal =
-    activeCategory === "all"
-      ? total ?? results.length
-      : filteredResults.length;
 
   return (
     <div className="space-y-6">
       <header className="space-y-3">
-        <div className="flex items-center gap-2 text-xs text-[var(--text-color-secondary)]">
-          <span>首页</span>
-          <span>/</span>
-          <span>知识库</span>
-        </div>
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="space-y-2">
-            <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-              全站知识检索
-            </h1>
-            <p className="text-xs md:text-sm text-[var(--text-color-secondary)]">
-              支持视频、文档、百宝袋工具与用户维度的综合搜索，排序交给后端，
-              前端专注于清晰地展示结果。
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 text-[10px] md:text-xs text-[var(--text-color-secondary)]">
-            <span>排序规则由后端统一控制</span>
-            <span>·</span>
-            <span>单一接口返回多类型结果</span>
+            <Shuffle
+              text="全站知识检索"
+              tag="h1"
+              className="text-xl md:text-2xl font-semibold tracking-tight"
+              triggerOnHover={false}
+              loop={true}
+              loopDelay={4000}
+            />
+            <TextType
+              text="支持视频与文档内容的综合搜索，排序交给后端， 前端专注于清晰地展示结果。"
+              asElement="p"
+              className="text-xs md:text-sm text-[var(--text-color-secondary)]"
+              typingSpeed={100}
+              showCursor={true}
+              loop={false}
+              hideCursorOnComplete={true}
+            />
           </div>
         </div>
       </header>
@@ -419,17 +407,11 @@ function AllSearchPage() {
         </div>
       </section>
 
-      <section className="space-y-4 pb-10">
-        <div className="space-y-3">
+      <section className="space-y-4 pb-3">
+        <div className="flex flex-col">
           <div className="flex flex-col gap-3 text-xs md:flex-row md:items-center md:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">综合排序</span>
-                <span className="hidden text-[var(--text-color-secondary)] md:inline">
-                  由后端统一排序，当前仅展示入参结构
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap gap-2">
                 {currentSortOptions.map(option => {
                   const isActive = option.key === activeSort;
                   return (
@@ -437,13 +419,12 @@ function AllSearchPage() {
                       key={option.key}
                       type="button"
                       className={
-                        "rounded-full border px-3 py-1.5 transition-colors " +
+                        "inline-flex min-h-[34px] items-center justify-center rounded-[var(--radius-base)] border px-3 py-2 text-xs transition-colors md:px-4 " +
                         (isActive
                           ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
-                          : "border-[var(--border-color)] text-[var(--text-color-secondary)] hover:border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)]")
+                          : "border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]")
                       }
                       onClick={() => setActiveSort(option.key)}
-                      whileHover={{ y: -1 }}
                       whileTap={{ scale: 0.96 }}
                       transition={{
                         type: "spring",
@@ -489,152 +470,156 @@ function AllSearchPage() {
             {advancedOpen ? (
               <motion.div
                 key="advanced-panel"
-                initial={{ opacity: 0, y: -4, height: 0 }}
-                animate={{ opacity: 1, y: 0, height: "auto" }}
-                exit={{ opacity: 0, y: -4, height: 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                 style={{ overflow: "hidden" }}
-                className="space-y-3 rounded-[var(--radius-base)] border border-[var(--border-color)] bg-[var(--bg-elevated)] px-3 py-3 text-[11px] text-[var(--text-color-secondary)]"
+                className="text-xs text-[var(--text-color-secondary)]"
               >
-                {(activeCategory === "all" || activeCategory === "video") && (
-                  <motion.div
-                    layout
-                    transition={{ type: "spring", stiffness: 320, damping: 26 }}
-                    className="space-y-2"
-                  >
-                    <div className="font-medium text-[var(--text-color)]">
-                      视频时长
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {durationFilters.map(item => {
-                        const isActive = duration === item.value;
-                        return (
-                          <Button
-                            key={item.value}
-                            type="button"
-                            className={
-                              "rounded-full border px-2.5 py-1 text-xs bg-transparent shadow-none hover:shadow-none " +
-                              (isActive
-                                ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
-                                : "border-[var(--border-color)] hover:border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)]")
-                            }
-                            size="sm"
-                            variant={isActive ? "solid" : "bordered"}
-                            onPress={() =>
-                              setDuration(current =>
-                                current === item.value ? null : item.value
-                              )
-                            }
-                          >
-                            {item.label}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-
-                {(activeCategory === "all" ||
-                  activeCategory === "video" ||
-                  activeCategory === "document") && (
-                  <motion.div
-                    layout
-                    transition={{ type: "spring", stiffness: 320, damping: 26 }}
-                    className="space-y-2"
-                  >
-                    <div className="font-medium text-[var(--text-color)]">
-                      创建时间范围
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <DateRangePicker
-                        aria-label="创建时间范围筛选"
-                        size="sm"
-                        variant="bordered"
-                        className="w-64 text-[11px]"
-                        onChange={value => {
-                          if (!value || !value.start || !value.end) {
-                            setTimeRange(null);
-                            return;
+                <div className="pt-3">
+                  {(activeCategory === "all" || activeCategory === "video") && (
+                    <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4 py-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          className={
+                            "rounded-full border px-2.5 py-1 text-xs bg-transparent shadow-none hover:shadow-none " +
+                            (!duration
+                              ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
+                              : "border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]")
                           }
-                          try {
-                            const timeZone = getLocalTimeZone();
-                            const startDate = value.start.toDate(timeZone);
-                            const endDate = value.end.toDate(timeZone);
-                            const diffMs = endDate.getTime() - startDate.getTime();
-                            const diffDays =
-                              Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-                            if (diffDays <= 7) {
-                              setTimeRange("7d");
-                            } else if (diffDays <= 31) {
-                              setTimeRange("1m");
-                            } else if (diffDays <= 365) {
-                              setTimeRange("1y");
-                            } else {
-                              setTimeRange("all");
-                            }
-                          } catch {
-                            setTimeRange(null);
+                          size="sm"
+                          variant={!duration ? "solid" : "bordered"}
+                          onPress={() => setDuration(null)}
+                        >
+                          全部时长
+                        </Button>
+                        {durationFilters.map(item => {
+                          const isActive = duration === item.value;
+                          return (
+                            <Button
+                              key={item.value}
+                              type="button"
+                              className={
+                                "rounded-full border px-2.5 py-1 text-xs bg-transparent shadow-none hover:shadow-none " +
+                                (isActive
+                                  ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
+                                  : "border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]")
+                              }
+                              size="sm"
+                              variant={isActive ? "solid" : "bordered"}
+                              onPress={() => setDuration(item.value)}
+                            >
+                              {item.label}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {(activeCategory === "all" ||
+                    activeCategory === "video" ||
+                    activeCategory === "document") && (
+                    <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4 py-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          className={
+                            "rounded-full border px-2.5 py-1 text-xs bg-transparent shadow-none hover:shadow-none " +
+                            (!timeRange
+                              ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
+                              : "border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]")
                           }
-                        }}
-                      />
+                          size="sm"
+                          variant={!timeRange ? "solid" : "bordered"}
+                          onPress={() => setTimeRange(null)}
+                        >
+                          全部时间
+                        </Button>
+                        {timeRangeOptions.map(item => {
+                          const isActive = timeRange === item.value;
+                          return (
+                            <Button
+                              key={item.value}
+                              type="button"
+                              className={
+                                "rounded-full border px-2.5 py-1 text-xs bg-transparent shadow-none hover:shadow-none " +
+                                (isActive
+                                  ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
+                                  : "border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]")
+                              }
+                              size="sm"
+                              variant={isActive ? "solid" : "bordered"}
+                              onPress={() => setTimeRange(item.value)}
+                            >
+                              {item.label}
+                            </Button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </motion.div>
-                )}
+                  )}
 
-                {currentTagFilters.length > 0 && (
-                  <motion.div
-                    layout
-                    transition={{ type: "spring", stiffness: 320, damping: 26 }}
-                    className="space-y-2"
-                  >
-                    <div className="font-medium text-[var(--text-color)]">
-                      分类 / 标签
+                  {currentTagFilters.length > 0 && (
+                    <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4 py-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          className={
+                            "rounded-full border px-2.5 py-1 text-xs bg-transparent shadow-none hover:shadow-none " +
+                            (!activeTag
+                              ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
+                              : "border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]")
+                          }
+                          size="sm"
+                          variant={!activeTag ? "solid" : "bordered"}
+                          onPress={() => setActiveTag(null)}
+                        >
+                          全部分区
+                        </Button>
+                        {currentTagFilters.map(tag => {
+                          const isActive = activeTag === tag;
+                          return (
+                            <Button
+                              key={tag}
+                              type="button"
+                              className={
+                                "rounded-full border px-2.5 py-1 text-xs bg-transparent shadow-none hover:shadow-none " +
+                                (isActive
+                                  ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
+                                  : "border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]")
+                              }
+                              size="sm"
+                              variant={isActive ? "solid" : "bordered"}
+                              onPress={() => setActiveTag(tag)}
+                            >
+                              {tag}
+                            </Button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {currentTagFilters.map(tag => {
-                        const isActive = activeTag === tag;
-                        return (
-                          <Button
-                            key={tag}
-                            type="button"
-                            className={
-                              "rounded-full border px-2.5 py-1 text-xs bg-transparent shadow-none hover:shadow-none " +
-                              (isActive
-                                ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
-                                : "border-[var(--border-color)] hover:border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)]")
-                            }
-                            size="sm"
-                            variant={isActive ? "solid" : "bordered"}
-                            onPress={() =>
-                              setActiveTag(current =>
-                                current === tag ? null : tag
-                              )
-                            }
-                          >
-                            {tag}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
+                  )}
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    className="rounded-[var(--radius-base)] border border-[var(--border-color)] px-3 py-1 text-[11px] bg-transparent shadow-none hover:shadow-none"
-                    size="sm"
-                    variant="bordered"
-                    onPress={() => {
-                      setDuration(null);
-                      setTimeRange(null);
-                      setActiveTag(null);
-                    }}
-                  >
-                    重置条件
-                  </Button>
-                  <div className="text-[var(--text-color-secondary)]">
-                    当前所有条件将作为查询参数传递给后端接口。
+                  <div className="flex flex-wrap gap-2 py-2 items-center">
+                    <Button
+                      type="button"
+                      className="rounded-[var(--radius-base)] border border-[var(--border-color)] px-3 py-1 text-[11px] bg-transparent shadow-none hover:shadow-none"
+                      size="sm"
+                      variant="bordered"
+                      onPress={() => {
+                        setDuration(null);
+                        setTimeRange(null);
+                        setActiveTag(null);
+                      }}
+                    >
+                      重置条件
+                    </Button>
+                    <div className="text-[var(--text-color-secondary)]">
+                      当前所有条件将作为查询参数传递给后端接口。
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -644,20 +629,6 @@ function AllSearchPage() {
       </section>
 
       <section className="space-y-4">
-        <div className="flex items-center justify-between text-xs">
-          <div className="text-[var(--text-color-secondary)]">
-            {error
-              ? error
-              : isInitialLoading && !results.length
-              ? "正在请求搜索结果..."
-              : `已接入搜索接口，当前共 ${
-                  displayTotal
-                } 条结果，前端仅负责展示。`}
-          </div>
-          <span className="hidden md:inline text-[var(--text-color-secondary)]">
-            接口：GET /api/search/all
-          </span>
-        </div>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -668,7 +639,6 @@ function AllSearchPage() {
             const isVideo = item.type === "video";
             const isDocument = item.type === "document";
             const isTool = item.type === "tool";
-
             if (isVideo) {
               const thumbnail = item.thumbnail || DEFAULT_THUMBNAIL;
               return (
