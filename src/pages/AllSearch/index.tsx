@@ -19,7 +19,8 @@ import {
 
 type ResultType = SearchResult["type"];
 
-const DEFAULT_THUMBNAIL = "/DefaultImage/MyDefaultImage.jpg";
+const VIDEO_DEFAULT = "/DefaultImage/MyDefaultHomeVodie.png";
+const DOC_DEFAULT = "/DefaultImage/MyDefaultImage.jpg";
 
 const categories: {
   key: SearchCategory;
@@ -354,13 +355,12 @@ function AllSearchPage() {
                 }
               }}
               placeholder="输入关键词，按下回车开始搜索"
-              className="w-full rounded-none border border-[var(--border-color)] bg-[var(--bg-elevated)] px-3 py-2 text-sm outline-none focus-visible:border-[var(--primary-color)]"
+              className="w-full rounded-full border border-[var(--border-color)] bg-[var(--bg-elevated)] px-4 py-2 text-sm outline-none focus-visible:border-[var(--primary-color)]"
             />
           </div>
           <Button
             type="button"
-            className="inline-flex items-center justify-center rounded-none bg-[var(--primary-color)] px-4 py-2 text-xs md:text-sm font-medium text-[var(--bg-elevated)] shadow-sm hover:bg-[color-mix(in_srgb,var(--primary-color)_88%,black_12%)]"
-            color="primary"
+            className="inline-flex items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--primary-color)_15%,transparent)] px-6 py-2 text-xs md:text-sm font-medium text-[var(--primary-color)] hover:bg-[color-mix(in_srgb,var(--primary-color)_25%,transparent)]"
             onPress={() => setAppliedKeyword(keyword.trim())}
           >
             综合搜索
@@ -602,9 +602,10 @@ function AllSearchPage() {
                   <div className="flex flex-wrap gap-2 py-2 items-center">
                     <Button
                       type="button"
-                      className="rounded-[var(--radius-base)] border border-[var(--border-color)] px-3 py-1 text-[11px] bg-transparent shadow-none hover:shadow-none"
                       size="sm"
-                      variant="bordered"
+                      variant="flat"
+                      radius="full"
+                      className="h-7 px-4 text-[11px] font-medium bg-danger/15 text-danger hover:bg-danger hover:text-white transition-all duration-200"
                       onPress={() => {
                         setDuration(null);
                         setTimeRange(null);
@@ -633,7 +634,7 @@ function AllSearchPage() {
             const isDocument = item.type === "document";
             const isTool = item.type === "tool";
             if (isVideo) {
-              const thumbnail = item.thumbnail || DEFAULT_THUMBNAIL;
+              const thumbnail = item.thumbnail || VIDEO_DEFAULT;
               return (
                 <motion.article
                   key={item.id}
@@ -654,7 +655,7 @@ function AllSearchPage() {
                       className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.04]"
                       loading="lazy"
                       onError={event => {
-                        event.currentTarget.src = DEFAULT_THUMBNAIL;
+                        event.currentTarget.src = VIDEO_DEFAULT;
                       }}
                     />
                     <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-2.5 pb-1.5 text-[10px] text-white">
@@ -688,7 +689,7 @@ function AllSearchPage() {
             }
 
             if (isDocument) {
-              const thumbnail = item.thumbnail || DEFAULT_THUMBNAIL;
+              const thumbnail = item.thumbnail || DOC_DEFAULT;
               return (
                 <motion.article
                   key={item.id}
@@ -709,7 +710,7 @@ function AllSearchPage() {
                       className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.04]"
                       loading="lazy"
                       onError={event => {
-                        event.currentTarget.src = DEFAULT_THUMBNAIL;
+                        event.currentTarget.src = DOC_DEFAULT;
                       }}
                     />
                     <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-2.5 pb-1.5 text-[10px] text-white">
@@ -762,7 +763,7 @@ function AllSearchPage() {
                       <Button
                         size="sm"
                         radius="full"
-                        className="h-7 px-3 bg-[var(--primary-color)] text-black text-[11px] shadow-[0_10px_24px_rgba(56,189,248,0.55)]"
+                        className="h-7 px-3 bg-[var(--primary-color)] text-black text-[11px]"
                       >
                         立即跳转
                       </Button>

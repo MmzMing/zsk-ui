@@ -15,6 +15,7 @@ export type HomeArticle = {
   summary: string;
   views: string;
   author?: string;
+  cover?: string;
 };
 
 export type HomeReview = {

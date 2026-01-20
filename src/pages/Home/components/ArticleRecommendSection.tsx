@@ -5,6 +5,8 @@ import AnimatedContent from "../../../components/Motion/AnimatedContent";
 import AnimatedList from "../../../components/Motion/AnimatedList";
 import type { HomeArticle } from "../../../api/front/home";
 
+const DEFAULT_COVER = "/DefaultImage/MyDefaultImage.jpg";
+
 type Props = {
   articles: HomeArticle[];
   activeArticle: HomeArticle;
@@ -105,20 +107,16 @@ export default function ArticleRecommendSection({
                 {trimmedSummary}
               </p>
               <motion.div
-                className="mt-2 aspect-video w-full rounded-[var(--radius-base)] border border-[var(--border-color)] bg-gradient-to-br from-slate-800 via-slate-900 to-black overflow-hidden relative cursor-pointer"
+                className="mt-2 aspect-video w-full rounded-[var(--radius-base)] border border-[var(--border-color)] bg-slate-900 overflow-hidden relative cursor-pointer"
                 initial={{ opacity: 0, scale: 0.96, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: [0.2, 0.7, 0.3, 1] }}
                 onClick={() => onArticleNavigate(activeArticle.id)}
               >
-                <motion.div
-                  className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(56,189,248,0.35),transparent_55%),radial-gradient(circle_at_80%_100%,rgba(34,197,94,0.4),transparent_55%)]"
-                  animate={{ opacity: [0.7, 1, 0.7] }}
-                  transition={{
-                    duration: 6,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
+                <img
+                  src={activeArticle.cover || DEFAULT_COVER}
+                  alt={activeArticle.title}
+                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                 />
               </motion.div>
             </div>
@@ -137,32 +135,32 @@ export default function ArticleRecommendSection({
                   <Button
                     type="button"
                     className={
-                      "group w-full flex items-center gap-3 md:gap-4 rounded-[var(--radius-base)] border px-4 md:px-6 h-32 md:h-36 bg-[color-mix(in_srgb,var(--bg-elevated)_96%,black_4%)] text-left text-xs md:text-sm transition-colors transition-transform duration-150 transform-gpu " +
+                      "group w-full flex items-center gap-3 md:gap-4 rounded-[var(--radius-base)] border px-4 md:px-6 h-32 md:h-36 text-left text-xs md:text-sm transition-colors transition-transform duration-150 transform-gpu " +
                       (isActive
-                        ? "border-[color-mix(in_srgb,var(--primary-color)_70%,transparent)]"
-                        : "border-[color-mix(in_srgb,var(--border-color)_80%,transparent)] hover:border-[color-mix(in_srgb,var(--primary-color)_45%,transparent)] hover:-translate-y-0.5")
+                        ? "border-[color-mix(in_srgb,var(--primary-color)_70%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)]"
+                        : "bg-[color-mix(in_srgb,var(--bg-elevated)_96%,black_4%)] border-[color-mix(in_srgb,var(--border-color)_80%,transparent)] hover:border-[color-mix(in_srgb,var(--primary-color)_45%,transparent)] hover:-translate-y-0.5")
                     }
                     variant="light"
                     onPress={() => onArticleChange(item.id)}
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate font-medium">
-                          {item.title}
-                        </span>
-                        <span className="hidden md:inline text-[10px] text-[var(--text-color-secondary)]">
-                          {item.date}
-                        </span>
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="truncate font-medium">
+                        {item.title}
                       </div>
-                      <div className="mt-0.5 flex items-center gap-2 text-[10px] text-[var(--text-color-secondary)]">
-                        <span className="truncate">{item.category}</span>
-                        <span className="h-0.5 w-5 rounded-full bg-[color-mix(in_srgb,var(--border-color)_80%,transparent)]" />
-                        <span className="md:hidden truncate">{item.date}</span>
+                      <div className="text-[10px] text-[var(--text-color-secondary)]">
+                        {item.author ?? "站长"} · {item.date}
+                      </div>
+                      <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)] text-[var(--primary-color)] text-[10px] px-2 py-0.5 w-fit">
+                        <span>{item.category}</span>
                       </div>
                     </div>
-                    <div className="relative w-24 h-12 md:w-28 md:h-14 shrink-0 rounded-[calc(var(--radius-base)_-_2px)] overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(56,189,248,0.55),transparent_60%),radial-gradient(circle_at_80%_100%,rgba(34,197,94,0.55),transparent_60%)]" />
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(circle_at_50%_0%,rgba(244,244,245,0.4),transparent_55%)]" />
+                    <div className="relative w-24 h-12 md:w-28 md:h-14 shrink-0 rounded-[calc(var(--radius-base)_-_2px)] overflow-hidden bg-slate-900">
+                      <img
+                        src={item.cover || DEFAULT_COVER}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/10" />
                     </div>
                   </Button>
                 </div>

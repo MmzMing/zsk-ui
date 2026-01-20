@@ -122,8 +122,11 @@ const TextType: React.FC<TextTypeProps> = ({
     onSentenceComplete
   ]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Tag = Component as any;
+
   return (
-    <Component ref={containerRef} className={`inline-flex items-center ${className}`}>
+    <Tag ref={containerRef} className={`inline-flex items-center ${className}`}>
       <span>{currentText}</span>
       {showCursor && (!hideCursorWhileTyping || !isTyping) && (!hideCursorOnComplete || !isFinished) && (
         <motion.span
@@ -138,7 +141,7 @@ const TextType: React.FC<TextTypeProps> = ({
           {cursorCharacter}
         </motion.span>
       )}
-    </Component>
+    </Tag>
   );
 };
 

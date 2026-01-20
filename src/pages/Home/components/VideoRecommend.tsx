@@ -8,6 +8,8 @@ import { FiPlay } from "react-icons/fi";
 import VideoPlayer from "../../../components/VideoPlayer";
 import { VideoSource, Subtitle } from "../../../components/VideoPlayer/types";
 
+const DEFAULT_COVER = "/DefaultImage/MyDefaultHomeVodie.png";
+
 export type VideoItem = {
   id: string;
   title: string;
@@ -71,7 +73,7 @@ export default function VideoRecommend({ items }: Props) {
   };
 
   return (
-    <section className="min-h-screen flex flex-col justify-center space-y-4 px-[var(--content-padding)]">
+    <section className="min-h-screen flex flex-col justify-center space-y-4 px-2 md:px-[var(--content-padding)]">
       <div className="max-w-6xl mx-auto w-full flex flex-col items-center space-y-1">
         <ScrollFloat
           containerClassName="text-lg md:text-xl font-semibold"
@@ -88,12 +90,12 @@ export default function VideoRecommend({ items }: Props) {
       </div>
       <div className="max-w-6xl mx-auto w-full">
         <ScrollStack
-          itemDistance={200}
-          itemStackDistance={80}
+          itemDistance={window.innerWidth < 768 ? 100 : 200}
+          itemStackDistance={window.innerWidth < 768 ? 40 : 80}
           itemScale={0.035}
-          stackPosition="36%"
+          stackPosition={window.innerWidth < 768 ? "25%" : "36%"}
           scaleEndPosition="8%"
-          baseScale={0.9}
+          baseScale={window.innerWidth < 768 ? 0.95 : 0.9}
           rotationAmount={0}
           blurAmount={0}
           useWindowScroll
@@ -103,40 +105,45 @@ export default function VideoRecommend({ items }: Props) {
               key={item.id}
               className="w-full flex justify-center"
             >
-            <div className="group scroll-stack-card relative flex items-stretch gap-6 rounded-[40px] border border-white/10 bg-gradient-to-br from-[#4c2aff] via-[#7b3fff] to-[#ff4da6] p-0 text-white shadow-[0_32px_80px_rgba(15,23,42,0.75)] overflow-hidden h-[320px]">
+            <div className="group scroll-stack-card relative flex flex-col md:flex-row items-stretch gap-0 md:gap-6 rounded-[40px] border border-[var(--border-color)] bg-[var(--bg-elevated)]/60 backdrop-blur-xl p-0 text-[var(--text-color)] shadow-[0_32px_80px_rgba(0,0,0,0.1)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.4)] overflow-hidden h-[420px] md:h-[320px]">
               {/* Left Info Area (35%) */}
               <div 
-                className="flex-[35] flex flex-col justify-between p-8 cursor-pointer"
+                className="flex-1 md:flex-[35] flex flex-col justify-between p-2 md:p-8 cursor-pointer w-full md:w-auto"
                 onClick={() => navigate(routes.videoDetail.replace(":id", item.id))}
               >
                 <div className="space-y-4">
-                  <h4 className="text-lg md:text-2xl font-semibold tracking-tight line-clamp-3">
+                  <h4 className="text-lg md:text-2xl font-semibold tracking-tight line-clamp-2 md:line-clamp-3">
                     {item.title}
                   </h4>
-                  <div className="flex flex-col gap-2 text-[11px] md:text-xs text-white/80">
+                  <div className="flex flex-col gap-2 text-[11px] md:text-xs text-[var(--text-color-secondary)]">
                     <span className="inline-flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       <span>播放量 {item.views}</span>
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-white/50" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-color-secondary)]/50" />
                       <span>{item.date}</span>
                     </span>
                   </div>
                 </div>
-                <div className="text-xs text-white/60 font-medium">
+                <div className="text-xs text-[var(--primary-color)] font-medium">
                   点击查看详情 &rarr;
                 </div>
               </div>
 
               {/* Right Video Area (65%) */}
-              <div className="flex-[65] relative bg-black/20 border-l border-white/10">
+              <div className="flex-1 md:flex-[65] relative bg-[var(--bg-elevated)]/30 border-t md:border-l md:border-t-0 border-[var(--border-color)] w-full md:w-auto">
+                <img 
+                  src={item.cover || DEFAULT_COVER}
+                  alt={item.title}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
                 <div 
-                  className="absolute inset-0 flex items-center justify-center cursor-pointer group-hover:bg-black/10 transition-colors"
+                  className="absolute inset-0 flex items-center justify-center cursor-pointer group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors z-10"
                   onClick={(e) => handleVideoClick(e, item.id)}
                 >
-                  <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 transition-transform duration-300 group-hover:scale-110">
-                    <FiPlay className="w-6 h-6 ml-1 text-white" />
+                  <div className="w-16 h-16 rounded-full bg-[var(--bg-elevated)]/40 backdrop-blur-md flex items-center justify-center border border-[var(--border-color)] transition-transform duration-300 group-hover:scale-110">
+                    <FiPlay className="w-6 h-6 ml-1 text-[var(--primary-color)]" />
                   </div>
                 </div>
               </div>
@@ -170,7 +177,7 @@ export default function VideoRecommend({ items }: Props) {
                 autoPlay
                 onClose={handleCloseVideo}
                 title={activeItem?.title}
-                poster={activeItem?.cover}
+                poster={activeItem?.cover || DEFAULT_COVER}
                 subtitles={activeItem?.subtitles}
                 chapters={[
                   { time: 0, title: "Intro" },

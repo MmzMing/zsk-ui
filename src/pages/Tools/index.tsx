@@ -382,7 +382,7 @@ function ToolsPage() {
                   <Button
                     size="sm"
                     radius="full"
-                    className="bg-[var(--primary-color)] text-black font-medium shadow-[0_12px_32px_rgba(56,189,248,0.55)]"
+                    className="bg-[var(--primary-color)] text-black font-medium"
                     endContent={<FiExternalLink className="w-4 h-4" />}
                     onPress={() => handleOpenSite(site.url)}
                   >

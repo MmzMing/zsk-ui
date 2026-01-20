@@ -17,7 +17,6 @@ import PageTransitionWrapper from "../../components/Motion/PageTransitionWrapper
 import StickerPeel from "../../components/Motion/StickerPeel";
 import WordRotate from "../../components/Motion/WordRotate";
 import { ThemeToggler } from "../../components/MagicUI/ThemeToggler";
-import { Meteors } from "../../components/MagicUI/Meteors";
 import {
   FiHelpCircle,
   FiMail,
@@ -42,7 +41,7 @@ const initialRunDays = Math.max(
 );
 
 const headerNavButtonClass =
-  "inline-flex items-center gap-1 px-1 h-10 text-sm border-b-2 border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors duration-150";
+  "inline-flex items-center gap-1 px-1 h-10 text-sm border-b-2 border-transparent transition-colors duration-150";
 
 const headerIconButtonClass =
   "inline-flex items-center justify-center rounded-full w-8 h-8 text-[var(--text-color-secondary)] transition-colors transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-sm hover:bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] hover:text-[var(--primary-color)]";
@@ -172,7 +171,7 @@ function BasicLayout() {
               headerNavButtonClass +
               (isActive
                 ? " font-semibold text-[var(--primary-color)] border-b-[var(--primary-color)]"
-                : "")
+                : " text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]")
             }
             onClick={() => handleNavClick(item.path)}
           >
@@ -193,10 +192,10 @@ function BasicLayout() {
             key={item.path}
             type="button"
             className={
-              "inline-flex items-center justify-center w-8 h-8 rounded-full text-[var(--text-color-secondary)] transition-colors duration-150 " +
+              "inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors duration-150 " +
               (isActive
                 ? "text-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)]"
-                : "hover:text-[var(--primary-color)] hover:bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)]")
+                : "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] hover:bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)]")
             }
             onClick={() => handleNavClick(item.path)}
             aria-label={item.label}
@@ -230,9 +229,6 @@ function BasicLayout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-color)] text-[var(--text-color)] icon-rotate-global relative">
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <Meteors number={15} angle={125} />
-      </div>
       <motion.header
         className="h-14 flex flex-col border-b border-[var(--border-color)] bg-[var(--bg-elevated)] sticky top-0 z-30"
         animate={hideHeader ? { y: -80 } : { y: 0 }}
