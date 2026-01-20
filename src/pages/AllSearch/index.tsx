@@ -3,8 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Button,
-  Chip,
-  Avatar,
   Tab
 } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";

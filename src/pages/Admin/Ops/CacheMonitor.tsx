@@ -151,7 +151,6 @@ function CacheMonitorPage() {
           <div className="p-3 flex items-center justify-between border-b border-[var(--border-color)]">
             <div className="text-xs font-medium">缓存实例列表</div>
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-[var(--text-color-secondary)]">按使用率排序：</span>
               <Button
                 size="sm"
                 variant={order === "desc" ? "solid" : "light"}

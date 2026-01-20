@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import type { IconType } from "react-icons";
 import {
   Avatar,
@@ -13,9 +13,11 @@ import { routes } from "../../router/routes";
 import SystemSettingsPanel from "../../components/SystemSettings/Panel";
 import { useAppStore } from "../../store";
 import { useUserStore } from "../../store/modules/userStore";
+import PageTransitionWrapper from "../../components/Motion/PageTransitionWrapper";
 import StickerPeel from "../../components/Motion/StickerPeel";
 import WordRotate from "../../components/Motion/WordRotate";
 import { ThemeToggler } from "../../components/MagicUI/ThemeToggler";
+import { Meteors } from "../../components/MagicUI/Meteors";
 import {
   FiHelpCircle,
   FiMail,
@@ -68,7 +70,6 @@ function BasicLayout() {
     menuWidth,
     multiTabEnabled,
     breadcrumbEnabled,
-    pageTransition,
     // themeMode,
     // setThemeMode,
     language,
@@ -228,7 +229,10 @@ function BasicLayout() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-color)] text-[var(--text-color)] icon-rotate-global">
+    <div className="min-h-screen flex flex-col bg-[var(--bg-color)] text-[var(--text-color)] icon-rotate-global relative">
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <Meteors number={15} angle={125} />
+      </div>
       <motion.header
         className="h-14 flex flex-col border-b border-[var(--border-color)] bg-[var(--bg-elevated)] sticky top-0 z-30"
         animate={hideHeader ? { y: -80 } : { y: 0 }}
@@ -428,7 +432,7 @@ function BasicLayout() {
       )}
       <main
         className={
-          "flex-1 " +
+          "flex-1 relative " +
           (location.pathname === routes.home
             ? "px-0 py-0"
             : "px-[var(--content-padding)] py-[var(--content-padding)]")
@@ -451,47 +455,16 @@ function BasicLayout() {
               {renderSidebarNav()}
             </aside>
           )}
-          <AnimatePresence mode="wait">
-            <motion.section
-              key={activePath}
-              className={containerClassName}
-              style={
-                effectiveBoxShadowEnabled
-                  ? { boxShadow: "var(--shadow-color)" }
-                  : undefined
-              }
-              initial={
-                pageTransition === "none"
-                  ? { opacity: 1, x: 0, scale: 1 }
-                  : pageTransition === "fade"
-                  ? { opacity: 0, x: 0, scale: 1 }
-                  : pageTransition === "slide"
-                  ? { opacity: 0, x: 16, scale: 1 }
-                  : pageTransition === "scale"
-                  ? { opacity: 0, x: 0, scale: 0.96 }
-                  : { opacity: 0, x: 12, scale: 0.98 }
-              }
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={
-                pageTransition === "none"
-                  ? { opacity: 1, x: 0, scale: 1 }
-                  : pageTransition === "fade"
-                  ? { opacity: 0, x: 0, scale: 1 }
-                  : pageTransition === "slide"
-                  ? { opacity: 0, x: -16, scale: 1 }
-                  : pageTransition === "scale"
-                  ? { opacity: 0, x: 0, scale: 0.96 }
-                  : { opacity: 0, x: -12, scale: 1.02 }
-              }
-              transition={
-                pageTransition === "none"
-                  ? { duration: 0 }
-                  : { duration: 0.2 }
-              }
-            >
-              <Outlet />
-            </motion.section>
-          </AnimatePresence>
+          <PageTransitionWrapper
+            className={containerClassName}
+            style={
+              effectiveBoxShadowEnabled
+                ? { boxShadow: "var(--shadow-color)" }
+                : undefined
+            }
+          >
+            <Outlet />
+          </PageTransitionWrapper>
         </div>
       </main>
       <footer className="border-t border-[var(--border-color)] bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] text-xs">

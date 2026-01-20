@@ -11,9 +11,6 @@ function NapCatPage() {
         <h1 className="text-lg md:text-xl font-semibold tracking-tight">
           NapCat 扩展控制台
         </h1>
-        <p className="text-xs text-[var(--text-color-secondary)]">
-          当前页面直接嵌入本地 NapCat 扩展前端，地址为 http://127.0.0.1:10010/webui/web_login。
-        </p>
       </div>
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[calc(100vh-220px)]">
         <div className="w-full h-full rounded-[var(--radius-base)] overflow-hidden">

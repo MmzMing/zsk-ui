@@ -1,5 +1,5 @@
 import React from "react";
-import { Tabs, Tab, Card, Avatar, Button, Input, Switch } from "@heroui/react";
+import { Tab, Card, Avatar, Button, Input, Switch } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { FiEdit2, FiSettings, FiHeart, FiStar, FiMessageSquare, FiShield, FiLock, FiLogOut } from "react-icons/fi";
 import { useUserStore } from "../../store/modules/userStore";

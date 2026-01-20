@@ -158,6 +158,14 @@ function Panel(props: Props) {
                       >
                         双列
                       </Button>
+                      <Button
+                        size="sm"
+                        variant={layoutMode === "dock" ? "solid" : "bordered"}
+                        className="h-7 px-3 text-xs"
+                        onPress={() => setLayoutMode("dock")}
+                      >
+                        Dock
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -379,21 +387,16 @@ function Panel(props: Props) {
                   <Select
                     size="sm"
                     variant="bordered"
-                    value={pageTransition}
-                    onChange={event =>
-                      setPageTransition(
-                        event.target.value as
-                          | "none"
-                          | "fade"
-                          | "slide"
-                          | "scale"
-                          | "layer"
-                      )
-                    }
+                    selectedKeys={[pageTransition]}
+                    onSelectionChange={keys => {
+                      const value = Array.from(keys)[0] as typeof pageTransition;
+                      if (value) setPageTransition(value);
+                    }}
                     classNames={{
                       trigger: "h-8 min-h-8 bg-[var(--bg-elevated)] border-[var(--border-color)]",
-                      value: "text-xs"
+                      value: "text-xs font-[inherit]"
                     }}
+                    disallowEmptySelection
                     aria-label="页面切换动效"
                   >
                     <SelectItem key="none" id="none" textValue="关闭">

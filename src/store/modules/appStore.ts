@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 export type ThemeMode = "light" | "dark" | "system";
 
-export type LayoutMode = "vertical" | "horizontal" | "mixed" | "double";
+export type LayoutMode = "vertical" | "horizontal" | "mixed" | "double" | "dock";
 
 export type Language = "zh-CN" | "en-US";
 
@@ -35,6 +35,7 @@ export type AppState = {
   contentPadding: ContentPadding;
   pageTransition: PageTransition;
   clickSparkEnabled: boolean;
+  showTopNav: boolean;
   isLoading: boolean;
 };
 
@@ -56,6 +57,7 @@ export type AppActions = {
   setContentPadding: (padding: ContentPadding) => void;
   setPageTransition: (transition: PageTransition) => void;
   setClickSparkEnabled: (value: boolean) => void;
+  setShowTopNav: (value: boolean) => void;
   setIsLoading: (value: boolean) => void;
   hydrateFromStorage: () => void;
   resetSettings: () => void;
@@ -81,6 +83,7 @@ const defaultState: AppState = {
   contentPadding: 16,
   pageTransition: "fade",
   clickSparkEnabled: true,
+  showTopNav: true,
   isLoading: false
 };
 
@@ -94,6 +97,7 @@ const loadState = (): Partial<AppState> | null => {
   try {
     return JSON.parse(raw) as Partial<AppState>;
   } catch {
+    window.localStorage.removeItem(storageKey);
     return null;
   }
 };
@@ -170,6 +174,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
   setClickSparkEnabled: value => {
     set({ clickSparkEnabled: value });
+    saveState(get());
+  },
+  setShowTopNav: value => {
+    set({ showTopNav: value });
     saveState(get());
   },
   setIsLoading: (value: boolean) => {

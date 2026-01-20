@@ -29,6 +29,7 @@ function loadInitialState(): UserState {
       userId: parsed.userId ?? null,
     };
   } catch {
+    window.localStorage.removeItem("auth_session");
     return emptyState;
   }
 }

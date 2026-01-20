@@ -12,15 +12,11 @@ import {
 } from "@heroui/react";
 import {
   FiHome,
-  FiLayout,
-  FiPieChart,
-  FiVideo,
-  FiFileText,
-  FiUsers,
-  FiSettings,
   FiBell,
+  FiSettings,
   FiLogOut,
   FiUser,
+  FiLayout,
   FiChevronDown,
   FiChevronRight
 } from "react-icons/fi";
@@ -28,99 +24,15 @@ import { routes } from "../../router/routes";
 import SystemSettingsPanel from "../../components/SystemSettings/Panel";
 import { useAppStore } from "../../store";
 import { useUserStore } from "../../store/modules/userStore";
-
-type AdminMenuChild = {
-  key: string;
-  label: string;
-  path: string;
-};
-
-type AdminMenuItem = {
-  key: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  children: AdminMenuChild[];
-};
-
-const adminMenuItems: AdminMenuItem[] = [
-  {
-    key: "dashboard",
-    label: "仪表盘",
-    icon: FiPieChart,
-    children: [
-      { key: "dashboard-workbench", label: "工作台", path: routes.admin },
-      { key: "dashboard-analysis", label: "分析页", path: `${routes.admin}/analysis` }
-    ]
-  },
-  {
-    key: "ops",
-    label: "系统运维",
-    icon: FiLayout,
-    children: [
-      { key: "ops-api-doc", label: "接口文档", path: `${routes.admin}/ops/api-doc` },
-      { key: "ops-system-monitor", label: "系统监控", path: `${routes.admin}/ops/system-monitor` },
-      { key: "ops-cache-monitor", label: "缓存监控", path: `${routes.admin}/ops/cache-monitor` },
-      { key: "ops-cache-list", label: "缓存列表", path: `${routes.admin}/ops/cache-list` },
-      { key: "ops-system-log", label: "系统日志", path: `${routes.admin}/ops/system-log` },
-      { key: "ops-user-behavior", label: "用户行为", path: `${routes.admin}/ops/user-behavior` }
-    ]
-  },
-  {
-    key: "personnel",
-    label: "人员管理",
-    icon: FiUsers,
-    children: [
-      { key: "personnel-user", label: "用户管理", path: `${routes.admin}/personnel/user` },
-      { key: "personnel-menu", label: "菜单管理", path: `${routes.admin}/personnel/menu` },
-      { key: "personnel-role", label: "角色管理", path: `${routes.admin}/personnel/role` }
-    ]
-  },
-  {
-    key: "system",
-    label: "系统管理",
-    icon: FiSettings,
-    children: [
-      { key: "system-dict", label: "字典管理", path: `${routes.admin}/system/dict` },
-      { key: "system-token", label: "令牌管理", path: `${routes.admin}/system/token` },
-      { key: "system-param", label: "参数管理", path: `${routes.admin}/system/param` },
-      { key: "system-permission", label: "权限管理", path: `${routes.admin}/system/permission` }
-    ]
-  },
-  {
-    key: "video",
-    label: "视频管理",
-    icon: FiVideo,
-    children: [
-      { key: "video-upload", label: "视频上传", path: `${routes.admin}/video/upload` },
-      { key: "video-list", label: "视频列表", path: `${routes.admin}/video/list` },
-      { key: "video-review", label: "审核管理", path: `${routes.admin}/video/review` }
-    ]
-  },
-  {
-    key: "document",
-    label: "文档管理",
-    icon: FiFileText,
-    children: [
-      { key: "document-upload", label: "文档上传", path: `${routes.admin}/document/upload` },
-      { key: "document-list", label: "文档列表", path: `${routes.admin}/document/list` },
-      { key: "document-review", label: "审核管理", path: `${routes.admin}/document/review` }
-    ]
-  },
-  {
-    key: "bot",
-    label: "BOT控制台",
-    icon: FiBell,
-    children: [
-      { key: "bot-napcat", label: "NapCat", path: `${routes.admin}/bot/napcat` },
-      { key: "bot-qq", label: "QQBot", path: `${routes.admin}/bot/qq` },
-      { key: "bot-wechat", label: "WeChatBot", path: `${routes.admin}/bot/wechat` },
-      { key: "bot-dingtalk", label: "DingTalkBot", path: `${routes.admin}/bot/dingtalk` }
-    ]
-  }
-];
+import PageTransitionWrapper from "../../components/Motion/PageTransitionWrapper";
+import { adminMenuItems } from "../../config/adminMenu";
+import OperationBar from "./OperationBar";
 
 const headerIconButtonClass =
   "inline-flex items-center justify-center rounded-full w-8 h-8 text-[var(--text-color-secondary)] transition-colors transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-sm hover:bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] hover:text-[var(--primary-color)]";
+
+const adminHeaderNavButtonClass =
+  "inline-flex items-center gap-1 px-1 h-10 text-xs border-b-2 border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors duration-150";
 
 function AdminLayout() {
   const location = useLocation();
@@ -134,16 +46,15 @@ function AdminLayout() {
     breadcrumbEnabled,
     sidebarAccordion,
     menuWidth,
-    fontSize
+    fontSize,
+    showTopNav
   } = useAppStore();
 
   // Apply global font size to root element
   useEffect(() => {
     document.documentElement.style.fontSize = `${fontSize}px`;
-    // Reset to default when unmounting or leaving admin layout could be considered,
-    // but usually app-wide settings should persist. 
-    // If needed to isolate: return () => { document.documentElement.style.fontSize = ''; };
   }, [fontSize]);
+
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => layoutMode === "horizontal"
@@ -153,8 +64,10 @@ function AdminLayout() {
     const dashboard = adminMenuItems[0]?.children[0];
     return dashboard ? [{ key: dashboard.key, label: dashboard.label, path: dashboard.path }] : [];
   });
+  
   const [hoverSectionKey, setHoverSectionKey] = useState<string | null>(null);
   const hoverTimerRef = useRef<number | null>(null);
+
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;
@@ -206,6 +119,19 @@ function AdminLayout() {
 
   const activeSectionKey = activeParent?.key ?? "dashboard";
 
+  // Keep track of tabs based on navigation
+  useEffect(() => {
+    if (activeChild) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTabs(previous => {
+        const exists = previous.some(tab => tab.key === activeChild.key);
+        if (exists) return previous;
+        const next = [...previous, { key: activeChild.key, label: activeChild.label, path: activeChild.path }];
+        return next.slice(-8); // Keep last 8
+      });
+    }
+  }, [activeChild]);
+
   const handleLogoClick = () => {
     navigate(routes.home);
   };
@@ -244,17 +170,6 @@ function AdminLayout() {
     if (!matched) {
       return;
     }
-    setTabs(previous => {
-      const exists = previous.some(tab => tab.key === matched.key);
-      if (exists) {
-        return previous;
-      }
-      const next = [...previous, { key: matched.key, label: matched.label, path: matched.path }];
-      if (next.length > 8) {
-        return next.slice(next.length - 8);
-      }
-      return next;
-    });
     navigate(matched.path);
   };
 
@@ -269,10 +184,9 @@ function AdminLayout() {
 
   const handleTabClick = (key: string) => {
     const tab = tabs.find(item => item.key === key);
-    if (!tab) {
-      return;
+    if (tab) {
+      navigate(tab.path);
     }
-    navigate(tab.path);
   };
 
   const handleTabClose = (key: string) => {
@@ -286,8 +200,7 @@ function AdminLayout() {
         }
         return [];
       }
-      const isClosingActive = key === activeKey;
-      if (isClosingActive) {
+      if (key === activeKey) {
         const nextTab = filtered[filtered.length - 1];
         navigate(nextTab.path);
       }
@@ -298,9 +211,7 @@ function AdminLayout() {
   const handleCloseOthers = (key: string) => {
     setTabs(previous => previous.filter(item => item.key === key));
     const current = tabs.find(item => item.key === key);
-    if (current) {
-      navigate(current.path);
-    }
+    if (current) navigate(current.path);
   };
 
   const handleCloseAll = () => {
@@ -325,14 +236,17 @@ function AdminLayout() {
   }, [activeChild, activeParent]);
 
   const containerClassName =
-    "w-full" +
-    (boxBorderEnabled || boxShadowEnabled
-      ? " bg-[var(--bg-elevated)] rounded-[var(--radius-base)] px-4 py-4"
-      : "") +
-    (boxBorderEnabled ? " border border-[var(--border-color)]" : "");
-
-const adminHeaderNavButtonClass =
-  "inline-flex items-center gap-1 px-1 h-10 text-xs border-b-2 border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors duration-150";
+    layoutMode === "dock"
+      ? "w-full h-full " +
+        (boxBorderEnabled || boxShadowEnabled
+          ? " bg-[var(--bg-elevated)] rounded-[var(--radius-base)] px-4 py-4"
+          : "") +
+        (boxBorderEnabled ? " border border-[var(--border-color)]" : "")
+      : "w-full" +
+        (boxBorderEnabled || boxShadowEnabled
+          ? " bg-[var(--bg-elevated)] rounded-[var(--radius-base)] px-4 py-4"
+          : "") +
+        (boxBorderEnabled ? " border border-[var(--border-color)]" : "");
 
   const renderTopAdminNav = () => {
     if (layoutMode !== "horizontal" && layoutMode !== "mixed") {
@@ -633,6 +547,145 @@ const adminHeaderNavButtonClass =
     );
   };
 
+  // -------------------------
+  // Render: Dock Mode
+  // -------------------------
+  if (layoutMode === "dock") {
+    return (
+      <div
+        className="h-screen w-full flex flex-col bg-[var(--bg-color)] text-[var(--text-color)] overflow-hidden"
+        onClick={() => {
+          if (contextMenu.visible) {
+            setContextMenu({ visible: false, x: 0, y: 0, tabKey: null });
+          }
+        }}
+      >
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto px-[var(--content-padding)] py-[var(--content-padding)] pb-32 scrollbar-hide">
+          <PageTransitionWrapper className={containerClassName}>
+            <Outlet />
+          </PageTransitionWrapper>
+        </main>
+
+        {/* Tabs and Breadcrumbs Container */}
+        {showTopNav && (
+          <div className="fixed bottom-24 left-0 right-0 z-20 flex flex-col items-center justify-center gap-2 pointer-events-none">
+            {/* Breadcrumbs */}
+            {breadcrumbEnabled && breadcrumb && (
+              <div className="pointer-events-auto bg-[var(--bg-elevated)]/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-[var(--border-color)] shadow-sm flex items-center gap-2">
+                <span className="text-xs text-[var(--text-color-secondary)]">当前位置:</span>
+                <Breadcrumbs
+                  size="sm"
+                  variant="light"
+                  itemClasses={{
+                    item: "text-xs text-[var(--text-color-secondary)] data-[current=true]:text-[var(--text-color)]",
+                    separator: "text-[var(--text-color-secondary)] px-1"
+                  }}
+                >
+                  <BreadcrumbItem>后台管理</BreadcrumbItem>
+                  <BreadcrumbItem>{breadcrumb.parentLabel}</BreadcrumbItem>
+                  <BreadcrumbItem>{breadcrumb.childLabel}</BreadcrumbItem>
+                </Breadcrumbs>
+              </div>
+            )}
+
+            {/* Tabs */}
+            {multiTabEnabled && tabs.length > 0 && (
+              <div className="pointer-events-auto max-w-[90vw] overflow-x-auto flex gap-1 p-1.5 bg-[var(--bg-elevated)]/80 backdrop-blur-md rounded-2xl border border-[var(--border-color)] shadow-sm scrollbar-hide">
+                {tabs.map(item => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className={
+                      "flex items-center gap-1 px-3 py-1 rounded-full text-xs transition-all border " +
+                      (item.key === activeKey
+                        ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] text-[var(--primary-color)] font-medium shadow-sm"
+                        : "border-transparent text-[var(--text-color-secondary)] hover:bg-[var(--bg-color)] hover:text-[var(--text-color)]")
+                    }
+                    onClick={() => handleTabClick(item.key)}
+                    onContextMenu={event => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setContextMenu({
+                        visible: true,
+                        x: event.clientX,
+                        y: event.clientY,
+                        tabKey: item.key
+                      });
+                    }}
+                  >
+                    <span>{item.label}</span>
+                    {item.key !== "dashboard-workbench" && (
+                      <span
+                        className="ml-1 opacity-60 hover:opacity-100"
+                        onClick={event => {
+                          event.stopPropagation();
+                          handleTabClose(item.key);
+                        }}
+                      >
+                        ×
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Operation Bar (Dock) */}
+        <OperationBar onOpenSettings={() => setSettingsVisible(true)} />
+
+        {/* Context Menu */}
+        {contextMenu.visible && contextMenu.tabKey && (
+          <div
+            className="fixed z-50 bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg shadow-xl text-xs text-[var(--text-color)] min-w-[100px] overflow-hidden"
+            style={{ top: contextMenu.y - 100, left: contextMenu.x }}
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="p-1">
+              <button
+                className="w-full text-left px-3 py-2 rounded hover:bg-[var(--primary-color)] hover:text-white transition-colors"
+                onClick={() => {
+                  handleTabClose(contextMenu.tabKey as string);
+                  setContextMenu({ visible: false, x: 0, y: 0, tabKey: null });
+                }}
+              >
+                关闭当前
+              </button>
+              <button
+                className="w-full text-left px-3 py-2 rounded hover:bg-[var(--primary-color)] hover:text-white transition-colors"
+                onClick={() => {
+                  handleCloseOthers(contextMenu.tabKey as string);
+                  setContextMenu({ visible: false, x: 0, y: 0, tabKey: null });
+                }}
+              >
+                关闭其他
+              </button>
+              <button
+                className="w-full text-left px-3 py-2 rounded hover:bg-[var(--primary-color)] hover:text-white transition-colors"
+                onClick={() => {
+                  handleCloseAll();
+                  setContextMenu({ visible: false, x: 0, y: 0, tabKey: null });
+                }}
+              >
+                关闭全部
+              </button>
+            </div>
+          </div>
+        )}
+
+        <SystemSettingsPanel
+          visible={settingsVisible}
+          onClose={() => setSettingsVisible(false)}
+        />
+      </div>
+    );
+  }
+
+  // -------------------------
+  // Render: Classic Modes (Vertical, Horizontal, Mixed, Double)
+  // -------------------------
   return (
     <div
       className="min-h-screen flex bg-[var(--bg-color)] text-[var(--text-color)] icon-rotate-global"
@@ -721,9 +774,6 @@ const adminHeaderNavButtonClass =
               ) : (
                 <span>后台管理</span>
               )}
-              <span className="px-2 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] text-[10px] text-[var(--primary-color)]">
-                单独后台布局
-              </span>
             </div>
           </div>
 
@@ -861,9 +911,9 @@ const adminHeaderNavButtonClass =
         )}
 
         <main className="flex-1 overflow-y-auto px-[var(--content-padding)] py-[var(--content-padding)]">
-          <div className={containerClassName}>
+          <PageTransitionWrapper className={containerClassName}>
             <Outlet />
-          </div>
+          </PageTransitionWrapper>
         </main>
 
         {contextMenu.visible && contextMenu.tabKey && (
