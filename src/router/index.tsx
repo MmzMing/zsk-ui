@@ -72,12 +72,12 @@ function AppRouter() {
           <Route element={<AdminLayout />}>
             <Route path={routes.admin} element={<AdminPage />} />
             <Route path={`${routes.admin}/analysis`} element={<AnalysisPage />} />
-            <Route path={`${routes.admin}/ops/api-doc`} element={<ApiDocPage />} />
-            <Route path={`${routes.admin}/ops/system-monitor`} element={<SystemMonitorPage />} />
-            <Route path={`${routes.admin}/ops/cache-monitor`} element={<CacheMonitorPage />} />
-            <Route path={`${routes.admin}/ops/cache-list`} element={<CacheListPage />} />
-            <Route path={`${routes.admin}/ops/system-log`} element={<SystemLogPage />} />
-            <Route path={`${routes.admin}/ops/user-behavior`} element={<UserBehaviorPage />} />
+            <Route path={`${routes.admin}/ops/apiDoc`} element={<ApiDocPage />} />
+            <Route path={`${routes.admin}/ops/systemMonitor`} element={<SystemMonitorPage />} />
+            <Route path={`${routes.admin}/ops/cacheMonitor`} element={<CacheMonitorPage />} />
+            <Route path={`${routes.admin}/ops/cacheList`} element={<CacheListPage />} />
+            <Route path={`${routes.admin}/ops/systemLog`} element={<SystemLogPage />} />
+            <Route path={`${routes.admin}/ops/userBehavior`} element={<UserBehaviorPage />} />
             <Route path={`${routes.admin}/personnel/user`} element={<UserManagePage />} />
             <Route path={`${routes.admin}/personnel/menu`} element={<MenuManagePage />} />
             <Route path={`${routes.admin}/personnel/role`} element={<RoleManagePage />} />

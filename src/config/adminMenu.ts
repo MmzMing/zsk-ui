@@ -55,12 +55,12 @@ export const adminMenuTree: AdminMenuNode[] = [
     permissionKey: "ops:root",
     parentId: null,
     children: [
-      { id: "002001", name: "接口文档", path: `${routes.admin}/ops/api-doc`, iconName: "FiList", order: 1, visible: true, permissionKey: "ops:apiDoc", parentId: "002" },
-      { id: "002002", name: "系统监控", path: `${routes.admin}/ops/system-monitor`, iconName: "FiList", order: 2, visible: true, permissionKey: "ops:systemMonitor", parentId: "002" },
-      { id: "002003", name: "缓存监控", path: `${routes.admin}/ops/cache-monitor`, iconName: "FiList", order: 3, visible: true, permissionKey: "ops:cacheMonitor", parentId: "002" },
-      { id: "002004", name: "缓存列表", path: `${routes.admin}/ops/cache-list`, iconName: "FiList", order: 4, visible: true, permissionKey: "ops:cacheList", parentId: "002" },
-      { id: "002005", name: "系统日志", path: `${routes.admin}/ops/system-log`, iconName: "FiList", order: 5, visible: true, permissionKey: "ops:systemLog", parentId: "002" },
-      { id: "002006", name: "用户行为", path: `${routes.admin}/ops/user-behavior`, iconName: "FiList", order: 6, visible: true, permissionKey: "ops:userBehavior", parentId: "002" }
+      { id: "002001", name: "接口文档", path: `${routes.admin}/ops/apiDoc`, iconName: "FiList", order: 1, visible: true, permissionKey: "ops:apiDoc", parentId: "002" },
+      { id: "002002", name: "系统监控", path: `${routes.admin}/ops/systemMonitor`, iconName: "FiList", order: 2, visible: true, permissionKey: "ops:systemMonitor", parentId: "002" },
+      { id: "002003", name: "缓存监控", path: `${routes.admin}/ops/cacheMonitor`, iconName: "FiList", order: 3, visible: true, permissionKey: "ops:cacheMonitor", parentId: "002" },
+      { id: "002004", name: "缓存列表", path: `${routes.admin}/ops/cacheList`, iconName: "FiList", order: 4, visible: true, permissionKey: "ops:cacheList", parentId: "002" },
+      { id: "002005", name: "系统日志", path: `${routes.admin}/ops/systemLog`, iconName: "FiList", order: 5, visible: true, permissionKey: "ops:systemLog", parentId: "002" },
+      { id: "002006", name: "用户行为", path: `${routes.admin}/ops/userBehavior`, iconName: "FiList", order: 6, visible: true, permissionKey: "ops:userBehavior", parentId: "002" }
     ]
   },
   {
