@@ -1,11 +1,9 @@
 import React, { useMemo, useState } from "react";
 import {
-  Select,
   SelectItem,
   Button,
   Card,
   Chip,
-  Input,
   Pagination,
   Table,
   TableHeader,
@@ -14,7 +12,8 @@ import {
   TableRow,
   TableCell
 } from "@heroui/react";
-import { FiRefreshCw, FiSearch, FiTrash2 } from "react-icons/fi";
+import { FiRefreshCw, FiTrash2 } from "react-icons/fi";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
 
 type CacheKeyItem = {
   id: string;
@@ -172,6 +171,8 @@ function formatTtl(ttl: number | null) {
   return `${hours} 小时 ${restMinutes} 分`;
 }
 
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+
 function CacheListPage() {
   const [keyword, setKeyword] = useState("");
   const [instanceFilter, setInstanceFilter] = useState<string>("all");
@@ -285,24 +286,17 @@ function CacheListPage() {
         <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
-              <Input
-                size="sm"
-                variant="bordered"
+              <AdminSearchInput
                 className="w-52"
                 placeholder="按键名模糊搜索，如 session:user:"
-                startContent={<FiSearch className="text-xs text-[var(--text-color-secondary)]" />}
                 value={keyword}
                 onValueChange={value => {
                   setKeyword(value);
                   setPage(1);
                 }}
-                classNames={{
-                  inputWrapper: "h-8 text-xs",
-                  input: "text-xs"
-                }}
               />
-              <Select
-                aria-label="实例筛选"
+              <AdminSelect
+                aria-label="缓存实例筛选"
                 size="sm"
                 className="w-40"
                 selectedKeys={[instanceFilter]}
@@ -312,43 +306,39 @@ function CacheListPage() {
                   setPage(1);
                 }}
                 items={[
-                  { label: "全部实例", value: "all" },
-                  ...cacheInstances.map(item => ({
-                    label: item.name,
-                    value: item.id
-                  }))
+                  { label: "全部实例", id: "all" },
+                  ...cacheInstances
                 ]}
                 isClearable
               >
-                {item => (
-                  <SelectItem key={item.value}>
-                    {item.label}
+                {(item: { id: string; name?: string; label?: string }) => (
+                  <SelectItem key={item.id}>
+                    {item.name || item.label}
                   </SelectItem>
                 )}
-              </Select>
-              <Select
+              </AdminSelect>
+              <AdminSelect
                 aria-label="过期时间筛选"
                 size="sm"
-                className="w-44"
+                className="w-32"
                 selectedKeys={[ttlFilter]}
                 onSelectionChange={keys => {
                   const key = Array.from(keys)[0];
-                  setTtlFilter(key ? String(key) as TtlFilter : "all");
+                  setTtlFilter(key ? (String(key) as TtlFilter) : "all");
                   setPage(1);
                 }}
                 items={[
-                  { label: "全部过期时间", value: "all" },
-                  { label: "即将过期（≤5 分钟）", value: "expiring" },
+                  { label: "全部过期", value: "all" },
+                  { label: "即将过期", value: "expiring" },
                   { label: "永不过期", value: "no-expire" }
                 ]}
-                isClearable
               >
-                {item => (
+                {(item: { label: string; value: string }) => (
                   <SelectItem key={item.value}>
                     {item.label}
                   </SelectItem>
                 )}
-              </Select>
+              </AdminSelect>
               <Button
                 size="sm"
                 variant="light"

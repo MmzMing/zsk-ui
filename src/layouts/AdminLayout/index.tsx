@@ -18,7 +18,9 @@ import {
   FiUser,
   FiLayout,
   FiChevronDown,
-  FiChevronRight
+  FiChevronRight,
+  FiMaximize2,
+  FiMinimize2
 } from "react-icons/fi";
 import * as Icons from "react-icons/fi";
 import { routes } from "../../router/routes";
@@ -63,6 +65,27 @@ function AdminLayout() {
   }, [fontSize]);
 
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => layoutMode === "horizontal"
   );
@@ -636,7 +659,11 @@ function AdminLayout() {
         )}
 
         {/* Operation Bar (Dock) */}
-        <OperationBar onOpenSettings={() => setSettingsVisible(true)} />
+        <OperationBar 
+          onOpenSettings={() => setSettingsVisible(true)} 
+          isFullscreen={isFullscreen}
+          toggleFullscreen={toggleFullscreen}
+        />
 
         {/* Context Menu */}
         {contextMenu.visible && contextMenu.tabKey && (
@@ -788,6 +815,21 @@ function AdminLayout() {
               radius="full"
               variant="light"
               className="inline-flex"
+              onPress={toggleFullscreen}
+              aria-label={isFullscreen ? "退出全屏" : "全屏切换"}
+            >
+              {isFullscreen ? (
+                <FiMinimize2 className="text-base" />
+              ) : (
+                <FiMaximize2 className="text-base" />
+              )}
+            </Button>
+            <Button
+              isIconOnly
+              size="sm"
+              radius="full"
+              variant="light"
+              className="inline-flex"
               aria-label="消息中心"
             >
               <FiBell className="text-base" />
@@ -803,7 +845,12 @@ function AdminLayout() {
               <FiSettings className="text-base" />
             </Button>
             {token ? (
-              <Dropdown placement="bottom-end">
+              <Dropdown 
+                 placement="bottom-end"
+                 classNames={{
+                   content: "bg-[var(--bg-elevated)]! border border-[var(--primary-color)]/20! shadow-2xl! rounded-xl min-w-[140px] p-1.5"
+                 }}
+               >
                 <DropdownTrigger>
                   <button
                     type="button"
@@ -824,6 +871,18 @@ function AdminLayout() {
                 </DropdownTrigger>
                 <DropdownMenu
                   aria-label="用户菜单"
+                  itemClasses={{
+                    base: [
+                      "rounded-lg",
+                      "text-gray-400",
+                      "gap-3",
+                      "px-3 py-2",
+                      "transition-colors",
+                      "data-[hover=true]:bg-[var(--primary-color)]/15!",
+                      "data-[hover=true]:text-[var(--primary-color)]!",
+                    ].join(" "),
+                    title: "text-sm font-medium"
+                  }}
                   onAction={key => {
                     if (key === "home") {
                       navigate(routes.home);
@@ -848,7 +907,7 @@ function AdminLayout() {
                   </DropdownItem>
                   <DropdownItem
                     key="logout"
-                    color="danger"
+                    className="text-danger data-[hover=true]:bg-danger/15! data-[hover=true]:text-danger!"
                     startContent={<FiLogOut className="w-4 h-4" />}
                   >
                     退出登录

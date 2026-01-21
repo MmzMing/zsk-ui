@@ -1,52 +1,109 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
-  Select,
-  SelectItem,
   Button,
   Card,
   Chip,
   Input,
-  Progress,
-  Tab,
+  Pagination,
   Table,
   TableBody,
   TableCell,
   TableColumn,
   TableHeader,
-  TableRow
+  TableRow,
+  Textarea,
+  Tab,
+  Tooltip,
+  SelectItem
 } from "@heroui/react";
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
 import {
-  FiFilePlus,
-  FiFilter,
-  FiFolder,
-  FiInbox,
+  FiFileText,
+  FiInfo,
+  FiRefreshCw,
+  FiTrash2,
   FiUpload,
-  FiX
+  FiUploadCloud,
+  FiX,
+  FiClock,
+  FiChevronRight,
+  FiTag,
+  FiImage
 } from "react-icons/fi";
-
+import { Listbox, ListboxItem, Popover, PopoverContent, PopoverTrigger } from "@heroui/react";
 import {
-  fetchDocumentUploadTaskList,
-  initDocumentUpload,
-  type DocumentUploadInitRequest,
+  removeDocumentUploadTask,
+  retryDocumentUploadTask,
   type DocumentUploadTaskItem
 } from "../../../api/admin/document";
 
-type UploadTaskStatus = DocumentUploadTaskItem["status"];
-
-type UploadTaskItem = DocumentUploadTaskItem;
+type UploadStatus = DocumentUploadTaskItem["status"];
 
 type DraftItem = {
   id: string;
   title: string;
   category: string;
   description: string;
+  createdAt: string;
   updatedAt: string;
 };
 
-const documentCategories = ["前端基础", "工程实践", "效率方法", "个人成长", "系统设计"];
+type PermissionType = "public" | "private" | "password";
 
-const initialUploadTasks: UploadTaskItem[] = [
+const CATEGORY_DATA = [
+  {
+    id: "tech",
+    name: "技术开发",
+    children: [
+      { id: "frontend", name: "前端开发" },
+      { id: "backend", name: "后端开发" },
+      { id: "mobile", name: "移动端开发" },
+      { id: "devops", name: "运维部署" }
+    ]
+  },
+  {
+    id: "design",
+    name: "设计美工",
+    children: [
+      { id: "ui", name: "UI/UX设计" },
+      { id: "graphic", name: "平面设计" },
+      { id: "motion", name: "动效设计" }
+    ]
+  },
+  {
+    id: "product",
+    name: "产品管理",
+    children: [
+      { id: "research", name: "市场调研" },
+      { id: "planning", name: "产品规划" },
+      { id: "prototype", name: "原型设计" }
+    ]
+  },
+  {
+    id: "operation",
+    name: "运营推广",
+    children: [
+      { id: "content", name: "内容运营" },
+      { id: "user", name: "用户运营" },
+      { id: "growth", name: "增长策略" }
+    ]
+  }
+];
+
+const TAG_OPTIONS = [
+  { label: "React", value: "react" },
+  { label: "Vue", value: "vue" },
+  { label: "TypeScript", value: "typescript" },
+  { label: "Next.js", value: "nextjs" },
+  { label: "Tailwind", value: "tailwind" },
+  { label: "Node.js", value: "nodejs" },
+  { label: "Docker", value: "docker" },
+  { label: "Figma", value: "figma" }
+];
+
+const initialTasks: DocumentUploadTaskItem[] = [
   {
     id: "doc_task_001",
     title: "如何把视频课程拆解成学习笔记",
@@ -76,195 +133,227 @@ const initialUploadTasks: UploadTaskItem[] = [
   }
 ];
 
-const initialDrafts: DraftItem[] = [
-  {
-    id: "draft_001",
-    title: "文档上传流程设计草稿",
-    category: "工程实践",
-    description: "记录知识库文档从上传、解析到上架的整体流程要点。",
-    updatedAt: "2026-01-18 10:40:00"
-  },
-  {
-    id: "draft_002",
-    title: "Markdown 使用规范整理",
-    category: "前端基础",
-    description: "整理项目内 Markdown 文档约定的标题层级、代码块与提示块写法。",
-    updatedAt: "2026-01-17 16:20:12"
-  }
-];
-
-function formatFileSize(size: number) {
-  if (size >= 1024 * 1024 * 1024) {
-    return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  }
-  if (size >= 1024 * 1024) {
-    return `${(size / (1024 * 1024)).toFixed(2)} MB`;
-  }
-  if (size >= 1024) {
-    return `${(size / 1024).toFixed(2)} KB`;
-  }
-  return `${size} B`;
+function formatSize(size: number) {
+  if (size <= 0) return "-";
+  const gb = 1024 * 1024 * 1024;
+  const mb = 1024 * 1024;
+  const kb = 1024;
+  if (size >= gb) return `${(size / gb).toFixed(2)} GB`;
+  if (size >= mb) return `${(size / mb).toFixed(2)} MB`;
+  return `${(size / kb).toFixed(2)} KB`;
 }
 
-function getUploadStatusLabel(status: UploadTaskStatus) {
-  if (status === "waiting") {
-    return "等待中";
-  }
-  if (status === "uploading") {
-    return "上传中";
-  }
-  if (status === "success") {
-    return "已完成";
-  }
-  return "上传失败";
+function getStatusLabel(status: UploadStatus) {
+  if (status === "waiting") return "待上传";
+  if (status === "uploading") return "上传中";
+  if (status === "success") return "已完成";
+  return "失败";
 }
 
-function getUploadStatusColor(status: UploadTaskStatus) {
-  if (status === "waiting") {
-    return "default";
-  }
-  if (status === "uploading") {
-    return "primary";
-  }
-  if (status === "success") {
-    return "success";
-  }
+function getStatusColor(status: UploadStatus) {
+  if (status === "waiting") return "default";
+  if (status === "uploading") return "primary";
+  if (status === "success") return "success";
   return "danger";
 }
 
 function DocumentUploadPage() {
+  // 基础信息
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<string>("未分类");
+  const [isTitleTouched, setIsTitleTouched] = useState(false);
+  const [category, setCategory] = useState<string>("前端开发");
+  const [activeCategoryLevel1, setActiveCategoryLevel1] = useState<string>("tech");
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set([]));
   const [description, setDescription] = useState("");
+  
+  // 文件上传
+  const [selectedFileName, setSelectedFileName] = useState("");
+  const [selectedFileSize, setSelectedFileSize] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 任务列表
+  const [tasks, setTasks] = useState<DocumentUploadTaskItem[]>(initialTasks);
+  const [statusFilter] = useState<"all" | UploadStatus>("all");
   const [keyword, setKeyword] = useState("");
-  const [uploadTasks, setUploadTasks] = useState<UploadTaskItem[]>(() => initialUploadTasks);
-  const [drafts, setDrafts] = useState<DraftItem[]>(() => initialDrafts);
-  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  
+  // 草稿
+  const [drafts, setDrafts] = useState<DraftItem[]>([]);
+  const [message, setMessage] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await fetchDocumentUploadTaskList({
-          page: 1,
-          pageSize: 20,
-          status: "all"
-        });
-        setUploadTasks(data.list as UploadTaskItem[]);
-      } catch {
-        setUploadTasks(initialUploadTasks);
-      }
-    }
-    load();
-  }, []);
+  // 权限设置
+  const [permissionType, setPermissionType] = useState<PermissionType>("public");
+  const [visibleUsers, setVisibleUsers] = useState<string[]>([]);
+  const [visibleUserInput, setVisibleUserInput] = useState("");
+  const [accessPassword, setAccessPassword] = useState("");
 
+  // 封面图
+  const DEFAULT_COVER = "/DefaultImage/MyDefaultImage.jpg";
+  const [coverImage, setCoverImage] = useState(DEFAULT_COVER);
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 分页计算
+  const pageSize = 5;
   const filteredTasks = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
-    if (!trimmed) {
-      return uploadTasks;
-    }
-    return uploadTasks.filter(item => {
-      const content = `${item.title} ${item.fileName}`.toLowerCase();
-      return content.includes(trimmed);
+    return tasks.filter(item => {
+      if (statusFilter !== "all" && item.status !== statusFilter) return false;
+      if (trimmed) {
+        const content = `${item.title} ${item.fileName}`.toLowerCase();
+        if (!content.includes(trimmed)) return false;
+      }
+      return true;
     });
-  }, [keyword, uploadTasks]);
+  }, [tasks, statusFilter, keyword]);
 
-  const handleSimulateUpload = () => {
+  const isFormValid = useMemo(() => {
+    return title.trim() !== "" && 
+           category !== "" && 
+           category !== "未分类" && 
+           selectedTags.size > 0 && 
+           selectedFileName !== "";
+  }, [title, category, selectedTags, selectedFileName]);
+
+  const total = filteredTasks.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const pageItems = filteredTasks.slice(startIndex, startIndex + pageSize);
+
+  const handlePageChange = (next: number) => {
+    if (next < 1 || next > totalPages) return;
+    setPage(next);
+  };
+
+  const handleSelectFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = event => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setSelectedFileName("");
+      setSelectedFileSize(0);
+      return;
+    }
+    setSelectedFileName(file.name);
+    setSelectedFileSize(file.size);
+    // 自动填充标题
+    if (!title) {
+      const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf("."));
+      setTitle(nameWithoutExt);
+    }
+  };
+
+  const handleCreateTask = () => {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      setMessage("请填写文档标题");
+      return;
+    }
     if (!selectedFileName) {
+      setMessage("请选择要上传的文档文件");
       return;
     }
 
-    // Call the unused initDocumentUpload to satisfy linter (in real world this would be used)
-    const dummyInit: DocumentUploadInitRequest = {
-      title: "Test",
-      fileName: selectedFileName,
-      fileSize: 1000,
-      fileMd5: "dummy",
-      category: "Test",
-      tags: [],
-      isPublic: true
-    };
-    console.log("Mock init upload", initDocumentUpload, dummyInit);
-
     const now = new Date();
-    const formatted = now.toISOString().replace("T", " ").slice(0, 19);
-    const id = `doc_task_${String(uploadTasks.length + 1).padStart(3, "0")}`;
-    const next: UploadTaskItem = {
-      id,
-      title: title.trim() || selectedFileName,
+    const newTask: DocumentUploadTaskItem = {
+      id: `doc_task_${now.getTime()}`,
+      title: trimmedTitle,
       fileName: selectedFileName,
-      size: 16 * 1024 * 1024,
+      size: selectedFileSize,
       status: "uploading",
-      progress: 24,
-      createdAt: formatted
+      progress: 0,
+      createdAt: now.toISOString().replace("T", " ").slice(0, 19)
     };
-    setUploadTasks(previous => [next, ...previous]);
+
+    setTasks(prev => [newTask, ...prev]);
+    setMessage("已创建上传任务");
+    setIsUploading(true);
+    
+    // 模拟上传进度
+    setTimeout(() => {
+      setTasks(prev => prev.map(t => 
+        t.id === newTask.id ? { ...t, progress: 45 } : t
+      ));
+    }, 1000);
+
+    setTimeout(() => {
+      setTasks(prev => prev.map(t => 
+        t.id === newTask.id ? { ...t, progress: 100, status: "success" } : t
+      ));
+      setIsUploading(false);
+      setMessage("文档上传成功");
+    }, 3000);
+  };
+
+  const handleRemoveTask = async (id: string) => {
+    if (!window.confirm("确定要删除该上传任务吗？")) return;
+    try {
+      await removeDocumentUploadTask(id);
+      setTasks(prev => prev.filter(t => t.id !== id));
+    } catch {
+      // 演示模式下直接删除
+      setTasks(prev => prev.filter(t => t.id !== id));
+    }
+  };
+
+  const handleRetryTask = async (id: string) => {
+    try {
+      await retryDocumentUploadTask(id);
+      setTasks(prev => prev.map(t => 
+        t.id === id ? { ...t, status: "uploading", progress: 0 } : t
+      ));
+    } catch {
+      // 演示模式
+      setTasks(prev => prev.map(t => 
+        t.id === id ? { ...t, status: "uploading", progress: 0 } : t
+      ));
+    }
+  };
+
+  const handleSelectCover = () => {
+    coverInputRef.current?.click();
+  };
+
+  const handleCoverChange: React.ChangeEventHandler<HTMLInputElement> = event => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setCoverImage(url);
+    }
   };
 
   const handleSaveDraft = () => {
     const trimmedTitle = title.trim();
-    const trimmedCategory = category.trim();
-    const trimmedDescription = description.trim();
-    if (!trimmedTitle && !trimmedCategory && !trimmedDescription) {
+    if (!trimmedTitle && !selectedFileName) {
+      setMessage("没有内容可保存");
       return;
     }
     const now = new Date();
-    const formatted = now.toISOString().replace("T", " ").slice(0, 19);
-    setDrafts(previous => {
-      if (selectedDraftId) {
-        const index = previous.findIndex(item => item.id === selectedDraftId);
-        if (index !== -1) {
-          const next = [...previous];
-          next[index] = {
-            ...next[index],
-            title: trimmedTitle || next[index].title,
-            category: trimmedCategory || next[index].category,
-            description: trimmedDescription,
-            updatedAt: formatted
-          };
-          return next.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-        }
-      }
-      const id = `draft_${String(previous.length + 1).padStart(3, "0")}`;
-      const nextItem: DraftItem = {
-        id,
-        title: trimmedTitle || "未命名文档",
-        category: trimmedCategory || "未分类",
-        description: trimmedDescription,
-        updatedAt: formatted
-      };
-      return [nextItem, ...previous].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-    });
+    const newDraft: DraftItem = {
+      id: `draft_${now.getTime()}`,
+      title: trimmedTitle || "未命名文档",
+      category,
+      description,
+      createdAt: now.toISOString().replace("T", " ").slice(0, 19),
+      updatedAt: now.toISOString().replace("T", " ").slice(0, 19)
+    };
+    setDrafts(prev => [newDraft, ...prev]);
+    setMessage("草稿已保存");
   };
 
-  const handleResetForm = () => {
-    setTitle("");
-    setCategory("未分类");
-    setDescription("");
-    setSelectedFileName(null);
-    setSelectedDraftId(null);
-  };
-
-  const handleApplyDraft = (draft: DraftItem) => {
+  const handleLoadDraft = (draft: DraftItem) => {
     setTitle(draft.title);
     setCategory(draft.category);
     setDescription(draft.description);
-    setSelectedDraftId(draft.id);
-  };
-
-  const handleRemoveDraft = (id: string) => {
-    const confirmed = window.confirm("确定要删除该草稿吗？");
-    if (!confirmed) {
-      return;
-    }
-    setDrafts(previous => previous.filter(item => item.id !== id));
-    if (selectedDraftId === id) {
-      setSelectedDraftId(null);
-    }
+    setMessage("已加载草稿");
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* 顶部 Header */}
       <div className="space-y-1">
         <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] px-3 py-1 text-xs text-[var(--primary-color)]">
           <span>文档管理 · 文档上传</span>
@@ -273,422 +362,592 @@ function DocumentUploadPage() {
           统一上传与配置知识库文档内容
         </h1>
         <p className="text-xs text-[var(--text-color-secondary)] max-w-2xl">
-          左侧用于选择与解析文档文件，右侧配置基础信息、分类标签与访问权限，底部通过草稿机制帮助你在多次编辑过程中安全保留进度。
+          支持 PDF、Word、PPT 等多种格式文档上传，自动解析内容并建立知识索引。
         </p>
+        {message && (
+          <div className="mt-2 text-xs text-[var(--primary-color)] flex items-center gap-1">
+            <FiInfo /> {message}
+          </div>
+        )}
       </div>
 
-      <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-        <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <Chip size="sm" variant="flat" className="text-xs">
-                支持 PDF / Word / PPT / Markdown 等常见格式
-              </Chip>
-              <Chip size="sm" variant="flat" className="text-xs">
-                大文件按分片上传，便于后续与后端对接
-              </Chip>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-color-secondary)]">
-              <FiFilter className="text-xs" />
-              <span>当前为示例实现，后续可根据接口文档接入真实上传与解析服务。</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-3 space-y-3">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.8fr)]">
-            <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-              <div className="p-3 space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="text-xs font-medium">上传与解析区</div>
-                    <div className="text-xs text-[var(--text-color-secondary)]">
-                      通过拖拽或点击选择方式上传文档文件，后续可接入智能解析引擎，将内容结构化展示在右侧配置区。
-                    </div>
-                  </div>
-                  <Chip size="sm" variant="flat" className="text-xs">
-                    上传入口
-                  </Chip>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex flex-col gap-2">
-                    <div className="border border-dashed border-[var(--border-color)] rounded-lg bg-[var(--bg-elevated)]/70 px-4 py-6 flex flex-col items-center justify-center gap-2 text-xs">
-                      <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] text-[var(--primary-color)]">
-                        <FiUpload className="text-lg" />
-                      </div>
-                      <div className="text-xs font-medium">
-                        点击选择文件或将文档拖拽至此区域
-                      </div>
-                      <div className="text-xs text-[var(--text-color-secondary)]">
-                        支持单文件或多文件批量上传，单个文件建议不超过 100 MB。
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          size="sm"
-                          className="h-8 text-xs"
-                          startContent={<FiFilePlus className="text-xs" />}
-                          onPress={() => {
-                            setSelectedFileName("example-doc.pdf");
-                          }}
-                        >
-                          模拟选择文件
-                        </Button>
-                        {selectedFileName && (
-                          <Chip
-                            size="sm"
-                            variant="flat"
-                            className="text-xs"
-                            onClose={() => setSelectedFileName(null)}
-                          >
-                            当前文件：{selectedFileName}
-                          </Chip>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="light"
-                        className="h-8 text-xs"
-                        startContent={<FiInbox className="text-xs" />}
-                        onPress={handleSimulateUpload}
-                        isDisabled={!selectedFileName}
-                      >
-                        模拟上传任务
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="light"
-                        className="h-8 text-xs"
-                        startContent={<FiX className="text-xs" />}
-                        onPress={() => setSelectedFileName(null)}
-                        isDisabled={!selectedFileName}
-                      >
-                        清除已选文件
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-              <div className="p-3 space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="text-xs font-medium">文档配置区</div>
-                    <div className="text-xs text-[var(--text-color-secondary)]">
-                      提前演示「基础信息 / 分类标签 / 权限设置」三类配置表单结构，后续可与实际文档元数据字段对齐。
-                    </div>
-                  </div>
-                  <Chip size="sm" variant="flat" className="text-xs">
-                    配置信息
-                  </Chip>
-                </div>
-                <AdminTabs
-          aria-label="文档配置标签"
-          size="sm"
-          defaultSelectedKey="basic"
-          classNames={{
-            tabList: "p-0 h-8 gap-0",
-            tab: "h-8 px-3 text-xs"
-          }}
-        >
-                  <Tab key="basic" title="基础信息">
-                    <div className="mt-3 space-y-3">
-                      <Input
-                        size="sm"
-                        variant="bordered"
-                        labelPlacement="outside"
-                        placeholder="请输入文档标题（1-60 字）"
-                        value={title}
-                        onValueChange={setTitle}
-                        classNames={{
-                          label: "text-xs",
-                          inputWrapper: "h-8 text-xs",
-                          input: "text-xs"
-                        }}
-                      />
-                      <Select
-                        aria-label="文档分类"
-                        size="sm"
-                        selectedKeys={[category]}
-                        onSelectionChange={keys => {
-                          const key = Array.from(keys)[0];
-                          if (key) {
-                            setCategory(String(key));
-                          }
-                        }}
-                        items={[
-                          { label: "未分类", value: "未分类" },
-                          ...documentCategories.map(item => ({
-                            label: item,
-                            value: item
-                          }))
-                        ]}
-                        disallowEmptySelection
-                      >
-                        {item => (
-                          <SelectItem key={item.value}>
-                            {item.label}
-                          </SelectItem>
-                        )}
-                      </Select>
-                      <div className="space-y-1">
-                        <div className="text-[11px] text-[var(--text-color-secondary)]">
-                          文档简介
-                        </div>
-                        <textarea
-                          className="w-full min-h-[80px] rounded-md border border-[var(--border-color)] bg-[var(--bg-elevated)] px-2.5 py-1.5 text-[11px] outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary-color)]"
-                          placeholder="可简要描述文档主要内容、适用场景与目标读者，便于在列表与搜索中快速了解。"
-                          value={description}
-                          onChange={event => setDescription(event.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </Tab>
-                  <Tab key="category" title="分类与标签">
-                    <div className="mt-3 space-y-3">
-                      <div className="text-[11px] text-[var(--text-color-secondary)]">
-                        这里预留分类与标签管理区域，后续可接入推荐分类与标签库，对应知识库的内容体系设计。
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Chip size="sm" variant="flat" className="text-[10px]">
-                          示例：工程实践
-                        </Chip>
-                        <Chip size="sm" variant="flat" className="text-[10px]">
-                          示例：知识库搭建
-                        </Chip>
-                        <Chip size="sm" variant="flat" className="text-[10px]">
-                          示例：效率提升
-                        </Chip>
-                      </div>
-                    </div>
-                  </Tab>
-                  <Tab key="permission" title="权限设置">
-                    <div className="mt-3 space-y-3">
-                      <div className="text-xs text-[var(--text-color-secondary)]">
-                        权限设置用于控制文档在前台的可见范围，例如公开、私有、密码访问或指定用户可见。当前为占位区域，后续可接入实际权限模型。
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Chip size="sm" variant="flat" className="text-xs">
-                          公开
-                        </Chip>
-                        <Chip size="sm" variant="flat" className="text-xs">
-                          私有
-                        </Chip>
-                        <Chip size="sm" variant="flat" className="text-xs">
-                          密码访问
-                        </Chip>
-                        <Chip size="sm" variant="flat" className="text-xs">
-                          指定用户可见
-                        </Chip>
-                      </div>
-                    </div>
-                  </Tab>
-                </AdminTabs>
-              </div>
-            </Card>
-          </div>
-
+      {/* 核心双栏布局 */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* 左侧主内容区：信息录入与高级配置 */}
+        <div className="lg:col-span-8 space-y-6">
+          
+          {/* 1. 基本信息 */}
           <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-            <div className="p-3 space-y-3 text-xs">
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div className="space-y-1">
-                  <div className="text-xs font-medium">草稿与提交</div>
-                  <div className="text-[11px] text-[var(--text-color-secondary)]">
-                    通过草稿功能保留尚未完成配置的文档，提交审核前会校验标题与分类等必填项。
-                  </div>
+             <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                   <div className="h-6 w-6 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_18%,transparent)] flex items-center justify-center text-[var(--primary-color)]">
+                      <FiFileText className="text-xs" />
+                   </div>
+                   <div className="text-sm font-medium">基本信息</div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="light"
-                    className="h-8 text-[11px]"
-                    startContent={<FiFolder className="text-[12px]" />}
-                    onPress={handleSaveDraft}
-                  >
-                    保存草稿
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="h-8 text-[11px]"
-                  >
-                    提交审核占位
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="light"
-                    className="h-8 text-[11px]"
-                    onPress={handleResetForm}
-                  >
-                    重置
-                  </Button>
-                </div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.7fr)]">
+             </div>
+             <div className="p-5 flex flex-col gap-6">
+                {/* 第一层：文档标题 */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs font-medium">草稿列表</div>
-                    <Chip size="sm" variant="flat" className="text-[10px]">
-                      最近编辑时间倒序
-                    </Chip>
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-medium text-[var(--text-color-secondary)]">文档标题</label>
+                    <span className={`text-[10px] ${title.length > 100 ? "text-danger" : "text-[var(--text-color-secondary)]"}`}>
+                      {title.length}/100
+                    </span>
                   </div>
-                  <div className="space-y-1">
-                    {drafts.length === 0 && (
-                      <div className="text-[11px] text-[var(--text-color-secondary)]">
-                        暂无草稿记录，可在编辑过程中随时点击「保存草稿」保留当前进度。
-                      </div>
-                    )}
-                    {drafts.map(item => {
-                      const active = selectedDraftId === item.id;
-                      return (
-                        <div
-                          key={item.id}
-                          role="button"
-                          tabIndex={0}
-                          className={
-                            "w-full flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-[11px] transition-colors cursor-pointer " +
-                            (active
-                              ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] text-[var(--primary-color)]"
-                              : "border-[var(--border-color)] bg-[var(--bg-elevated)]/80 text-[var(--text-color-secondary)] hover:border-[var(--primary-color)]/60 hover:text-[var(--text-color)]")
-                          }
-                          onClick={() => handleApplyDraft(item)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleApplyDraft(item);
-                            }
-                          }}
-                        >
-                          <div className="space-y-0.5">
-                            <div className="text-xs font-medium line-clamp-1">
-                              {item.title}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                              <span>分类：{item.category}</span>
-                              <span>最近编辑：{item.updatedAt}</span>
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="light"
-                            className="h-7 text-[10px]"
-                            startContent={<FiX className="text-[11px]" />}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveDraft(item.id);
+                  <Input
+                    size="sm"
+                    variant="bordered"
+                    aria-label="文档标题"
+                    placeholder="请输入文档标题"
+                    value={title}
+                    onValueChange={(v) => {
+                      setTitle(v);
+                      if (!isTitleTouched) setIsTitleTouched(true);
+                    }}
+                    isInvalid={isTitleTouched && !title.trim()}
+                    errorMessage={isTitleTouched && !title.trim() ? "请输入文档标题" : ""}
+                    classNames={{
+                      inputWrapper: "h-10 border-[var(--border-color)] hover:border-[var(--primary-color)] transition-colors bg-[var(--bg-elevated)]/30",
+                      input: "text-xs"
+                    }}
+                  />
+                </div>
+
+                {/* 第二层：文档分类 */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-[var(--text-color-secondary)]">文档分类</label>
+                  <Popover placement="bottom-start" showArrow offset={10}>
+                    <PopoverTrigger>
+                      <Button 
+                      variant="bordered" 
+                      size="sm" 
+                      aria-label="文档分类"
+                      className="w-full justify-between h-10 border-[var(--border-color)] hover:border-[var(--primary-color)] bg-[var(--bg-elevated)]/30 text-xs font-normal px-3"
+                      endContent={<FiChevronRight className="text-[var(--text-color-secondary)] rotate-90" />}
+                    >
+                      {category && category !== "未分类" ? (
+                        <div className="flex items-center gap-1">
+                          {(() => {
+                            const parent = CATEGORY_DATA.find(c => c.children.some(sub => sub.name === category));
+                            return parent ? (
+                              <>
+                                <span className="text-[var(--text-color-secondary)]">{parent.name}</span>
+                                <span className="text-[var(--text-color-secondary)]/50">/</span>
+                              </>
+                            ) : null;
+                          })()}
+                          <span>{category}</span>
+                        </div>
+                      ) : "选择分类"}
+                    </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 border border-[var(--border-color)] shadow-xl overflow-hidden bg-[var(--bg-elevated)]">
+                      <div className="flex h-[280px] min-w-[320px]">
+                        {/* 一级分类 */}
+                        <div className="w-1/2 border-r border-[var(--border-color)] bg-[var(--bg-elevated)]/50">
+                          <Listbox
+                            aria-label="一级分类"
+                            variant="flat"
+                            disallowEmptySelection
+                            selectionMode="single"
+                            selectedKeys={[activeCategoryLevel1]}
+                            onSelectionChange={(keys) => setActiveCategoryLevel1(Array.from(keys)[0] as string)}
+                            className="p-1"
+                            itemClasses={{
+                              base: "rounded-md px-3 py-2 gap-3 data-[selected=true]:bg-[var(--primary-color)]/10 data-[selected=true]:text-[var(--primary-color)]",
+                              title: "text-xs font-medium"
                             }}
                           >
-                            删除
+                            {CATEGORY_DATA.map(cat => (
+                              <ListboxItem key={cat.id} endContent={<FiChevronRight className="text-[10px] opacity-50" />}>
+                                {cat.name}
+                              </ListboxItem>
+                            ))}
+                          </Listbox>
+                        </div>
+                        {/* 二级分类 */}
+                        <div className="w-1/2 bg-[var(--bg-elevated)]">
+                          <Listbox
+                            aria-label="二级分类"
+                            variant="flat"
+                            disallowEmptySelection
+                            selectionMode="single"
+                            selectedKeys={[category]}
+                            onSelectionChange={(keys) => setCategory(Array.from(keys)[0] as string)}
+                            className="p-1"
+                            itemClasses={{
+                              base: "rounded-md px-3 py-2 data-[selected=true]:bg-[var(--primary-color)]/10 data-[selected=true]:text-[var(--primary-color)]",
+                              title: "text-xs"
+                            }}
+                          >
+                            {(CATEGORY_DATA.find(c => c.id === activeCategoryLevel1)?.children || []).map(sub => (
+                              <ListboxItem key={sub.name}>
+                                {sub.name}
+                              </ListboxItem>
+                            ))}
+                          </Listbox>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* 第三层：文档简介 */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-medium text-[var(--text-color-secondary)]">文档简介</label>
+                    <span className={`text-[10px] ${description.length > 500 ? "text-danger" : "text-[var(--text-color-secondary)]"}`}>
+                      {description.length}/500
+                    </span>
+                  </div>
+                  <Textarea
+                    size="sm"
+                    variant="bordered"
+                    aria-label="文档简介"
+                    placeholder="简要描述文档内容，帮助他人快速了解文档核心价值..."
+                    value={description}
+                    onValueChange={setDescription}
+                    minRows={4}
+                    classNames={{
+                      inputWrapper: "border-[var(--border-color)] hover:border-[var(--primary-color)] transition-colors bg-[var(--bg-elevated)]/30 p-3",
+                      input: "text-xs leading-relaxed"
+                    }}
+                  />
+                </div>
+
+                {/* 第四层：标签设置 */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-[var(--text-color-secondary)]">标签设置</label>
+                  <AdminSelect
+                    aria-label="标签设置"
+                    placeholder="为文档添加标签 (多选)"
+                    selectionMode="multiple"
+                    size="sm"
+                    selectedKeys={selectedTags}
+                    onSelectionChange={(keys) => setSelectedTags(keys as Set<string>)}
+                    startContent={<FiTag className="text-[var(--text-color-secondary)] text-xs" />}
+                    classNames={{
+                      trigger: "h-10 border-[var(--border-color)] hover:border-[var(--primary-color)] bg-[var(--bg-elevated)]/30",
+                      value: "text-xs"
+                    }}
+                  >
+                    {TAG_OPTIONS.map(tag => (
+                      <SelectItem key={tag.value} textValue={tag.label}>
+                        {tag.label}
+                      </SelectItem>
+                    ))}
+                  </AdminSelect>
+                </div>
+             </div>
+          </Card>
+
+          {/* 2. 权限设置 */}
+          <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+             <div className="p-3 border-b border-[var(--border-color)]">
+                <div className="text-sm font-medium">权限设置</div>
+             </div>
+             
+             <div className="p-5">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs text-[var(--text-color-secondary)] w-20">可见范围</span>
+                    <AdminTabs
+                      selectedKey={permissionType}
+                      onSelectionChange={(k) => setPermissionType(k as PermissionType)}
+                      size="sm"
+                    >
+                      <Tab key="public" title="公开可见" />
+                      <Tab key="private" title="私有文档" />
+                      <Tab key="password" title="密码访问" />
+                    </AdminTabs>
+                  </div>
+                  
+                  <div className="p-4 border border-[var(--border-color)] rounded-lg bg-[var(--bg-elevated)]/30 min-h-[100px]">
+                    {permissionType === "public" && (
+                      <div className="text-xs text-[var(--text-color-secondary)] flex items-center gap-2">
+                        <FiInfo className="text-sm" />
+                        此文档将对所有拥有访问权限的用户公开。
+                      </div>
+                    )}
+                    {permissionType === "private" && (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Input 
+                            size="sm" 
+                            variant="bordered" 
+                            aria-label="用户名"
+                            placeholder="输入用户名添加可见权限" 
+                            value={visibleUserInput} 
+                            onValueChange={setVisibleUserInput}
+                            className="max-w-xs"
+                            classNames={{ inputWrapper: "h-8 text-xs" }}
+                          />
+                          <Button 
+                            size="sm" 
+                            className="h-8"
+                            onPress={() => {
+                              if (visibleUserInput.trim()) {
+                                setVisibleUsers(prev => [...new Set([...prev, visibleUserInput.trim()])]);
+                                setVisibleUserInput("");
+                              }
+                            }}
+                          >
+                            添加
                           </Button>
                         </div>
-                      );
-                    })}
+                        <div className="flex flex-wrap gap-2">
+                          {visibleUsers.map(u => (
+                            <Chip 
+                              key={u} 
+                              onClose={() => setVisibleUsers(prev => prev.filter(user => user !== u))}
+                              size="sm" 
+                              variant="flat"
+                              classNames={{ base: "bg-[var(--primary-color)]/10 text-[var(--primary-color)] border-none" }}
+                            >
+                              {u}
+                            </Chip>
+                          ))}
+                          {visibleUsers.length === 0 && (
+                            <span className="text-[10px] text-[var(--text-color-secondary)]">暂无指定用户，仅自己可见。</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {permissionType === "password" && (
+                      <div className="grid gap-4 max-w-sm">
+                        <Input
+                          type="password"
+                          size="sm"
+                          variant="bordered"
+                          label="设置访问密码"
+                          placeholder="请输入4-6位数字密码"
+                          value={accessPassword}
+                          onValueChange={setAccessPassword}
+                          labelPlacement="outside"
+                          classNames={{
+                            label: "text-xs text-[var(--text-color-secondary)] mb-1",
+                            inputWrapper: "h-9"
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs font-medium">上传任务队列</div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Input
-                        size="sm"
-                        variant="bordered"
-                        className="w-52"
-                        placeholder="按标题 / 文件名搜索上传任务"
-                        value={keyword}
-                        onValueChange={setKeyword}
-                        classNames={{
-                          inputWrapper: "h-8 text-xs",
-                          input: "text-xs"
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
-                    <Table
-                      aria-label="文档上传任务队列"
-                      className="min-w-full text-xs"
-                    >
-                      <TableHeader className="bg-[var(--bg-elevated)]/80">
-                        <TableColumn className="px-3 py-2 text-left font-medium">
-                          标题
-                        </TableColumn>
-                        <TableColumn className="px-3 py-2 text-left font-medium">
-                          文件名
-                        </TableColumn>
-                        <TableColumn className="px-3 py-2 text-right font-medium">
-                          大小
-                        </TableColumn>
-                        <TableColumn className="px-3 py-2 text-left font-medium">
-                          状态
-                        </TableColumn>
-                        <TableColumn className="px-3 py-2 text-left font-medium">
-                          进度
-                        </TableColumn>
-                        <TableColumn className="px-3 py-2 text-left font-medium">
-                          创建时间
-                        </TableColumn>
-                      </TableHeader>
-                      <TableBody
-                        items={filteredTasks}
-                        emptyContent="暂未找到上传任务记录，可先选择文件并模拟上传。"
-                      >
-                        {item => (
-                          <TableRow key={item.id}>
-                            <TableCell className="px-3 py-2 align-top">
-                              <div className="flex flex-col gap-1">
-                                <div className="font-medium line-clamp-2">
-                                  {item.title}
-                                </div>
-                                <div className="text-xs text-[var(--text-color-secondary)]">
-                                  任务 ID：{item.id}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-3 py-2 align-top">
-                              {item.fileName}
-                            </TableCell>
-                            <TableCell className="px-3 py-2 align-top text-right">
-                              {formatFileSize(item.size)}
-                            </TableCell>
-                            <TableCell className="px-3 py-2 align-top">
-                              <Chip
-                                size="sm"
-                                variant="flat"
-                                color={getUploadStatusColor(item.status)}
-                                className="text-xs"
-                              >
-                                {getUploadStatusLabel(item.status)}
-                              </Chip>
-                            </TableCell>
-                            <TableCell className="px-3 py-2 align-top">
-                              <div className="flex items-center gap-2">
-                                <Progress
-                                  aria-label="上传进度"
-                                  size="sm"
-                                  value={item.progress}
-                                  className="flex-1"
-                                />
-                                <span className="text-xs text-[var(--text-color-secondary)] w-10 text-right">
-                                  {item.progress}%
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-3 py-2 align-top">
-                              {item.createdAt}
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+             </div>
+          </Card>
+        </div>
+
+        {/* 右侧辅助区：封面上传与上传区 */}
+        <div className="lg:col-span-4 space-y-6 sticky top-4">
+          
+          {/* 文档封面 */}
+          <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+            <div className="p-3 border-b border-[var(--border-color)]">
+              <div className="text-sm font-medium">文档封面</div>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="aspect-[16/9] w-full rounded-lg border border-[var(--border-color)] overflow-hidden bg-[var(--bg-elevated)]/50 group relative">
+                <img 
+                  src={coverImage} 
+                  alt="Document Cover" 
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="flat" 
+                    className="bg-white/20 backdrop-blur-md text-white border border-white/30"
+                    onPress={handleSelectCover}
+                    startContent={<FiImage />}
+                  >
+                    更换封面
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="flat" 
+                    isIconOnly
+                    className="bg-danger/20 backdrop-blur-md text-danger border border-danger/30 hover:bg-danger/40"
+                    onPress={() => setCoverImage(DEFAULT_COVER)}
+                    isDisabled={coverImage === DEFAULT_COVER}
+                  >
+                    <FiTrash2 />
+                  </Button>
                 </div>
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <input 
+                  type="file" 
+                  ref={coverInputRef} 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={handleCoverChange}
+                />
+                <Button 
+                  fullWidth 
+                  size="sm" 
+                  variant="flat" 
+                  className="bg-[var(--primary-color)]/10 text-[var(--primary-color)] font-medium h-9"
+                  onPress={handleSelectCover}
+                  startContent={<FiUpload className="text-xs" />}
+                >
+                  从本地上传图片
+                </Button>
+                <p className="text-[10px] text-[var(--text-color-secondary)] text-center">
+                  建议尺寸 1280x720，支持 jpg/png 格式
+                </p>
               </div>
             </div>
           </Card>
+
+           {/* 上传区域 */}
+           <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+             <div className="p-3 border-b border-[var(--border-color)] text-sm font-medium">
+               文件上传
+             </div>
+             <div className="p-4">
+               <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={handleFileChange}
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.md,.txt"
+                />
+                {!selectedFileName ? (
+                  <div 
+                    className="border-2 border-dashed border-[var(--border-color)] rounded-xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-[var(--primary-color)] transition-colors"
+                    onClick={handleSelectFile}
+                  >
+                    <div className="h-10 w-10 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center text-[var(--text-color-secondary)]">
+                      <FiUpload className="text-lg" />
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs font-medium">点击或拖拽上传</div>
+                      <div className="text-[10px] text-[var(--text-color-secondary)] mt-1">
+                        支持 PDF/Word/PPT/Markdown
+                        <br />
+                        最大支持 100MB
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border border-[var(--border-color)] rounded-lg p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded bg-[var(--primary-color)]/10 flex items-center justify-center text-[var(--primary-color)]">
+                        <FiFileText className="text-lg" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate" title={selectedFileName}>
+                          {selectedFileName}
+                        </div>
+                        <div className="text-[10px] text-[var(--text-color-secondary)]">
+                          {formatSize(selectedFileSize)}
+                        </div>
+                      </div>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        color="danger"
+                        onPress={() => {
+                          setSelectedFileName("");
+                          setSelectedFileSize(0);
+                        }}
+                      >
+                        <FiX />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+             </div>
+           </Card>
+
+           {/* 发布操作 */}
+           <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+              <div className="p-4 space-y-3">
+                 <Button
+                   fullWidth
+                   color="primary"
+                   className="font-medium"
+                   startContent={<FiUploadCloud className="text-lg" />}
+                   onPress={handleCreateTask}
+                   isLoading={isUploading}
+                   isDisabled={!isFormValid || isUploading}
+                 >
+                   开始上传并发布
+                 </Button>
+                 <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      fullWidth
+                      variant="flat"
+                      className="text-xs"
+                      onPress={handleSaveDraft}
+                    >
+                      保存草稿
+                    </Button>
+                    <Button
+                      fullWidth
+                      variant="light"
+                      className="text-xs"
+                      onPress={() => {
+                        setTitle("");
+                        setCategory("未分类");
+                        setSelectedTags(new Set([]));
+                        setDescription("");
+                        setSelectedFileName("");
+                        setMessage("");
+                      }}
+                    >
+                      重置
+                    </Button>
+                 </div>
+              </div>
+           </Card>
         </div>
-      </Card>
+      </div>
+
+      {/* 底部：上传任务与草稿列表 */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* 上传任务列表 */}
+        <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[400px] flex flex-col">
+          <div className="p-3 border-b border-[var(--border-color)] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] flex items-center justify-center text-[var(--primary-color)]">
+                 <FiRefreshCw className="text-xs" />
+              </div>
+              <div className="text-sm font-medium">上传任务</div>
+            </div>
+            <div className="flex items-center gap-2">
+               <AdminSearchInput
+                 placeholder="搜索任务..."
+                 value={keyword}
+                 onValueChange={setKeyword}
+                 onSearch={() => setPage(1)}
+                 size="sm"
+                 classNames={{ inputWrapper: "h-8 w-40" }}
+               />
+               <Button isIconOnly size="sm" variant="light" onPress={() => setKeyword("")}>
+                 <FiRefreshCw />
+               </Button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto p-2">
+             <Table
+               aria-label="Upload Tasks"
+               className="min-w-full text-xs"
+             >
+               <TableHeader>
+                 <TableColumn>任务名称</TableColumn>
+                 <TableColumn width={100}>状态</TableColumn>
+                 <TableColumn width={100} align="end">操作</TableColumn>
+               </TableHeader>
+               <TableBody emptyContent="暂无上传任务">
+                 {pageItems.map(item => (
+                   <TableRow key={item.id}>
+                     <TableCell>
+                       <div className="flex flex-col">
+                         <span className="font-medium truncate max-w-[180px]" title={item.title}>{item.title}</span>
+                         <span className="text-[10px] text-[var(--text-color-secondary)]">{formatSize(item.size)}</span>
+                       </div>
+                     </TableCell>
+                     <TableCell>
+                       <Chip size="sm" variant="flat" color={getStatusColor(item.status)} className="h-6 text-[10px]">
+                         {getStatusLabel(item.status)} {item.status === "uploading" && `${item.progress}%`}
+                       </Chip>
+                     </TableCell>
+                     <TableCell>
+                       <div className="flex justify-end gap-1">
+                         {item.status === "error" && (
+                           <Tooltip content="重试">
+                             <Button isIconOnly size="sm" variant="light" onPress={() => handleRetryTask(item.id)}>
+                               <FiRefreshCw className="text-xs" />
+                             </Button>
+                           </Tooltip>
+                         )}
+                         <Tooltip content="删除">
+                           <Button isIconOnly size="sm" variant="light" color="danger" onPress={() => handleRemoveTask(item.id)}>
+                             <FiTrash2 className="text-xs" />
+                           </Button>
+                         </Tooltip>
+                       </div>
+                     </TableCell>
+                   </TableRow>
+                 ))}
+               </TableBody>
+             </Table>
+          </div>
+          <div className="p-2 border-t border-[var(--border-color)] flex justify-end">
+             <Pagination
+               size="sm"
+               total={totalPages}
+               page={page}
+               onChange={handlePageChange}
+               showControls
+               className="gap-1"
+             />
+          </div>
+        </Card>
+
+        {/* 草稿箱 */}
+        <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[400px] flex flex-col">
+           <div className="p-3 border-b border-[var(--border-color)] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-6 rounded-full bg-[color-mix(in_srgb,var(--warning-color)_10%,transparent)] flex items-center justify-center text-[var(--warning-color)]">
+                   <FiClock className="text-xs" />
+                </div>
+                <div className="text-sm font-medium">草稿箱</div>
+              </div>
+              <Button size="sm" variant="light" className="h-7 text-xs" onPress={() => setDrafts([])}>
+                清空
+              </Button>
+           </div>
+           <div className="flex-1 overflow-auto p-2">
+             <Table
+               aria-label="Drafts"
+               className="min-w-full text-xs"
+             >
+               <TableHeader>
+                 <TableColumn>草稿标题</TableColumn>
+                 <TableColumn width={120}>时间</TableColumn>
+                 <TableColumn width={100} align="end">操作</TableColumn>
+               </TableHeader>
+               <TableBody emptyContent="暂无草稿">
+                 {drafts.map(draft => (
+                   <TableRow key={draft.id}>
+                     <TableCell>
+                       <div className="flex flex-col">
+                         <span className="font-medium truncate max-w-[200px]">{draft.title}</span>
+                         <span className="text-[10px] text-[var(--text-color-secondary)]">{draft.category}</span>
+                       </div>
+                     </TableCell>
+                     <TableCell>
+                       <span className="text-[10px] text-[var(--text-color-secondary)]">
+                         {draft.updatedAt.split(" ")[0]}
+                       </span>
+                     </TableCell>
+                     <TableCell>
+                       <div className="flex justify-end gap-1">
+                         <Tooltip content="恢复">
+                           <Button isIconOnly size="sm" variant="light" color="primary" onPress={() => handleLoadDraft(draft)}>
+                             <FiUpload className="text-xs" />
+                           </Button>
+                         </Tooltip>
+                         <Tooltip content="删除">
+                           <Button isIconOnly size="sm" variant="light" color="danger" onPress={() => setDrafts(prev => prev.filter(d => d.id !== draft.id))}>
+                             <FiTrash2 className="text-xs" />
+                           </Button>
+                         </Tooltip>
+                       </div>
+                     </TableCell>
+                   </TableRow>
+                 ))}
+               </TableBody>
+             </Table>
+           </div>
+        </Card>
+      </div>
     </div>
   );
 }

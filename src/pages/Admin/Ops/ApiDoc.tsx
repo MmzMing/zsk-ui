@@ -18,7 +18,7 @@ import {
   Textarea
 } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
-import { FiSearch, FiFileText, FiDownload, FiLink, FiChevronDown, FiCopy, FiChevronUp } from "react-icons/fi";
+import { FiFileText, FiDownload, FiLink, FiChevronDown, FiCopy, FiChevronUp } from "react-icons/fi";
 
 type ApiCategory = {
   id: string;
@@ -83,6 +83,8 @@ const apiTreeData: ApiCategory[] = [
     ]
   }
 ];
+
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 
 function ApiDocPage() {
   const [keyword, setKeyword] = useState("");
@@ -232,17 +234,10 @@ function ApiDocPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Input
-            size="sm"
-            variant="bordered"
+          <AdminSearchInput
             placeholder="按名称 / 路径搜索接口"
-            startContent={<FiSearch className="text-xs text-[var(--text-color-secondary)]" />}
             value={keyword}
             onValueChange={setKeyword}
-            classNames={{
-              inputWrapper: "h-8",
-              input: "text-xs"
-            }}
           />
           <Button
             size="sm"

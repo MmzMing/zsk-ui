@@ -9,6 +9,12 @@ interface UndevelopedPageProps {
   className?: string;
 }
 
+const DECORATIVE_SYMBOLS = ['<', '>', '{', '}', '(', ')', '[', ']'].map((symbol) => ({
+  symbol,
+  left: `${Math.random() * 100}%`,
+  top: `${Math.random() * 100}%`,
+}));
+
 const UndevelopedPage: React.FC<UndevelopedPageProps> = ({
   title = '尚未开发',
   description = '该功能正在紧张开发中，敬请期待...',
@@ -115,13 +121,13 @@ const UndevelopedPage: React.FC<UndevelopedPageProps> = ({
       {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* 浮动的代码符号 */}
-        {['<', '>', '{', '}', '(', ')', '[', ']'].map((symbol, index) => (
+        {DECORATIVE_SYMBOLS.map((item, index) => (
           <motion.div
-            key={symbol}
+            key={item.symbol}
             className="absolute text-6xl text-[var(--primary-color)] opacity-5 font-mono"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: item.left,
+              top: item.top,
             }}
             animate={{
               y: [0, -20, 0],
@@ -135,7 +141,7 @@ const UndevelopedPage: React.FC<UndevelopedPageProps> = ({
               delay: index * 0.5,
             }}
           >
-            {symbol}
+            {item.symbol}
           </motion.div>
         ))}
       </div>

@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { Button, Card, Chip, DateRangePicker, Input, Tab } from "@heroui/react";
+import { Button, Card, Chip, DateRangePicker, Tab } from "@heroui/react";
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import type { LineConfig } from "@ant-design/plots";
 import { Line } from "@ant-design/plots";
-import { FiSearch } from "react-icons/fi";
 import { getLocalTimeZone } from "@internationalized/date";
 import { useAppStore } from "../../../store";
 
@@ -322,20 +322,11 @@ function UserBehaviorPage() {
           <div className="p-3 space-y-4 text-xs border-b border-[var(--border-color)]">
             {/* 第一层：搜索与基础筛选 */}
             <div className="flex flex-wrap items-center gap-3">
-              <Input
-                size="sm"
-                variant="bordered"
+              <AdminSearchInput
                 className="w-64"
                 placeholder="按操作类型、模块或关键字搜索"
-                startContent={
-                  <FiSearch className="text-[12px] text-[var(--text-color-secondary)]" />
-                }
                 value={keyword}
                 onValueChange={value => setKeyword(value)}
-                classNames={{
-                  inputWrapper: "h-8 text-xs",
-                  input: "text-xs"
-                }}
               />
               <DateRangePicker
                 aria-label="用户行为时间范围"

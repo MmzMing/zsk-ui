@@ -4,9 +4,7 @@ import {
   Card,
   Chip,
   DateRangePicker,
-  Input,
   Pagination,
-  Select,
   SelectItem,
   Table,
   TableHeader,
@@ -16,8 +14,10 @@ import {
   TableCell,
   Tab
 } from "@heroui/react";
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
-import { FiDownload, FiSearch } from "react-icons/fi";
+import { FiDownload } from "react-icons/fi";
 
 type LogLevel = "INFO" | "WARN" | "ERROR";
 
@@ -209,26 +209,17 @@ function SystemLogPage() {
         <div className="p-3 space-y-4 text-xs border-b border-[var(--border-color)]">
           {/* 第一层：搜索与基础筛选 */}
           <div className="flex flex-wrap items-center gap-3">
-            <Input
-              size="sm"
-              variant="bordered"
+            <AdminSearchInput
               className="w-64"
               placeholder="按关键字、traceId 搜索日志"
-              startContent={
-                <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
-              }
               value={keyword}
               onValueChange={value => {
                 setKeyword(value);
                 setPage(1);
               }}
-              classNames={{
-                inputWrapper: "h-8 text-xs",
-                input: "text-xs"
-              }}
             />
 
-            <Select
+            <AdminSelect
               aria-label="模块筛选"
               size="sm"
               className="w-40"
@@ -244,12 +235,12 @@ function SystemLogPage() {
               }))}
               isClearable
             >
-              {item => (
+              {(item: { label: string; value: string }) => (
                 <SelectItem key={item.value}>
                   {item.label}
                 </SelectItem>
               )}
-            </Select>
+            </AdminSelect>
 
             <DateRangePicker
               aria-label="日志时间范围筛选"

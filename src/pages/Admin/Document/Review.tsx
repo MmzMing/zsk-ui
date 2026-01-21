@@ -1,12 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Select,
   SelectItem,
   Button,
   Card,
   Chip,
   DateRangePicker,
-  Input,
   Modal,
   ModalBody,
   ModalContent,
@@ -32,6 +30,8 @@ import {
   FiFileText
 } from "react-icons/fi";
 
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 
 import {
@@ -481,9 +481,7 @@ function DocumentReviewPage() {
                 <div className="p-4 space-y-4 text-xs border-b border-[var(--border-color)]">
                   {/* 第一层：搜索框，下拉框，重置筛选 */}
                   <div className="flex flex-wrap items-center gap-3">
-                    <Input
-                      size="sm"
-                      variant="bordered"
+                    <AdminSearchInput
                       className="w-64"
                       placeholder="按标题 / ID 搜索文档"
                       value={keyword}
@@ -492,17 +490,8 @@ function DocumentReviewPage() {
                         setPage(1);
                         setSelectedIds([]);
                       }}
-                      startContent={
-                        <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
-                      }
-                      classNames={{
-                        inputWrapper: "h-8 text-xs",
-                        input: "text-xs"
-                      }}
                     />
-                    <Input
-                      size="sm"
-                      variant="bordered"
+                    <AdminSearchInput
                       className="w-40"
                       placeholder="按上传人筛选"
                       value={uploaderFilter}
@@ -511,12 +500,8 @@ function DocumentReviewPage() {
                         setPage(1);
                         setSelectedIds([]);
                       }}
-                      classNames={{
-                        inputWrapper: "h-8 text-xs",
-                        input: "text-xs"
-                      }}
                     />
-                    <Select
+                    <AdminSelect
                       aria-label="文档分类筛选"
                       size="sm"
                       className="w-40"
@@ -535,16 +520,13 @@ function DocumentReviewPage() {
                         }))
                       ]}
                       isClearable
-                      classNames={{
-                        trigger: "h-8 min-h-8 text-xs"
-                      }}
                     >
-                      {item => (
+                      {(item: { label: string; value: string }) => (
                         <SelectItem key={item.value} className="text-xs">
                           {item.label}
                         </SelectItem>
                       )}
-                    </Select>
+                    </AdminSelect>
                     <DateRangePicker
                       aria-label="提交时间筛选"
                       size="sm"
@@ -794,17 +776,11 @@ function DocumentReviewPage() {
                         <span>按时间倒序展示文档审核日志，支持按审核人与时间范围筛选。</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Input
-                          size="sm"
-                          variant="bordered"
+                        <AdminSearchInput
                           className="w-40"
                           placeholder="按审核人筛选"
                           value={logReviewerFilter}
-                          onValueChange={value => setLogReviewerFilter(value)}
-                          classNames={{
-                            inputWrapper: "h-8 text-xs",
-                            input: "text-xs"
-                          }}
+                          onValueChange={setLogReviewerFilter}
                         />
                         <DateRangePicker
                           aria-label="审核时间筛选"
@@ -906,18 +882,9 @@ function DocumentReviewPage() {
                     </AdminTabs>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Input
-                      size="sm"
-                      variant="bordered"
+                    <AdminSearchInput
                       className="w-64"
                       placeholder="按评论内容 / 关联文档标题搜索"
-                      startContent={
-                        <FiSearch className="text-[12px] text-[var(--text-color-secondary)]" />
-                      }
-                      classNames={{
-                        inputWrapper: "h-8 text-xs",
-                        input: "text-xs"
-                      }}
                     />
                     <DateRangePicker
                       aria-label="评论时间范围"
@@ -1303,7 +1270,7 @@ function DocumentReviewPage() {
                       <section className="space-y-4">
                         <div className="text-sm font-semibold">审核意见</div>
                         <div className="space-y-4">
-                          <Select
+                          <AdminSelect
                             label="驳回原因模板"
                             labelPlacement="outside"
                             placeholder="请选择预设驳回原因..."
@@ -1315,7 +1282,7 @@ function DocumentReviewPage() {
                             <SelectItem key="copyright">涉及版权纠纷</SelectItem>
                             <SelectItem key="format">格式不符合要求</SelectItem>
                             <SelectItem key="quality">内容质量过低</SelectItem>
-                          </Select>
+                          </AdminSelect>
 
                           <Textarea
                             label="审核备注"

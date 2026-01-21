@@ -25,6 +25,33 @@ export async function initDocumentUpload(data: DocumentUploadInitRequest) {
   );
 }
 
+export type DocumentUploadFinishRequest = {
+  uploadId: string;
+  status: "success" | "error";
+  errorMsg?: string;
+};
+
+export async function finishDocumentUpload(data: DocumentUploadFinishRequest) {
+  return request.post<boolean>(
+    "/admin/content/doc/upload/finish",
+    data
+  );
+}
+
+export async function removeDocumentUploadTask(id: string) {
+  return request.post<boolean>(
+    "/admin/content/doc/upload/remove",
+    { id }
+  );
+}
+
+export async function retryDocumentUploadTask(id: string) {
+  return request.post<boolean>(
+    "/admin/content/doc/upload/retry",
+    { id }
+  );
+}
+
 export type DocumentUploadTaskItem = {
   id: string;
   title: string;
@@ -55,12 +82,16 @@ export type DocumentItem = {
   id: string;
   title: string;
   category: string;
-  status: "draft" | "published" | "offline";
+  status: "draft" | "published" | "offline" | "pending" | "approved" | "rejected" | "scheduled";
   readCount: number;
   likeCount: number;
   commentCount: number;
   createdAt: string;
   updatedAt: string;
+  cover?: string;
+  tags?: string[];
+  pinned?: boolean;
+  recommended?: boolean;
 };
 
 export type DocumentListResponse = {

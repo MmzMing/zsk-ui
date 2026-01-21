@@ -1,11 +1,9 @@
 import React, { useMemo, useState } from "react";
 import {
-  Select,
   SelectItem,
   Button,
   Card,
   Chip,
-  Input,
   Pagination,
   Table,
   TableHeader,
@@ -14,7 +12,7 @@ import {
   TableRow,
   TableCell
 } from "@heroui/react";
-import { FiKey, FiSearch } from "react-icons/fi";
+import { FiKey } from "react-icons/fi";
 
 type PermissionItem = {
   id: string;
@@ -194,6 +192,9 @@ function getTypeLabel(type: PermissionItem["type"]) {
   return "数据权限";
 }
 
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
+
 function PermissionPage() {
   const [keyword, setKeyword] = useState("");
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
@@ -266,27 +267,20 @@ function PermissionPage() {
         <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
-              <Input
-                size="sm"
-                variant="bordered"
+              <AdminSearchInput
                 className="w-56"
                 placeholder="按权限标识 / 名称 / 模块搜索"
-                startContent={<FiSearch className="text-xs text-[var(--text-color-secondary)]" />}
                 value={keyword}
                 onValueChange={value => setKeyword(value)}
-                classNames={{
-                  inputWrapper: "h-8 text-xs",
-                  input: "text-xs"
-                }}
               />
-              <Select
+              <AdminSelect
                 aria-label="模块筛选"
                 size="sm"
                 className="w-40"
                 selectedKeys={[moduleFilter]}
                 onSelectionChange={keys => {
                   const key = Array.from(keys)[0];
-                  setModuleFilter(key ? String(key) as ModuleFilter : "all");
+                  setModuleFilter(key ? (String(key) as ModuleFilter) : "all");
                 }}
                 items={[
                   { label: "全部模块", value: "all" },
@@ -298,12 +292,12 @@ function PermissionPage() {
                 ]}
                 isClearable
               >
-                {item => (
+                {(item: { label: string; value: string }) => (
                   <SelectItem key={item.value}>
                     {item.label}
                   </SelectItem>
                 )}
-              </Select>
+              </AdminSelect>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button

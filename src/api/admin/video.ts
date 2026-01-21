@@ -80,11 +80,13 @@ export type UploadTaskItem = {
   title: string;
   fileName: string;
   category: string;
+  tags?: string[];
   size: number;
   status: UploadTaskStatus;
   progress: number;
   isAiChecked: boolean;
   aiRiskLevel?: "low" | "medium" | "high";
+  coverImage?: string;
   createdAt: string;
 };
 
@@ -109,19 +111,24 @@ export async function fetchUploadTaskList(params: UploadTaskListParams) {
   );
 }
 
-export type VideoStatus = "draft" | "published" | "offline";
+export type VideoStatus = "draft" | "published" | "offline" | "pending" | "approved" | "rejected" | "scheduled";
 
 export type VideoItem = {
   id: string;
   title: string;
   category: string;
   status: VideoStatus;
-  duration: number;
+  duration: string;
   plays: number;
   likes: number;
   comments: number;
   createdAt: string;
   updatedAt: string;
+  cover?: string;
+  tags?: string[];
+  videoUrl?: string;
+  pinned?: boolean;
+  recommended?: boolean;
 };
 
 export type VideoListParams = {

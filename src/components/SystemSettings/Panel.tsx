@@ -1,5 +1,6 @@
 import React from "react";
-import { Button, Input, Switch, Select, SelectItem } from "@heroui/react";
+import { Button, Input, Switch, SelectItem, Accordion, AccordionItem } from "@heroui/react";
+import { AdminSelect } from "../Admin/AdminSelect";
 import { useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiSun, FiMoon, FiMonitor, FiRotateCcw } from "react-icons/fi";
@@ -10,6 +11,44 @@ import StaggeredMenu from "../Motion/StaggeredMenu";
 type Props = {
   visible: boolean;
   onClose: () => void;
+};
+
+function CollapsibleSection({ title, children, defaultExpanded = true }: { title: string; children: React.ReactNode; defaultExpanded?: boolean }) {
+  return (
+    <Accordion
+      variant="light"
+      className="px-0"
+      itemClasses={{
+        base: "py-0 w-full",
+        title: "text-sm font-medium",
+        trigger: "py-2 px-0 hover:bg-transparent",
+        content: "pb-3 pt-0",
+        indicator: "text-[var(--text-color-secondary)]"
+      }}
+      defaultExpandedKeys={defaultExpanded ? ["section"] : []}
+    >
+      <AccordionItem key="section" aria-label={title} title={title}>
+        {children}
+      </AccordionItem>
+    </Accordion>
+  );
+}
+
+const buttonClassNames = {
+  base: [
+    "border",
+    "border-[var(--border-color)]",
+    "dark:border-white/20",
+    "transition-colors",
+    "data-[hover=true]:bg-transparent!",
+    "data-[hover=true]:border-[var(--primary-color)]/80!"
+  ].join(" "),
+  selected: [
+    "bg-[color-mix(in_srgb,var(--primary-color)_15%,transparent)]!",
+    "border-[var(--primary-color)]!",
+    "text-[var(--primary-color)]!",
+    "dark:border-[var(--primary-color)]!"
+  ].join(" ")
 };
 
 function Panel(props: Props) {
@@ -33,6 +72,7 @@ function Panel(props: Props) {
     contentPadding,
     pageTransition,
     clickSparkEnabled,
+    showTopNav,
     setThemeMode,
     setLayoutMode,
     setLanguage,
@@ -50,6 +90,7 @@ function Panel(props: Props) {
     setContentPadding,
     setPageTransition,
     setClickSparkEnabled,
+    setShowTopNav,
     resetSettings
   } = useAppStore();
 
@@ -85,16 +126,15 @@ function Panel(props: Props) {
                 <FiRotateCcw className="text-sm" />
               </Button>
             </div>
-            <div className="space-y-4 text-sm overflow-y-auto h-full pb-10">
+            <div className="space-y-1 text-sm overflow-y-auto h-full pb-10 pr-1">
               <StaggeredMenu>
-                <div>
-                  <div className="mb-2 font-medium">主题风格</div>
+                <CollapsibleSection title="主题风格">
                   <div className="flex gap-2">
                     <Button
                       isIconOnly
                       size="sm"
-                      variant={themeMode === "light" ? "solid" : "bordered"}
-                      className="h-8 w-8 min-w-8"
+                      variant="bordered"
+                      className={`${buttonClassNames.base} h-8 w-8 min-w-8 ${themeMode === "light" ? buttonClassNames.selected : ""}`}
                       onPress={() => setThemeMode("light")}
                       aria-label="浅色模式"
                     >
@@ -103,8 +143,8 @@ function Panel(props: Props) {
                     <Button
                       isIconOnly
                       size="sm"
-                      variant={themeMode === "dark" ? "solid" : "bordered"}
-                      className="h-8 w-8 min-w-8"
+                      variant="bordered"
+                      className={`${buttonClassNames.base} h-8 w-8 min-w-8 ${themeMode === "dark" ? buttonClassNames.selected : ""}`}
                       onPress={() => setThemeMode("dark")}
                       aria-label="深色模式"
                     >
@@ -113,85 +153,85 @@ function Panel(props: Props) {
                     <Button
                       isIconOnly
                       size="sm"
-                      variant={themeMode === "system" ? "solid" : "bordered"}
-                      className="h-8 w-8 min-w-8"
+                      variant="bordered"
+                      className={`${buttonClassNames.base} h-8 w-8 min-w-8 ${themeMode === "system" ? buttonClassNames.selected : ""}`}
                       onPress={() => setThemeMode("system")}
                       aria-label="跟随系统"
                     >
                       <FiMonitor className="text-sm" />
                     </Button>
                   </div>
-                </div>
+                </CollapsibleSection>
+
                 {isAdmin && (
-                  <div>
-                    <div className="mb-2 font-medium">菜单布局（仅后台管理）</div>
+                  <CollapsibleSection title="菜单布局（仅后台管理）">
                     <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
-                        variant={layoutMode === "vertical" ? "solid" : "bordered"}
-                        className="h-7 px-3 text-xs"
+                        variant="bordered"
+                        className={`${buttonClassNames.base} h-7 px-3 text-xs ${layoutMode === "vertical" ? buttonClassNames.selected : ""}`}
                         onPress={() => setLayoutMode("vertical")}
                       >
                         垂直
                       </Button>
                       <Button
                         size="sm"
-                        variant={layoutMode === "horizontal" ? "solid" : "bordered"}
-                        className="h-7 px-3 text-xs"
+                        variant="bordered"
+                        className={`${buttonClassNames.base} h-7 px-3 text-xs ${layoutMode === "horizontal" ? buttonClassNames.selected : ""}`}
                         onPress={() => setLayoutMode("horizontal")}
                       >
                         水平
                       </Button>
                       <Button
                         size="sm"
-                        variant={layoutMode === "mixed" ? "solid" : "bordered"}
-                        className="h-7 px-3 text-xs"
+                        variant="bordered"
+                        className={`${buttonClassNames.base} h-7 px-3 text-xs ${layoutMode === "mixed" ? buttonClassNames.selected : ""}`}
                         onPress={() => setLayoutMode("mixed")}
                       >
                         混合
                       </Button>
                       <Button
                         size="sm"
-                        variant={layoutMode === "double" ? "solid" : "bordered"}
-                        className="h-7 px-3 text-xs"
+                        variant="bordered"
+                        className={`${buttonClassNames.base} h-7 px-3 text-xs ${layoutMode === "double" ? buttonClassNames.selected : ""}`}
                         onPress={() => setLayoutMode("double")}
                       >
                         双列
                       </Button>
                       <Button
                         size="sm"
-                        variant={layoutMode === "dock" ? "solid" : "bordered"}
-                        className="h-7 px-3 text-xs"
+                        variant="bordered"
+                        className={`${buttonClassNames.base} h-7 px-3 text-xs ${layoutMode === "dock" ? buttonClassNames.selected : ""}`}
                         onPress={() => setLayoutMode("dock")}
                       >
                         Dock
                       </Button>
                     </div>
-                  </div>
+                  </CollapsibleSection>
                 )}
-                <div>
-                  <div className="mb-2 font-medium">国际化</div>
+
+                <CollapsibleSection title="国际化">
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant={language === "zh-CN" ? "solid" : "bordered"}
-                      className="flex-1 h-8 text-xs"
+                      variant="bordered"
+                      className={`${buttonClassNames.base} flex-1 h-8 text-xs ${language === "zh-CN" ? buttonClassNames.selected : ""}`}
                       onPress={() => setLanguage("zh-CN")}
                     >
                       中文
                     </Button>
                     <Button
                       size="sm"
-                      variant={language === "en-US" ? "solid" : "bordered"}
-                      className="flex-1 h-8 text-xs"
+                      variant="bordered"
+                      className={`${buttonClassNames.base} flex-1 h-8 text-xs ${language === "en-US" ? buttonClassNames.selected : ""}`}
                       onPress={() => setLanguage("en-US")}
                     >
                       English
                     </Button>
                   </div>
-                </div>
-                <div>
-                  <div className="mb-2 font-medium">主题配色</div>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="主题配色">
                   <div className="flex items-center gap-3 mb-2">
                     <input
                       type="color"
@@ -229,9 +269,9 @@ function Panel(props: Props) {
                       )
                     )}
                   </div>
-                </div>
-                <div>
-                  <div className="mb-2 font-medium">盒子样式</div>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="盒子样式">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-color-secondary)]">启用边框</span>
@@ -252,9 +292,9 @@ function Panel(props: Props) {
                       />
                     </div>
                   </div>
-                </div>
-                <div>
-                  <div className="mb-2 font-medium">自定义布局模式</div>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="自定义布局模式">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--text-color-secondary)]">多标签页</span>
@@ -262,6 +302,15 @@ function Panel(props: Props) {
                         size="sm"
                         isSelected={multiTabEnabled}
                         onValueChange={setMultiTabEnabled}
+                        className="scale-90"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[var(--text-color-secondary)]">显示顶栏</span>
+                      <Switch
+                        size="sm"
+                        isSelected={showTopNav}
+                        onValueChange={setShowTopNav}
                         className="scale-90"
                       />
                     </div>
@@ -311,9 +360,9 @@ function Panel(props: Props) {
                       />
                     </div>
                   </div>
-                </div>
-                <div>
-                  <div className="mb-2 font-medium">菜单宽度</div>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="菜单宽度">
                   <input
                     type="range"
                     min={160}
@@ -328,9 +377,9 @@ function Panel(props: Props) {
                   <div className="mt-1 text-[11px] text-[var(--text-color-secondary)]">
                     当前宽度: {menuWidth}px
                   </div>
-                </div>
-                <div>
-                  <div className="mb-2 font-medium">圆角与字体</div>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="圆角与字体">
                   <div className="mb-2 text-xs">
                     <div className="mb-1">全局圆角: {borderRadius}px</div>
                     <input
@@ -354,8 +403,8 @@ function Panel(props: Props) {
                         <Button
                           key={size}
                           size="sm"
-                          variant={fontSize === size ? "solid" : "bordered"}
-                          className="px-2 py-1 rounded-full text-xs h-7 min-w-0"
+                          variant="bordered"
+                          className={`${buttonClassNames.base} px-2 py-1 rounded-full text-xs h-7 min-w-0 ${fontSize === size ? buttonClassNames.selected : ""}`}
                           onPress={() => setFontSize(size as 12 | 14 | 16 | 18)}
                         >
                           {size}px
@@ -370,8 +419,8 @@ function Panel(props: Props) {
                         <Button
                           key={padding}
                           size="sm"
-                          variant={contentPadding === padding ? "solid" : "bordered"}
-                          className="px-2 py-1 rounded-full text-[11px] h-7 min-w-0"
+                          variant="bordered"
+                          className={`${buttonClassNames.base} px-2 py-1 rounded-full text-[11px] h-7 min-w-0 ${contentPadding === padding ? buttonClassNames.selected : ""}`}
                           onPress={() =>
                             setContentPadding(padding as 8 | 16 | 24)
                           }
@@ -381,42 +430,37 @@ function Panel(props: Props) {
                       ))}
                     </div>
                   </div>
-                </div>
-                <div>
-                  <div className="mb-2 font-medium">页面切换动效</div>
-                  <Select
-                    size="sm"
-                    variant="bordered"
+                </CollapsibleSection>
+
+                <CollapsibleSection title="页面切换动效">
+                  <AdminSelect
                     selectedKeys={[pageTransition]}
                     onSelectionChange={keys => {
                       const value = Array.from(keys)[0] as typeof pageTransition;
                       if (value) setPageTransition(value);
                     }}
-                    classNames={{
-                      trigger: "h-8 min-h-8 bg-[var(--bg-elevated)] border-[var(--border-color)]",
-                      value: "text-xs font-[inherit]"
-                    }}
                     disallowEmptySelection
                     aria-label="页面切换动效"
                   >
-                    <SelectItem key="none" id="none" textValue="关闭">
+                    <SelectItem key="none" textValue="关闭">
                       关闭
                     </SelectItem>
-                    <SelectItem key="fade" id="fade" textValue="淡入淡出">
+                    <SelectItem key="fade" textValue="淡入淡出">
                       淡入淡出
                     </SelectItem>
-                    <SelectItem key="slide" id="slide" textValue="滑入滑出">
+                    <SelectItem key="slide" textValue="滑入滑出">
                       滑入滑出
                     </SelectItem>
-                    <SelectItem key="scale" id="scale" textValue="缩放渐变">
+                    <SelectItem key="scale" textValue="缩放渐变">
                       缩放渐变
                     </SelectItem>
-                    <SelectItem key="layer" id="layer" textValue="层级切换">
+                    <SelectItem key="layer" textValue="层级切换">
                       层级切换
                     </SelectItem>
-                  </Select>
-                </div>
-                <p className="text-[11px] text-[var(--text-color-secondary)]">
+                  </AdminSelect>
+                </CollapsibleSection>
+
+                <p className="text-[11px] text-[var(--text-color-secondary)] px-1">
                   当前版本已接入所有配置字段，点击动效与页面动效已生效，其他功能会在对应布局和页面中逐步完善。
                 </p>
               </StaggeredMenu>

@@ -1,22 +1,23 @@
 import React, { useMemo, useState } from "react";
 import {
-  Select,
-  SelectItem,
   Button,
   Card,
   Chip,
   Input,
   Pagination,
+  SelectItem,
   Switch,
-  Textarea,
   Table,
-  TableHeader,
-  TableColumn,
   TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
   TableRow,
-  TableCell
+  Textarea
 } from "@heroui/react";
-import { FiEdit2, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
 
 type ParamScope = "global" | "frontend" | "backend" | "task";
 
@@ -266,30 +267,23 @@ function ParamPage() {
         <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
-              <Input
-                size="sm"
-                variant="bordered"
+              <AdminSearchInput
                 className="w-56"
                 placeholder="按键名 / 名称搜索参数"
-                startContent={<FiSearch className="text-xs text-[var(--text-color-secondary)]" />}
                 value={keyword}
                 onValueChange={value => {
                   setKeyword(value);
                   setPage(1);
                 }}
-                classNames={{
-                  inputWrapper: "h-8 text-xs",
-                  input: "text-xs"
-                }}
               />
-              <Select
+              <AdminSelect
                 aria-label="作用域筛选"
                 size="sm"
                 className="w-40"
                 selectedKeys={[scopeFilter]}
                 onSelectionChange={keys => {
                   const key = Array.from(keys)[0];
-                  setScopeFilter(key ? String(key) as ParamScope | "all" : "all");
+                  setScopeFilter(key ? (String(key) as ParamScope | "all") : "all");
                   setPage(1);
                 }}
                 items={[
@@ -301,12 +295,12 @@ function ParamPage() {
                 ]}
                 isClearable
               >
-                {item => (
+                {(item: { label: string; value: string }) => (
                   <SelectItem key={item.value}>
                     {item.label}
                   </SelectItem>
                 )}
-              </Select>
+              </AdminSelect>
               <Button
                 size="sm"
                 variant="light"
@@ -515,7 +509,7 @@ function ParamPage() {
               </div>
               <div className="space-y-1">
                 <div>作用域</div>
-                <Select
+                <AdminSelect
                   aria-label="参数作用域"
                   size="sm"
                   selectedKeys={[formState.scope]}
@@ -534,12 +528,12 @@ function ParamPage() {
                   className="w-full"
                   disallowEmptySelection
                 >
-                  {item => (
+                  {(item: { label: string; value: string }) => (
                     <SelectItem key={item.value}>
                       {item.label}
                     </SelectItem>
                   )}
-                </Select>
+                </AdminSelect>
               </div>
               <div className="flex items-center justify-between pt-1">
                 <div className="text-xs">是否敏感参数</div>

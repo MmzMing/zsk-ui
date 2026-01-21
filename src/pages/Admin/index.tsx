@@ -159,22 +159,15 @@ function AdminPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Chip
-            size="sm"
-            color="primary"
-            variant="flat"
-            className="text-xs"
-          >
-            当前版本：V1 · 仅前端演示
-          </Chip>
           <Tooltip content="刷新当前看板数据（当前为本地 mock）">
             <Button
+              isIconOnly
               size="sm"
-              variant="bordered"
-              startContent={<FiRefreshCw className="text-xs" />}
+              variant="light"
+              color="danger"
               className="text-xs"
             >
-              刷新数据
+              <FiRefreshCw className="text-sm" />
             </Button>
           </Tooltip>
         </div>

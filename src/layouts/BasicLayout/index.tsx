@@ -273,7 +273,11 @@ function BasicLayout() {
               >
                 <FiGlobe />
               </button>
-              <Dropdown>
+              <Dropdown
+                 classNames={{
+                   content: "bg-[var(--bg-elevated)]! border border-[var(--primary-color)]/20! shadow-2xl! rounded-xl min-w-[140px] p-1.5"
+                 }}
+               >
                 <DropdownTrigger>
                   <button
                     type="button"
@@ -288,6 +292,18 @@ function BasicLayout() {
                 </DropdownTrigger>
                 <DropdownMenu
                   aria-label="选择主题色"
+                  itemClasses={{
+                    base: [
+                      "rounded-lg",
+                      "text-gray-400",
+                      "gap-3",
+                      "px-3 py-2",
+                      "transition-colors",
+                      "data-[hover=true]:bg-[var(--primary-color)]/15!",
+                      "data-[hover=true]:text-[var(--primary-color)]!",
+                    ].join(" "),
+                    title: "text-sm font-medium"
+                  }}
                   onAction={key => setPrimaryColor(key as string)}
                 >
                   {[
@@ -313,7 +329,12 @@ function BasicLayout() {
               </Dropdown>
             </div>
             {token ? (
-            <Dropdown placement="bottom-end">
+            <Dropdown 
+               placement="bottom-end"
+               classNames={{
+                 content: "bg-[var(--bg-elevated)]! border border-[var(--primary-color)]/20! shadow-2xl! rounded-xl min-w-[140px] p-1.5"
+               }}
+             >
               <DropdownTrigger>
                 <button
                   type="button"
@@ -334,6 +355,18 @@ function BasicLayout() {
               </DropdownTrigger>
               <DropdownMenu
                 aria-label="用户菜单"
+                itemClasses={{
+                  base: [
+                    "rounded-lg",
+                    "text-gray-400",
+                    "gap-3",
+                    "px-3 py-2",
+                    "transition-colors",
+                    "data-[hover=true]:bg-[var(--primary-color)]/15!",
+                    "data-[hover=true]:text-[var(--primary-color)]!",
+                  ].join(" "),
+                  title: "text-sm font-medium"
+                }}
                 onAction={key => {
                   if (key === "admin") {
                     navigate(routes.admin);
@@ -366,7 +399,7 @@ function BasicLayout() {
                 </DropdownItem>
                 <DropdownItem
                   key="logout"
-                  color="danger"
+                  className="text-danger data-[hover=true]:bg-danger/15! data-[hover=true]:text-danger!"
                   startContent={<FiLogOut className="w-4 h-4" />}
                 >
                   退出登录

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
-import { FiGrid, FiBell, FiSettings, FiHome, FiUser, FiLogOut, FiEye, FiEyeOff } from "react-icons/fi";
+import { FiGrid, FiBell, FiSettings, FiHome, FiUser, FiLogOut, FiEye, FiEyeOff, FiMaximize2, FiMinimize2 } from "react-icons/fi";
 import { Dock, DockIcon } from "../../components/MagicUI/Dock";
 import MainMenu from "./MainMenu";
 import { useAppStore } from "../../store";
@@ -10,6 +10,8 @@ import { routes } from "../../router/routes";
 
 interface OperationBarProps {
   onOpenSettings: () => void;
+  isFullscreen?: boolean;
+  toggleFullscreen?: () => void;
 }
 
 const Clock = () => {
@@ -29,7 +31,7 @@ const Clock = () => {
   );
 };
 
-const OperationBar = ({ onOpenSettings }: OperationBarProps) => {
+const OperationBar = ({ onOpenSettings, isFullscreen, toggleFullscreen }: OperationBarProps) => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const { showTopNav, setShowTopNav } = useAppStore();
@@ -82,6 +84,14 @@ const OperationBar = ({ onOpenSettings }: OperationBarProps) => {
               </Tooltip>
             </DockIcon>
 
+            <DockIcon onClick={toggleFullscreen}>
+              <Tooltip content={isFullscreen ? "退出全屏" : "全屏模式"}>
+                <div className="w-full h-full flex items-center justify-center text-[var(--text-color)] hover:text-[var(--primary-color)] transition-colors">
+                  {isFullscreen ? <FiMinimize2 className="text-xl" /> : <FiMaximize2 className="text-xl" />}
+                </div>
+              </Tooltip>
+            </DockIcon>
+
             <DockIcon onClick={onOpenSettings}>
               <Tooltip content="系统设置">
                 <div className="w-full h-full flex items-center justify-center text-[var(--text-color)] hover:text-[var(--primary-color)] transition-colors">
@@ -91,7 +101,12 @@ const OperationBar = ({ onOpenSettings }: OperationBarProps) => {
             </DockIcon>
 
             <DockIcon>
-               <Dropdown placement="top">
+               <Dropdown 
+                 placement="top"
+                 classNames={{
+                   content: "bg-[var(--bg-elevated)]! border border-[var(--primary-color)]/20! shadow-2xl! rounded-xl min-w-[140px] p-1.5"
+                 }}
+               >
                 <DropdownTrigger>
                   <div className="w-full h-full flex items-center justify-center outline-none cursor-pointer">
                     <div className="w-8 h-8 rounded-full bg-[var(--primary-color)] flex items-center justify-center text-white text-xs font-bold shadow-lg transform transition-transform hover:scale-110 active:scale-95">
@@ -99,14 +114,33 @@ const OperationBar = ({ onOpenSettings }: OperationBarProps) => {
                     </div>
                   </div>
                 </DropdownTrigger>
-                <DropdownMenu aria-label="User Actions">
-                  <DropdownItem key="home" startContent={<FiHome />} onPress={() => navigate(routes.home)}>
+                <DropdownMenu 
+                  aria-label="User Actions"
+                  itemClasses={{
+                    base: [
+                      "rounded-lg",
+                      "text-gray-400",
+                      "gap-3",
+                      "px-3 py-2",
+                      "transition-colors",
+                      "data-[hover=true]:bg-[var(--primary-color)]/15!",
+                      "data-[hover=true]:text-[var(--primary-color)]!",
+                    ].join(" "),
+                    title: "text-sm font-medium"
+                  }}
+                >
+                  <DropdownItem key="home" startContent={<FiHome className="text-lg" />} onPress={() => navigate(routes.home)}>
                     返回前台
                   </DropdownItem>
-                  <DropdownItem key="profile" startContent={<FiUser />} onPress={() => navigate(routes.profile)}>
+                  <DropdownItem key="profile" startContent={<FiUser className="text-lg" />} onPress={() => navigate(routes.profile)}>
                     个人中心
                   </DropdownItem>
-                  <DropdownItem key="logout" className="text-danger" color="danger" startContent={<FiLogOut />} onPress={handleLogout}>
+                  <DropdownItem 
+                    key="logout" 
+                    className="text-danger data-[hover=true]:bg-danger/15! data-[hover=true]:text-danger!" 
+                    startContent={<FiLogOut className="text-lg" />} 
+                    onPress={handleLogout}
+                  >
                     退出登录
                   </DropdownItem>
                 </DropdownMenu>

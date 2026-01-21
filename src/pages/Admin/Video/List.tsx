@@ -3,9 +3,7 @@ import {
   Button,
   Card,
   Chip,
-  Input,
   Pagination,
-  Select,
   SelectItem,
   Table,
   TableBody,
@@ -13,41 +11,32 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-  Tab
+  Tab,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  useDisclosure
 } from "@heroui/react";
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { Column } from "@ant-design/plots";
 import {
   FiBarChart2,
   FiEdit2,
   FiEye,
-  FiFilm,
-  FiSearch,
   FiSlash,
-  FiUpload
+  FiUpload,
+  FiPlayCircle
 } from "react-icons/fi";
+import ReactPlayer from "react-player";
 import { useAppStore } from "../../../store";
-
-type VideoStatus = "draft" | "published" | "offline";
-
-type VideoItem = {
-  id: string;
-  title: string;
-  category: string;
-  status: VideoStatus;
-  duration: string;
-  plays: number;
-  likes: number;
-  comments: number;
-  createdAt: string;
-  updatedAt: string;
-  pinned?: boolean;
-  recommended?: boolean;
-};
+import type { VideoItem, VideoStatus } from "@/api/admin/video";
 
 type StatusFilter = "all" | VideoStatus;
 
-const videoCategories = ["前端基础", "工程实践", "效率方法", "个人成长"];
+const videoCategories = ["前端基础", "工程实践", "效率方法", "个人成长", "系统设计"];
 
 const initialVideos: VideoItem[] = [
   {
@@ -62,7 +51,10 @@ const initialVideos: VideoItem[] = [
     createdAt: "2026-01-10 09:20:11",
     updatedAt: "2026-01-12 14:32:45",
     pinned: true,
-    recommended: true
+    recommended: true,
+    cover: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=60",
+    tags: ["React", "工程化"],
+    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4"
   },
   {
     id: "v_002",
@@ -75,7 +67,10 @@ const initialVideos: VideoItem[] = [
     comments: 48,
     createdAt: "2026-01-11 10:05:00",
     updatedAt: "2026-01-13 10:18:22",
-    recommended: true
+    recommended: true,
+    cover: "https://images.unsplash.com/photo-1456324504439-367cee13d652?w=800&auto=format&fit=crop&q=60",
+    tags: ["笔记", "效率"],
+    videoUrl: "https://www.w3schools.com/html/movie.mp4"
   },
   {
     id: "v_003",
@@ -87,7 +82,10 @@ const initialVideos: VideoItem[] = [
     likes: 0,
     comments: 0,
     createdAt: "2026-01-12 16:08:33",
-    updatedAt: "2026-01-12 16:08:33"
+    updatedAt: "2026-01-12 16:08:33",
+    cover: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    tags: ["React 19", "前端"],
+    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4"
   },
   {
     id: "v_004",
@@ -99,7 +97,27 @@ const initialVideos: VideoItem[] = [
     likes: 112,
     comments: 15,
     createdAt: "2026-01-08 11:22:11",
-    updatedAt: "2026-01-15 09:02:47"
+    updatedAt: "2026-01-15 09:02:47",
+    cover: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=60",
+    tags: ["职业成长", "规划"],
+    videoUrl: "https://www.w3schools.com/html/movie.mp4"
+  },
+  {
+    id: "v_005",
+    title: "系统设计入门：从单机到集群",
+    category: "系统设计",
+    status: "published",
+    duration: "45:12",
+    plays: 1520,
+    likes: 210,
+    comments: 32,
+    createdAt: "2026-01-15 14:20:00",
+    updatedAt: "2026-01-16 10:00:00",
+    recommended: true,
+    pinned: true,
+    cover: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop&q=60",
+    tags: ["系统设计", "架构"],
+    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4"
   }
 ];
 
@@ -142,6 +160,8 @@ function VideoListPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
+  const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
 
   const { themeMode } = useAppStore();
 
@@ -193,6 +213,21 @@ function VideoListPage() {
     () => videos.filter(item => item.recommended),
     [videos]
   );
+
+  const displayRecommended = useMemo(() => {
+    const items: VideoItem[] = [];
+    // 优先放置置顶视频
+    pinnedVideos.forEach(v => {
+      if (items.length < 4) items.push(v);
+    });
+    // 补足推荐视频（避免重复）
+    recommendedVideos.forEach(v => {
+      if (items.length < 4 && !items.find(i => i.id === v.id)) {
+        items.push(v);
+      }
+    });
+    return items;
+  }, [pinnedVideos, recommendedVideos]);
 
   const handlePageChange = (next: number) => {
     if (next < 1 || next > totalPages) {
@@ -288,6 +323,11 @@ function VideoListPage() {
     setSidebarVisible(false);
   };
 
+  const handlePreviewVideo = (url: string) => {
+    setPreviewVideoUrl(url);
+    onPreviewOpen();
+  };
+
   const activeVideo = videos.find(item => item.id === activeVideoId) ?? null;
 
   const chartConfig = {
@@ -347,6 +387,83 @@ function VideoListPage() {
       </div>
 
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+        <div className="p-3 border-b border-[var(--border-color)]">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-medium">推荐位与置顶视频</div>
+            <div className="text-[0.6875rem] text-[var(--text-color-secondary)]">
+              顶部预留 4 个推荐位，对应前台页面的视频推荐区。
+            </div>
+          </div>
+        </div>
+        <div className="p-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            {[0, 1, 2, 3].map(index => {
+              const item = displayRecommended[index] ?? null;
+              if (!item) {
+                return (
+                  <Card
+                    key={index}
+                    className="border border-dashed border-[var(--border-color)] bg-[var(--bg-elevated)]/60"
+                  >
+                    <div className="p-3 flex items-center justify-center text-[0.6875rem] text-[var(--text-color-secondary)]">
+                      空推荐位
+                    </div>
+                  </Card>
+                );
+              }
+              return (
+                <Card
+                  key={`recommend-${index}`}
+                  className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/90"
+                >
+                  <div className="p-3 flex flex-col gap-2 text-[0.6875rem]">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-medium line-clamp-2">
+                          {item.title}
+                        </div>
+                        <div className="text-[var(--text-color-secondary)]">
+                          视频 ID：{item.id}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {item.pinned && (
+                          <Chip
+                            size="sm"
+                            variant="flat"
+                            color="danger"
+                            className="text-[0.625rem]"
+                            radius="full"
+                          >
+                            置顶
+                          </Chip>
+                        )}
+                        {item.recommended && (
+                          <Chip
+                            size="sm"
+                            variant="flat"
+                            color="primary"
+                            className="text-[0.625rem]"
+                            radius="full"
+                          >
+                            推荐
+                          </Chip>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[var(--text-color-secondary)]">
+                      <span>分类：{item.category}</span>
+                      <span>播放量：{item.plays.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </Card>
+
+      <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
         <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
@@ -355,15 +472,7 @@ function VideoListPage() {
                 className="h-8 text-[0.6875rem]"
                 startContent={<FiUpload className="text-xs" />}
               >
-                新建视频占位
-              </Button>
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-[0.6875rem]"
-                startContent={<FiFilm className="text-xs" />}
-              >
-                导入外部视频占位
+                新建视频
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-[0.6875rem] text-[var(--text-color-secondary)]">
@@ -375,9 +484,7 @@ function VideoListPage() {
         <div className="p-3 space-y-4 text-xs">
           {/* 第一层：搜索框、下拉框、重置筛选 */}
           <div className="flex flex-wrap items-center gap-3">
-            <Input
-              size="sm"
-              variant="bordered"
+            <AdminSearchInput
               className="w-64"
               placeholder="按标题 / ID 搜索视频"
               value={keyword}
@@ -385,15 +492,8 @@ function VideoListPage() {
                 setKeyword(value);
                 setPage(1);
               }}
-              startContent={
-                <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
-              }
-              classNames={{
-                inputWrapper: "h-8 text-xs",
-                input: "text-xs"
-              }}
             />
-            <Select
+            <AdminSelect
               aria-label="视频分类筛选"
               size="sm"
               className="w-40"
@@ -409,12 +509,12 @@ function VideoListPage() {
               ]}
               isClearable
             >
-              {item => (
+              {(item: { label: string; value: string }) => (
                 <SelectItem key={item.value}>
                   {item.label}
                 </SelectItem>
               )}
-            </Select>
+            </AdminSelect>
             <Button
               size="sm"
               variant="light"
@@ -478,77 +578,6 @@ function VideoListPage() {
         </div>
 
         <div className="p-3 space-y-3">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-medium">系列置顶 / 推荐位</div>
-              <div className="text-[0.6875rem] text-[var(--text-color-secondary)]">
-                顶部预留 3 个推荐位，便于在前台突出重要视频。
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              {[0, 1, 2].map(index => {
-                const item = pinnedVideos[index] ?? recommendedVideos[index] ?? null;
-                if (!item) {
-                  return (
-                    <Card
-                      key={index}
-                      className="border border-dashed border-[var(--border-color)] bg-[var(--bg-elevated)]/60"
-                    >
-                      <div className="p-3 flex items-center justify-center text-[0.6875rem] text-[var(--text-color-secondary)]">
-                        空推荐位，可在列表中设置视频为置顶或推荐后填充。
-                      </div>
-                    </Card>
-                  );
-                }
-                return (
-                  <Card
-                    key={item.id}
-                    className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/90"
-                  >
-                    <div className="p-3 flex flex-col gap-2 text-[0.6875rem]">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-0.5">
-                          <div className="text-xs font-medium line-clamp-2">
-                            {item.title}
-                          </div>
-                          <div className="text-[var(--text-color-secondary)]">
-                            视频 ID：{item.id}
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          {item.pinned && (
-                            <Chip
-                              size="sm"
-                              variant="flat"
-                              color="danger"
-                              className="text-[0.625rem]"
-                            >
-                              置顶
-                            </Chip>
-                          )}
-                          {item.recommended && (
-                            <Chip
-                              size="sm"
-                              variant="flat"
-                              color="primary"
-                              className="text-[0.625rem]"
-                            >
-                              推荐
-                            </Chip>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-[var(--text-color-secondary)]">
-                        <span>分类：{item.category}</span>
-                        <span>播放量：{item.plays.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
             <Table
               aria-label="视频列表"
@@ -559,10 +588,16 @@ function VideoListPage() {
             >
               <TableHeader className="bg-[var(--bg-elevated)]/80">
                 <TableColumn className="px-3 py-2 text-left font-medium">
+                  视频封面
+                </TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">
                   标题
                 </TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">
                   分类
+                </TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">
+                  标签
                 </TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">
                   状态
@@ -593,15 +628,39 @@ function VideoListPage() {
                 {item => (
                   <TableRow key={item.id}>
                     <TableCell className="px-3 py-2 align-top">
+                      {item.cover ? (
+                        <img
+                          src={item.cover}
+                          alt={item.title}
+                          className="w-12 h-8 object-cover rounded border border-[var(--border-color)]"
+                        />
+                      ) : (
+                        <div className="w-12 h-8 bg-[var(--bg-content)] rounded border border-[var(--border-color)] flex items-center justify-center text-[var(--text-color-secondary)] text-[0.5rem]">
+                          无封面
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-3 py-2 align-top">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">
                           <span className="font-medium">{item.title}</span>
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            className="h-6 w-6 min-w-0 text-primary"
+                            onPress={() => item.videoUrl && handlePreviewVideo(item.videoUrl)}
+                            isDisabled={!item.videoUrl}
+                          >
+                            <FiPlayCircle className="text-base" />
+                          </Button>
                           {item.pinned && (
                             <Chip
                               size="sm"
                               variant="flat"
                               color="danger"
                               className="text-[0.625rem]"
+                              radius="full"
                             >
                               置顶
                             </Chip>
@@ -612,6 +671,7 @@ function VideoListPage() {
                               variant="flat"
                               color="primary"
                               className="text-[0.625rem]"
+                              radius="full"
                             >
                               推荐
                             </Chip>
@@ -627,9 +687,29 @@ function VideoListPage() {
                         size="sm"
                         variant="flat"
                         className="text-[0.625rem]"
+                        radius="full"
                       >
                         {item.category}
                       </Chip>
+                    </TableCell>
+                    <TableCell className="px-3 py-2 align-top">
+                      <div className="flex flex-wrap gap-1 max-w-[150px]">
+                        {item.tags?.length ? (
+                          item.tags.map((tag, idx) => (
+                            <Chip
+                              key={idx}
+                              size="sm"
+                              variant="flat"
+                              className="text-[0.625rem] bg-[var(--bg-content)]"
+                              radius="full"
+                            >
+                              {tag}
+                            </Chip>
+                          ))
+                        ) : (
+                          <span className="text-[var(--text-color-secondary)] text-[0.625rem]">-</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="px-3 py-2 align-top">
                       <Chip
@@ -637,6 +717,7 @@ function VideoListPage() {
                         variant="flat"
                         color={getStatusColor(item.status)}
                         className="text-[0.625rem]"
+                        radius="full"
                       >
                         {getStatusLabel(item.status)}
                       </Chip>
@@ -727,6 +808,38 @@ function VideoListPage() {
         </div>
       </Card>
 
+      {/* 视频预览弹窗 */}
+      <Modal 
+        isOpen={isPreviewOpen} 
+        onClose={onPreviewClose}
+        size="3xl"
+        backdrop="blur"
+        classNames={{
+          base: "bg-[var(--bg-elevated)] border border-[var(--border-color)]",
+          header: "border-b border-[var(--border-color)]",
+        }}
+      >
+        <ModalContent>
+          <ModalHeader className="text-sm font-medium">视频预览</ModalHeader>
+          <ModalBody className="p-0 bg-black aspect-video flex items-center justify-center">
+            {previewVideoUrl ? (
+              <ReactPlayer
+                {...({
+                  url: previewVideoUrl,
+                  controls: true,
+                  width: "100%",
+                  height: "100%",
+                  playing: true
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                } as any)}
+              />
+            ) : (
+              <div className="text-white text-xs">视频加载失败</div>
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
       {sidebarVisible && activeVideo && (
         <div className="fixed inset-0 z-40 flex items-end md:items-stretch justify-end bg-black/40">
           <div className="w-full md:max-w-md h-[70vh] md:h-full bg-[var(--bg-elevated)] border-l border-[var(--border-color)] shadow-xl flex flex-col">
@@ -765,6 +878,7 @@ function VideoListPage() {
                       variant="flat"
                       color={getStatusColor(activeVideo.status)}
                       className="text-[0.625rem]"
+                      radius="full"
                     >
                       {getStatusLabel(activeVideo.status)}
                     </Chip>
@@ -803,7 +917,7 @@ function VideoListPage() {
                       <FiBarChart2 className="text-sm" />
                       <span>最近 7 日播放趋势</span>
                     </div>
-                    <Chip size="sm" variant="flat" className="text-[0.625rem]">
+                    <Chip size="sm" variant="flat" className="text-[0.625rem]" radius="full">
                       示例数据
                     </Chip>
                   </div>

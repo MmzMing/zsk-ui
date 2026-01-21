@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import {
-  Select,
   SelectItem,
   Button,
   Card,
@@ -17,13 +16,14 @@ import {
   Tab,
   addToast
 } from "@heroui/react";
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
   FiDownload,
   FiEdit2,
   FiKey,
   FiPlus,
-  FiSearch,
   FiTrash2,
   FiUpload,
   FiUserCheck
@@ -424,25 +424,16 @@ function UserPage() {
         <div className="p-4 space-y-4 text-xs border-b border-[var(--border-color)]">
           {/* 第一层：搜索框，下拉框，重置筛选 */}
           <div className="flex flex-wrap items-center gap-3">
-            <Input
-              size="sm"
-              variant="bordered"
+            <AdminSearchInput
               className="w-44"
               placeholder="按账号 / 姓名搜索"
-              startContent={<FiSearch className="text-xs text-[var(--text-color-secondary)]" />}
               value={keyword}
               onValueChange={value => {
                 setKeyword(value);
                 setPage(1);
               }}
-              classNames={{
-                inputWrapper: "h-8 text-xs",
-                input: "text-xs"
-              }}
             />
-            <Input
-              size="sm"
-              variant="bordered"
+            <AdminSearchInput
               className="w-40"
               placeholder="按手机号搜索"
               value={phoneKeyword}
@@ -450,12 +441,8 @@ function UserPage() {
                 setPhoneKeyword(value);
                 setPage(1);
               }}
-              classNames={{
-                inputWrapper: "h-8 text-xs",
-                input: "text-xs"
-              }}
             />
-            <Select
+            <AdminSelect
               aria-label="角色筛选"
               size="sm"
               className="w-40"
@@ -474,12 +461,12 @@ function UserPage() {
                 trigger: "h-8 min-h-8 text-xs"
               }}
             >
-              {item => (
+              {(item: { label: string; value: string }) => (
                 <SelectItem key={item.value} className="text-xs">
                   {item.label}
                 </SelectItem>
               )}
-            </Select>
+            </AdminSelect>
             <Button
               size="sm"
               variant="light"
@@ -775,7 +762,7 @@ function UserPage() {
               </div>
               <div className="space-y-1">
                 <div>角色</div>
-                <Select
+                <AdminSelect
                   aria-label="用户角色"
                   size="sm"
                   selectedKeys={userForm.role ? [userForm.role] : []}
@@ -791,12 +778,12 @@ function UserPage() {
                   }))}
                   className="w-full"
                 >
-                  {item => (
+                  {(item: { label: string; value: string }) => (
                     <SelectItem key={item.value}>
                       {item.label}
                     </SelectItem>
                   )}
-                </Select>
+                </AdminSelect>
               </div>
               <div className="flex items-center justify-between pt-1">
                 <div className="text-xs">启用状态</div>

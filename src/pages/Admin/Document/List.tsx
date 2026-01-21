@@ -4,9 +4,7 @@ import {
   Button,
   Card,
   Chip,
-  Input,
   Pagination,
-  Select,
   SelectItem,
   Tab,
   Table,
@@ -16,6 +14,8 @@ import {
   TableHeader,
   TableRow
 } from "@heroui/react";
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { Column } from "@ant-design/plots";
 import {
@@ -23,7 +23,6 @@ import {
   FiEdit2,
   FiEye,
   FiFilter,
-  FiSearch,
   FiSlash,
   FiGrid,
   FiList,
@@ -55,6 +54,8 @@ type DocumentItem = {
   updatedAt: string;
   pinned?: boolean;
   recommended?: boolean;
+  cover?: string;
+  tags?: string[];
 };
 
 type StatusFilter = "all" | DocumentStatus;
@@ -73,7 +74,9 @@ const initialDocuments: DocumentItem[] = [
     createdAt: "2026-01-10 09:20:11",
     updatedAt: "2026-01-12 14:32:45",
     pinned: true,
-    recommended: true
+    recommended: true,
+    cover: "https://images.unsplash.com/photo-1456324504439-367cee13d652?w=800&auto=format&fit=crop&q=60",
+    tags: ["学习方法", "笔记技巧"]
   },
   {
     id: "d_002",
@@ -85,7 +88,9 @@ const initialDocuments: DocumentItem[] = [
     comments: 63,
     createdAt: "2026-01-11 10:05:00",
     updatedAt: "2026-01-13 10:18:22",
-    recommended: true
+    recommended: true,
+    cover: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=60",
+    tags: ["React", "知识库", "前端架构"]
   },
   {
     id: "d_003",
@@ -96,7 +101,8 @@ const initialDocuments: DocumentItem[] = [
     likes: 0,
     comments: 0,
     createdAt: "2026-01-12 16:08:33",
-    updatedAt: "2026-01-12 16:08:33"
+    updatedAt: "2026-01-12 16:08:33",
+    tags: ["信息架构", "系统设计"]
   },
   {
     id: "d_004",
@@ -107,7 +113,8 @@ const initialDocuments: DocumentItem[] = [
     likes: 0,
     comments: 0,
     createdAt: "2026-01-08 11:22:11",
-    updatedAt: "2026-01-15 09:02:47"
+    updatedAt: "2026-01-15 09:02:47",
+    tags: ["Markdown", "规范"]
   },
   {
     id: "d_005",
@@ -118,7 +125,9 @@ const initialDocuments: DocumentItem[] = [
     likes: 112,
     comments: 15,
     createdAt: "2026-01-09 11:22:11",
-    updatedAt: "2026-01-15 09:02:47"
+    updatedAt: "2026-01-15 09:02:47",
+    cover: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=60",
+    tags: ["职业规划", "个人成长"]
   }
 ];
 
@@ -447,6 +456,83 @@ function DocumentListPage() {
       </div>
 
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+        <div className="p-3 border-b border-[var(--border-color)]">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-medium">推荐位与置顶文档</div>
+            <div className="text-[0.6875rem] text-[var(--text-color-secondary)]">
+              顶部预留 3 个推荐位，便于在前台突出重要文档。
+            </div>
+          </div>
+        </div>
+        <div className="p-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {[0, 1, 2].map(index => {
+              const item = pinnedDocuments[index] ?? recommendedDocuments[index] ?? null;
+              if (!item) {
+                return (
+                  <Card
+                    key={index}
+                    className="border border-dashed border-[var(--border-color)] bg-[var(--bg-elevated)]/60"
+                  >
+                    <div className="p-3 flex items-center justify-center text-[0.6875rem] text-[var(--text-color-secondary)]">
+                      空推荐位，可在列表中设置文档为置顶或推荐后填充。
+                    </div>
+                  </Card>
+                );
+              }
+              return (
+                <Card
+                  key={item.id}
+                  className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/90"
+                >
+                  <div className="p-3 flex flex-col gap-2 text-[0.6875rem]">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-medium line-clamp-2">
+                          {item.title}
+                        </div>
+                        <div className="text-[var(--text-color-secondary)]">
+                          文档 ID：{item.id}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {item.pinned && (
+                          <Chip
+                            size="sm"
+                            variant="flat"
+                            color="danger"
+                            className="text-[0.625rem]"
+                            radius="full"
+                          >
+                            置顶
+                          </Chip>
+                        )}
+                        {item.recommended && (
+                          <Chip
+                            size="sm"
+                            variant="flat"
+                            color="primary"
+                            className="text-[0.625rem]"
+                            radius="full"
+                          >
+                            推荐
+                          </Chip>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[var(--text-color-secondary)]">
+                      <span>分类：{item.category}</span>
+                      <span>阅读量：{item.reads.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </Card>
+
+      <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
         <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
@@ -476,9 +562,7 @@ function DocumentListPage() {
         <div className="p-3 space-y-4 text-xs">
           {/* 第一层：搜索框、下拉框、重置筛选 */}
           <div className="flex flex-wrap items-center gap-3">
-            <Input
-              size="sm"
-              variant="bordered"
+            <AdminSearchInput
               className="w-64"
               placeholder="按标题 / ID 搜索文档"
               value={keyword}
@@ -486,15 +570,8 @@ function DocumentListPage() {
                 setKeyword(value);
                 setPage(1);
               }}
-              startContent={
-                <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
-              }
-              classNames={{
-                inputWrapper: "h-8 text-xs",
-                input: "text-xs"
-              }}
             />
-            <Select
+            <AdminSelect
               aria-label="文档分类筛选"
               size="sm"
               className="w-40"
@@ -510,12 +587,12 @@ function DocumentListPage() {
               ]}
               isClearable
             >
-              {item => (
+              {(item: { label: string; value: string }) => (
                 <SelectItem key={item.value}>
                   {item.label}
                 </SelectItem>
               )}
-            </Select>
+            </AdminSelect>
             <Button
               size="sm"
               variant="light"
@@ -608,77 +685,6 @@ function DocumentListPage() {
         </div>
 
         <div className="p-3 space-y-3">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-medium">推荐位与置顶文档</div>
-              <div className="text-[0.6875rem] text-[var(--text-color-secondary)]">
-                顶部预留 3 个推荐位，便于在前台突出重要文档。
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              {[0, 1, 2].map(index => {
-                const item = pinnedDocuments[index] ?? recommendedDocuments[index] ?? null;
-                if (!item) {
-                  return (
-                    <Card
-                      key={index}
-                      className="border border-dashed border-[var(--border-color)] bg-[var(--bg-elevated)]/60"
-                    >
-                      <div className="p-3 flex items-center justify-center text-[0.6875rem] text-[var(--text-color-secondary)]">
-                        空推荐位，可在列表中设置文档为置顶或推荐后填充。
-                      </div>
-                    </Card>
-                  );
-                }
-                return (
-                  <Card
-                    key={item.id}
-                    className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/90"
-                  >
-                    <div className="p-3 flex flex-col gap-2 text-[0.6875rem]">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-0.5">
-                          <div className="text-xs font-medium line-clamp-2">
-                            {item.title}
-                          </div>
-                          <div className="text-[var(--text-color-secondary)]">
-                            文档 ID：{item.id}
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          {item.pinned && (
-                            <Chip
-                              size="sm"
-                              variant="flat"
-                              color="danger"
-                              className="text-[0.625rem]"
-                            >
-                              置顶
-                            </Chip>
-                          )}
-                          {item.recommended && (
-                            <Chip
-                              size="sm"
-                              variant="flat"
-                              color="primary"
-                              className="text-[0.625rem]"
-                            >
-                              推荐
-                            </Chip>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-[var(--text-color-secondary)]">
-                        <span>分类：{item.category}</span>
-                        <span>阅读量：{item.reads.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-
           {viewMode === "list" ? (
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
             <Table
@@ -690,10 +696,16 @@ function DocumentListPage() {
             >
               <TableHeader className="bg-[var(--bg-elevated)]/80">
                 <TableColumn className="px-3 py-2 text-left font-medium">
+                  封面
+                </TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">
                   标题
                 </TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">
                   分类
+                </TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">
+                  标签
                 </TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">
                   状态
@@ -721,6 +733,19 @@ function DocumentListPage() {
                 {item => (
                   <TableRow key={item.id}>
                     <TableCell className="px-3 py-2 align-top">
+                      {item.cover ? (
+                        <img
+                          src={item.cover}
+                          alt={item.title}
+                          className="w-10 h-10 object-cover rounded border border-[var(--border-color)]"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-[var(--bg-content)] rounded border border-[var(--border-color)] flex items-center justify-center text-[var(--text-color-secondary)] text-[0.5rem]">
+                          无封面
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-3 py-2 align-top">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">
                           <span className="font-medium">{item.title}</span>
@@ -730,6 +755,7 @@ function DocumentListPage() {
                               variant="flat"
                               color="danger"
                               className="text-[0.625rem]"
+                              radius="full"
                             >
                               置顶
                             </Chip>
@@ -740,6 +766,7 @@ function DocumentListPage() {
                               variant="flat"
                               color="primary"
                               className="text-[0.625rem]"
+                              radius="full"
                             >
                               推荐
                             </Chip>
@@ -755,9 +782,29 @@ function DocumentListPage() {
                         size="sm"
                         variant="flat"
                         className="text-[0.625rem]"
+                        radius="full"
                       >
                         {item.category}
                       </Chip>
+                    </TableCell>
+                    <TableCell className="px-3 py-2 align-top">
+                      <div className="flex flex-wrap gap-1 max-w-[150px]">
+                        {item.tags?.length ? (
+                          item.tags.map((tag, idx) => (
+                            <Chip
+                              key={idx}
+                              size="sm"
+                              variant="flat"
+                              className="text-[0.625rem] bg-[var(--bg-content)]"
+                              radius="full"
+                            >
+                              {tag}
+                            </Chip>
+                          ))
+                        ) : (
+                          <span className="text-[var(--text-color-secondary)] text-[0.625rem]">-</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="px-3 py-2 align-top">
                       <Chip
@@ -765,6 +812,7 @@ function DocumentListPage() {
                         variant="flat"
                         color={getStatusColor(item.status)}
                         className="text-[0.625rem]"
+                        radius="full"
                       >
                         {getStatusLabel(item.status)}
                       </Chip>
@@ -841,7 +889,15 @@ function DocumentListPage() {
               {pageItems.map(item => (
                 <Card key={item.id} className="p-4 hover:shadow-md transition-shadow border border-[var(--border-color)]">
                    <div className="flex justify-between items-start mb-3">
-                      <Chip size="sm" color={getStatusColor(item.status)} variant="flat" className="text-[0.625rem]">{getStatusLabel(item.status)}</Chip>
+                      <Chip
+                        size="sm"
+                        color={getStatusColor(item.status)}
+                        variant="flat"
+                        className="text-[0.625rem]"
+                        radius="full"
+                      >
+                        {getStatusLabel(item.status)}
+                      </Chip>
                       <div className="flex gap-1">
                          <Button isIconOnly size="sm" variant="light" color="success" className="h-6 w-6 min-w-6" onPress={() => navigate(`/admin/document/edit/${item.id}`)}><FiEdit2 className="text-xs" /></Button>
                          <Button isIconOnly size="sm" variant="light" color="primary" className="h-6 w-6 min-w-6" onPress={() => handleOpenSidebar(item.id)}><FiBarChart2 className="text-xs" /></Button>
@@ -926,6 +982,7 @@ function DocumentListPage() {
                       variant="flat"
                       color={getStatusColor(activeDocument.status)}
                       className="text-[0.625rem]"
+                      radius="full"
                     >
                       {getStatusLabel(activeDocument.status)}
                     </Chip>
@@ -964,7 +1021,7 @@ function DocumentListPage() {
                       <FiBarChart2 className="text-sm" />
                       <span>最近 7 日阅读趋势</span>
                     </div>
-                    <Chip size="sm" variant="flat" className="text-[0.625rem]">
+                    <Chip size="sm" variant="flat" className="text-[0.625rem]" radius="full">
                       示例数据
                     </Chip>
                   </div>

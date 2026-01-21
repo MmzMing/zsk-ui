@@ -1,12 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Select,
   SelectItem,
   Button,
   Card,
   Chip,
   DateRangePicker,
-  Input,
   Modal,
   ModalBody,
   ModalContent,
@@ -21,6 +19,8 @@ import {
     Tab,
     Textarea
   } from "@heroui/react";
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
   FiAlertCircle,
@@ -29,7 +29,6 @@ import {
   FiFlag,
   FiMessageSquare,
   FiPlayCircle,
-  FiSearch,
   FiX
 } from "react-icons/fi";
 
@@ -570,9 +569,7 @@ function VideoReviewPage() {
                 <div className="p-3 space-y-4 border-b border-[var(--border-color)]">
                   {/* 第一层：搜索框，下拉框，重置筛选 */}
                   <div className="flex flex-wrap items-center gap-3">
-                    <Input
-                      size="sm"
-                      variant="bordered"
+                    <AdminSearchInput
                       className="w-64"
                       placeholder="按标题 / ID 搜索视频"
                       value={keyword}
@@ -581,17 +578,8 @@ function VideoReviewPage() {
                         setPage(1);
                         setSelectedIds([]);
                       }}
-                      startContent={
-                        <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
-                      }
-                      classNames={{
-                        inputWrapper: "h-8 text-xs",
-                        input: "text-xs"
-                      }}
                     />
-                    <Input
-                      size="sm"
-                      variant="bordered"
+                    <AdminSearchInput
                       className="w-40"
                       placeholder="按上传人筛选"
                       value={uploaderFilter}
@@ -600,12 +588,8 @@ function VideoReviewPage() {
                         setPage(1);
                         setSelectedIds([]);
                       }}
-                      classNames={{
-                        inputWrapper: "h-8 text-xs",
-                        input: "text-xs"
-                      }}
                     />
-                    <Select
+                    <AdminSelect
                       aria-label="视频分类筛选"
                       size="sm"
                       className="w-40"
@@ -625,12 +609,12 @@ function VideoReviewPage() {
                       ]}
                       isClearable
                     >
-                      {item => (
+                      {(item: { label: string; value: string }) => (
                         <SelectItem key={item.value}>
                           {item.label}
                         </SelectItem>
                       )}
-                    </Select>
+                    </AdminSelect>
                     <DateRangePicker
                       aria-label="上传时间筛选"
                       size="sm"
@@ -915,17 +899,11 @@ function VideoReviewPage() {
                         <span>按时间倒序展示视频审核日志，支持按审核人与时间范围筛选。</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Input
-                          size="sm"
-                          variant="bordered"
+                        <AdminSearchInput
                           className="w-40"
                           placeholder="按审核人筛选"
                           value={logReviewerFilter}
-                          onValueChange={value => setLogReviewerFilter(value)}
-                          classNames={{
-                            inputWrapper: "h-8 text-xs",
-                            input: "text-xs"
-                          }}
+                          onValueChange={setLogReviewerFilter}
                         />
                         <DateRangePicker
                           aria-label="审核时间筛选"
@@ -1034,18 +1012,9 @@ function VideoReviewPage() {
                     </AdminTabs>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Input
-                      size="sm"
-                      variant="bordered"
+                    <AdminSearchInput
                       className="w-64"
                       placeholder="按评论内容 / 关联视频标题搜索"
-                      startContent={
-                        <FiSearch className="text-[12px] text-[var(--text-color-secondary)]" />
-                      }
-                      classNames={{
-                        inputWrapper: "h-8 text-xs",
-                        input: "text-xs"
-                      }}
                     />
                     <DateRangePicker
                       aria-label="评论时间范围"
@@ -1428,7 +1397,7 @@ function VideoReviewPage() {
                         <section className="space-y-4">
                           <div className="text-sm font-semibold">审核意见</div>
                           <div className="space-y-4">
-                            <Select
+                            <AdminSelect
                               label="违规原因预设"
                               labelPlacement="outside"
                               placeholder="请选择违规原因（可选）"
@@ -1443,7 +1412,7 @@ function VideoReviewPage() {
                               <SelectItem key="quality">画质模糊或无法播放</SelectItem>
                               <SelectItem key="copyright">版权侵权争议</SelectItem>
                               <SelectItem key="other">其他原因</SelectItem>
-                            </Select>
+                            </AdminSelect>
 
                             <Textarea
                               label="审核备注"
