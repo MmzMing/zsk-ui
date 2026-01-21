@@ -10,6 +10,7 @@ import AdminLayout from "../layouts/AdminLayout";
 const HomePage = React.lazy(() => import("../pages/Home"));
 const AllSearchPage = React.lazy(() => import("../pages/AllSearch"));
 const ResumePage = React.lazy(() => import("../pages/Resume"));
+const CrazinessPage = React.lazy(() => import("../pages/Craziness"));
 const ToolsPage = React.lazy(() => import("../pages/Tools"));
 const AboutPage = React.lazy(() => import("../pages/About"));
 const VideoDetail = React.lazy(() => import("../pages/VideoDetail"));
@@ -61,6 +62,7 @@ function AppRouter() {
             <Route path={routes.home} element={<HomePage />} />
             <Route path={routes.allSearch} element={<AllSearchPage />} />
             <Route path={routes.resume} element={<ResumePage />} />
+            <Route path={routes.craziness} element={<CrazinessPage />} />
             <Route path={routes.tools} element={<ToolsPage />} />
             <Route path={routes.about} element={<AboutPage />} />
             <Route path={routes.profile} element={<ProfilePage />} />

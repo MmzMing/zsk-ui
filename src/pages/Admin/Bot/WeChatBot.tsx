@@ -1,5 +1,5 @@
 import React from "react";
-import { Card } from "@heroui/react";
+import UndevelopedPage from "@/components/Undeveloped";
 
 function WeChatBotPage() {
   return (
@@ -15,14 +15,13 @@ function WeChatBotPage() {
           当前功能尚未接入，仅作为占位页面展示，不会跳转到 404。
         </p>
       </div>
-      <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[calc(100vh-220px)]">
-        <div className="w-full h-full flex items-center justify-center text-xs text-[var(--text-color-secondary)]">
-          WeChatBot 功能开发中，敬请期待。
-        </div>
-      </Card>
+      <UndevelopedPage 
+        title="WeChatBot" 
+        description="WeChatBot 功能开发中，敬请期待。" 
+        className="h-[calc(100vh-220px)] border border-[var(--border-color)] bg-[var(--bg-elevated)]/95"
+      />
     </div>
   );
 }
 
 export default WeChatBotPage;
-

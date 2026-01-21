@@ -1,28 +1,26 @@
 import React, { useMemo, useState } from "react";
 import { Button, Card, Chip, Input, NumberInput, Switch, Checkbox } from "@heroui/react";
+import * as Icons from "react-icons/fi";
 import {
+  FiBell,
+  FiFileText,
   FiHome,
+  FiLayout,
   FiLayers,
   FiList,
   FiMenu,
-  FiMoreHorizontal,
+  FiPieChart,
   FiPlus,
-  FiTrash2
+  FiSave,
+  FiSettings,
+  FiTrash2,
+  FiUsers,
+  FiVideo
 } from "react-icons/fi";
 import Tree from "rc-tree";
 import "rc-tree/assets/index.css";
-
-type MenuNode = {
-  id: string;
-  name: string;
-  path: string;
-  iconName: string;
-  order: number;
-  visible: boolean;
-  permissionKey: string;
-  parentId: string | null;
-  children?: MenuNode[];
-};
+import { adminMenuTree } from "../../../config/adminMenu";
+import { MenuNode, updateMenuTree } from "../../../api/admin/menu";
 
 type IconOption = {
   id: string;
@@ -37,136 +35,22 @@ type RcTreeDataNode = {
 };
 
 const iconOptions: IconOption[] = [
-  {
-    id: "FiHome",
-    name: "首页",
-    icon: <FiHome className="w-4 h-4" />
-  },
-  {
-    id: "FiMenu",
-    name: "菜单",
-    icon: <FiMenu className="w-4 h-4" />
-  },
-  {
-    id: "FiLayers",
-    name: "分组",
-    icon: <FiLayers className="w-4 h-4" />
-  },
-  {
-    id: "FiList",
-    name: "列表",
-    icon: <FiList className="w-4 h-4" />
-  }
+  { id: "FiHome", name: "首页", icon: <FiHome className="w-4 h-4" /> },
+  { id: "FiMenu", name: "菜单", icon: <FiMenu className="w-4 h-4" /> },
+  { id: "FiLayers", name: "分组", icon: <FiLayers className="w-4 h-4" /> },
+  { id: "FiList", name: "列表", icon: <FiList className="w-4 h-4" /> },
+  { id: "FiPieChart", name: "仪表盘", icon: <FiPieChart className="w-4 h-4" /> },
+  { id: "FiLayout", name: "布局", icon: <FiLayout className="w-4 h-4" /> },
+  { id: "FiUsers", name: "用户", icon: <FiUsers className="w-4 h-4" /> },
+  { id: "FiSettings", name: "设置", icon: <FiSettings className="w-4 h-4" /> },
+  { id: "FiVideo", name: "视频", icon: <FiVideo className="w-4 h-4" /> },
+  { id: "FiFileText", name: "文档", icon: <FiFileText className="w-4 h-4" /> },
+  { id: "FiBell", name: "通知", icon: <FiBell className="w-4 h-4" /> }
 ];
 
-const initialMenuTree: MenuNode[] = [
-  {
-    id: "m_001",
-    name: "仪表盘",
-    path: "/admin",
-    iconName: "FiHome",
-    order: 1,
-    visible: true,
-    permissionKey: "dashboard:view",
-    parentId: null,
-    children: [
-      {
-        id: "m_001_01",
-        name: "工作台",
-        path: "/admin",
-        iconName: "FiHome",
-        order: 1,
-        visible: true,
-        permissionKey: "dashboard:workbench",
-        parentId: "m_001"
-      },
-      {
-        id: "m_001_02",
-        name: "分析页",
-        path: "/admin/analysis",
-        iconName: "FiLayers",
-        order: 2,
-        visible: true,
-        permissionKey: "dashboard:analysis",
-        parentId: "m_001"
-      }
-    ]
-  },
-  {
-    id: "m_002",
-    name: "系统运维",
-    path: "/admin/ops",
-    iconName: "FiLayers",
-    order: 2,
-    visible: true,
-    permissionKey: "ops:root",
-    parentId: null,
-    children: [
-      {
-        id: "m_002_01",
-        name: "接口文档",
-        path: "/admin/ops/api-doc",
-        iconName: "FiList",
-        order: 1,
-        visible: true,
-        permissionKey: "ops:apiDoc",
-        parentId: "m_002"
-      },
-      {
-        id: "m_002_02",
-        name: "系统监控",
-        path: "/admin/ops/system-monitor",
-        iconName: "FiList",
-        order: 2,
-        visible: true,
-        permissionKey: "ops:systemMonitor",
-        parentId: "m_002"
-      }
-    ]
-  },
-  {
-    id: "m_003",
-    name: "人员管理",
-    path: "/admin/personnel",
-    iconName: "FiMenu",
-    order: 3,
-    visible: true,
-    permissionKey: "personnel:root",
-    parentId: null,
-    children: [
-      {
-        id: "m_003_01",
-        name: "用户管理",
-        path: "/admin/personnel/user",
-        iconName: "FiList",
-        order: 1,
-        visible: true,
-        permissionKey: "personnel:user",
-        parentId: "m_003"
-      },
-      {
-        id: "m_003_02",
-        name: "菜单管理",
-        path: "/admin/personnel/menu",
-        iconName: "FiList",
-        order: 2,
-        visible: true,
-        permissionKey: "personnel:menu",
-        parentId: "m_003"
-      },
-      {
-        id: "m_003_03",
-        name: "角色管理",
-        path: "/admin/personnel/role",
-        iconName: "FiList",
-        order: 3,
-        visible: true,
-        permissionKey: "personnel:role",
-        parentId: "m_003"
-      }
-    ]
-  }
-];
+// 使用配置作为初始数据
+const initialMenuTree: MenuNode[] = JSON.parse(JSON.stringify(adminMenuTree));
+
 
 function flattenMenu(nodes: MenuNode[], depth = 0): Array<MenuNode & { depth: number }> {
   const result: Array<MenuNode & { depth: number }> = [];
@@ -360,6 +244,7 @@ function buildTreeData(
               isSelected={selectedIds.includes(node.id)}
               onValueChange={value => toggleNodeChecked(node.id, value)}
               size="sm"
+              aria-label={`选择菜单 ${node.name}`}
               classNames={{
                 wrapper: "mr-1 scale-90",
                 label: "hidden"
@@ -367,11 +252,11 @@ function buildTreeData(
             />
           </span>
           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--bg-elevated)] border border-[var(--border-color)] text-[10px]">
-            {node.parentId === null ? (
-              <FiMoreHorizontal className="w-3 h-3" />
-            ) : (
-              <FiList className="w-3 h-3" />
-            )}
+            {(() => {
+                // @ts-expect-error - iconName is a string but Icons is an object
+                const Icon = Icons[node.iconName] || (node.parentId === null ? Icons.FiMoreHorizontal : Icons.FiList);
+                return <Icon className="w-3 h-3" />;
+              })()}
           </span>
           <span>{node.name}</span>
           <span className="text-[10px] text-[var(--text-color-secondary)]">{node.path}</span>
@@ -579,6 +464,16 @@ function MenuPage() {
     setIconPickerTargetId(null);
   };
 
+  const handleSave = async () => {
+    try {
+      await updateMenuTree(menuTree);
+      setMessage("菜单配置已成功保存到服务器。");
+    } catch (error) {
+      console.error(error);
+      setMessage("保存失败，请检查网络或联系管理员。");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <style>{`
@@ -653,6 +548,15 @@ function MenuPage() {
                 onPress={handleBatchDelete}
               >
                 批量删除
+              </Button>
+              <Button
+                size="sm"
+                color="primary"
+                className="h-8 text-[11px]"
+                startContent={<FiSave className="text-[12px]" />}
+                onPress={handleSave}
+              >
+                保存配置
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-color-secondary)]">
@@ -737,6 +641,7 @@ function MenuPage() {
                       <Input
                         size="sm"
                         variant="bordered"
+                        aria-label="菜单名称"
                         value={activeNode.name}
                         onValueChange={value => handleFieldChange({ name: value })}
                         classNames={{
@@ -750,6 +655,7 @@ function MenuPage() {
                       <Input
                         size="sm"
                         variant="bordered"
+                        aria-label="路由路径"
                         value={activeNode.path}
                         onValueChange={value => handleFieldChange({ path: value })}
                         classNames={{
@@ -763,6 +669,7 @@ function MenuPage() {
                       <Input
                         size="sm"
                         variant="bordered"
+                        aria-label="权限标识"
                         value={activeNode.permissionKey}
                         onValueChange={value => handleFieldChange({ permissionKey: value })}
                         classNames={{
@@ -784,6 +691,7 @@ function MenuPage() {
                       <NumberInput
                         size="sm"
                         variant="bordered"
+                        aria-label="排序值"
                         value={activeNode.order}
                         minValue={1}
                         onValueChange={value =>
@@ -802,22 +710,12 @@ function MenuPage() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--bg-elevated)] border border-[var(--border-color)]">
-                            {activeNode.iconName === "FiHome" && (
-                              <FiHome className="w-4 h-4" />
-                            )}
-                            {activeNode.iconName === "FiMenu" && (
-                              <FiMenu className="w-4 h-4" />
-                            )}
-                            {activeNode.iconName === "FiLayers" && (
-                              <FiLayers className="w-4 h-4" />
-                            )}
-                            {activeNode.iconName === "FiList" && (
-                              <FiList className="w-4 h-4" />
-                            )}
-                            {!iconOptions.some(item => item.id === activeNode.iconName) && (
-                              <FiMoreHorizontal className="w-4 h-4" />
-                            )}
-                          </span>
+                              {(() => {
+                                 // @ts-expect-error - iconName is a string but Icons is an object
+                                 const Icon = Icons[activeNode.iconName] || Icons.FiMoreHorizontal;
+                                 return <Icon className="w-4 h-4" />;
+                               })()}
+                            </span>
                           <span className="text-xs">{getIconLabel(activeNode.iconName)}</span>
                         </div>
                         <Button
@@ -841,6 +739,7 @@ function MenuPage() {
                         <div className="flex items-center gap-2">
                           <Switch
                             size="sm"
+                            aria-label="是否在菜单中显示"
                             isSelected={activeNode.visible}
                             onValueChange={value => handleFieldChange({ visible: value })}
                           />

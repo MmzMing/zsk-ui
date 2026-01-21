@@ -20,12 +20,13 @@ import {
   FiChevronDown,
   FiChevronRight
 } from "react-icons/fi";
+import * as Icons from "react-icons/fi";
 import { routes } from "../../router/routes";
 import SystemSettingsPanel from "../../components/SystemSettings/Panel";
 import { useAppStore } from "../../store";
 import { useUserStore } from "../../store/modules/userStore";
 import PageTransitionWrapper from "../../components/Motion/PageTransitionWrapper";
-import { adminMenuItems } from "../../config/adminMenu";
+import { adminMenuTree } from "../../config/adminMenu";
 import OperationBar from "./OperationBar";
 
 const headerIconButtonClass =
@@ -33,6 +34,12 @@ const headerIconButtonClass =
 
 const adminHeaderNavButtonClass =
   "inline-flex items-center gap-1 px-1 h-10 text-xs border-b-2 border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors duration-150";
+
+const getIcon = (iconName: string) => {
+  // @ts-expect-error - iconName is a string but Icons is an object
+  const Icon = Icons[iconName] || Icons.FiList;
+  return Icon;
+};
 
 function AdminLayout() {
   const location = useLocation();
@@ -59,10 +66,10 @@ function AdminLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => layoutMode === "horizontal"
   );
-  const [openKeys, setOpenKeys] = useState<string[]>(["dashboard"]);
+  const [openKeys, setOpenKeys] = useState<string[]>(["001"]); // Default dashboard
   const [tabs, setTabs] = useState<{ key: string; label: string; path: string }[]>(() => {
-    const dashboard = adminMenuItems[0]?.children[0];
-    return dashboard ? [{ key: dashboard.key, label: dashboard.label, path: dashboard.path }] : [];
+    const dashboard = adminMenuTree[0]?.children?.[0];
+    return dashboard ? [{ key: dashboard.id, label: dashboard.name, path: dashboard.path }] : [];
   });
   
   const [hoverSectionKey, setHoverSectionKey] = useState<string | null>(null);
@@ -96,37 +103,37 @@ function AdminLayout() {
   const currentPath = location.pathname;
 
   const activeChild = useMemo(() => {
-    const found = adminMenuItems
-      .flatMap(section => section.children)
+    const found = adminMenuTree
+      .flatMap(section => section.children || [])
       .find(child => child.path === currentPath);
     if (found) {
       return found;
     }
-    return adminMenuItems[0]?.children[0] ?? null;
+    return adminMenuTree[0]?.children?.[0] ?? null;
   }, [currentPath]);
 
-  const activeKey = activeChild?.key ?? "dashboard-workbench";
+  const activeKey = activeChild?.id ?? "001001";
 
   const activeParent = useMemo(() => {
     if (!activeChild) {
-      return adminMenuItems[0] ?? null;
+      return adminMenuTree[0] ?? null;
     }
-    const parent = adminMenuItems.find(section =>
-      section.children.some(child => child.key === activeKey)
+    const parent = adminMenuTree.find(section =>
+      section.children?.some(child => child.id === activeKey)
     );
-    return parent ?? adminMenuItems[0] ?? null;
+    return parent ?? adminMenuTree[0] ?? null;
   }, [activeChild, activeKey]);
 
-  const activeSectionKey = activeParent?.key ?? "dashboard";
+  const activeSectionKey = activeParent?.id ?? "001";
 
   // Keep track of tabs based on navigation
   useEffect(() => {
     if (activeChild) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setTabs(previous => {
-        const exists = previous.some(tab => tab.key === activeChild.key);
+        const exists = previous.some(tab => tab.key === activeChild.id);
         if (exists) return previous;
-        const next = [...previous, { key: activeChild.key, label: activeChild.label, path: activeChild.path }];
+        const next = [...previous, { key: activeChild.id, label: activeChild.name, path: activeChild.path }];
         return next.slice(-8); // Keep last 8
       });
     }
@@ -148,38 +155,38 @@ function AdminLayout() {
     navigate(routes.home);
   };
 
-  const handleSectionToggle = (sectionKey: string) => {
+  const handleSectionToggle = (sectionId: string) => {
     setOpenKeys(previous => {
-      const isOpen = previous.includes(sectionKey);
+      const isOpen = previous.includes(sectionId);
       if (sidebarAccordion) {
         if (isOpen) {
           return [];
         }
-        return [sectionKey];
+        return [sectionId];
       }
       return isOpen
-        ? previous.filter(key => key !== sectionKey)
-        : [...previous, sectionKey];
+        ? previous.filter(key => key !== sectionId)
+        : [...previous, sectionId];
     });
   };
 
-  const handleMenuItemClick = (menuKey: string) => {
-    const matched = adminMenuItems
-      .flatMap(section => section.children)
-      .find(child => child.key === menuKey);
+  const handleMenuItemClick = (menuId: string) => {
+    const matched = adminMenuTree
+      .flatMap(section => section.children || [])
+      .find(child => child.id === menuId);
     if (!matched) {
       return;
     }
     navigate(matched.path);
   };
 
-  const handleSectionEntryClick = (sectionKey: string) => {
-    const section = adminMenuItems.find(item => item.key === sectionKey);
-    if (!section || !section.children.length) {
+  const handleSectionEntryClick = (sectionId: string) => {
+    const section = adminMenuTree.find(item => item.id === sectionId);
+    if (!section || !section.children?.length) {
       return;
     }
     const first = section.children[0];
-    handleMenuItemClick(first.key);
+    handleMenuItemClick(first.id);
   };
 
   const handleTabClick = (key: string) => {
@@ -193,10 +200,10 @@ function AdminLayout() {
     setTabs(previous => {
       const filtered = previous.filter(item => item.key !== key);
       if (!filtered.length) {
-        const dashboard = adminMenuItems[0]?.children[0];
+        const dashboard = adminMenuTree[0]?.children?.[0];
         if (dashboard) {
           navigate(dashboard.path);
-          return [{ key: dashboard.key, label: dashboard.label, path: dashboard.path }];
+          return [{ key: dashboard.id, label: dashboard.name, path: dashboard.path }];
         }
         return [];
       }
@@ -215,9 +222,9 @@ function AdminLayout() {
   };
 
   const handleCloseAll = () => {
-    const dashboard = adminMenuItems[0]?.children[0];
+    const dashboard = adminMenuTree[0]?.children?.[0];
     if (dashboard) {
-      setTabs([{ key: dashboard.key, label: dashboard.label, path: dashboard.path }]);
+      setTabs([{ key: dashboard.id, label: dashboard.name, path: dashboard.path }]);
       navigate(dashboard.path);
     } else {
       setTabs([]);
@@ -229,9 +236,9 @@ function AdminLayout() {
       return null;
     }
     return {
-      parentLabel: activeParent.label,
-      childLabel: activeChild.label,
-      parentKey: activeParent.key
+      parentLabel: activeParent.name,
+      childLabel: activeChild.name,
+      parentKey: activeParent.id
     };
   }, [activeChild, activeParent]);
 
@@ -254,19 +261,20 @@ function AdminLayout() {
     }
     return (
       <div className="hidden md:flex items-center gap-4 text-xs">
-        {adminMenuItems.map(section => {
-          const isActive = section.key === activeSectionKey;
+        {adminMenuTree.map(section => {
+          const isActive = section.id === activeSectionKey;
+          const Icon = getIcon(section.iconName);
           if (layoutMode === "horizontal") {
             return (
               <div
-                key={section.key}
+                key={section.id}
                 className="relative"
                 onMouseEnter={() => {
                   if (hoverTimerRef.current !== null) {
                     window.clearTimeout(hoverTimerRef.current);
                     hoverTimerRef.current = null;
                   }
-                  setHoverSectionKey(section.key);
+                  setHoverSectionKey(section.id);
                 }}
                 onMouseLeave={() => {
                   if (hoverTimerRef.current !== null) {
@@ -274,7 +282,7 @@ function AdminLayout() {
                   }
                   hoverTimerRef.current = window.setTimeout(() => {
                     setHoverSectionKey(current =>
-                      current === section.key ? null : current
+                      current === section.id ? null : current
                     );
                   }, 120);
                 }}
@@ -287,15 +295,12 @@ function AdminLayout() {
                       ? " font-semibold text-[var(--primary-color)] border-b-[var(--primary-color)]"
                       : "")
                   }
-                  onClick={() => handleSectionEntryClick(section.key)}
+                  onClick={() => handleSectionEntryClick(section.id)}
                 >
-                  {(() => {
-                    const Icon = section.icon;
-                    return <Icon className="w-4 h-4" />;
-                  })()}
-                  <span>{section.label}</span>
+                  <Icon className="w-4 h-4" />
+                  <span>{section.name}</span>
                 </button>
-                {hoverSectionKey === section.key && (
+                {hoverSectionKey === section.id && (
                   <div
                     className="absolute left-0 top-full mt-1 min-w-[140px] rounded-md border border-[var(--border-color)] bg-[var(--bg-elevated)] shadow-sm py-1 z-30"
                     onMouseEnter={() => {
@@ -303,7 +308,7 @@ function AdminLayout() {
                         window.clearTimeout(hoverTimerRef.current);
                         hoverTimerRef.current = null;
                       }
-                      setHoverSectionKey(section.key);
+                      setHoverSectionKey(section.id);
                     }}
                     onMouseLeave={() => {
                       if (hoverTimerRef.current !== null) {
@@ -311,19 +316,19 @@ function AdminLayout() {
                       }
                       hoverTimerRef.current = window.setTimeout(() => {
                         setHoverSectionKey(current =>
-                          current === section.key ? null : current
+                          current === section.id ? null : current
                         );
                       }, 120);
                     }}
                   >
-                    {section.children.map(child => (
+                    {section.children?.map(child => (
                       <button
-                        key={child.key}
+                        key={child.id}
                         type="button"
                         className="w-full px-3 py-1.5 text-left text-xs text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]"
-                        onClick={() => handleMenuItemClick(child.key)}
+                        onClick={() => handleMenuItemClick(child.id)}
                       >
-                        {child.label}
+                        {child.name}
                       </button>
                     ))}
                   </div>
@@ -333,7 +338,7 @@ function AdminLayout() {
           }
           return (
             <button
-              key={section.key}
+              key={section.id}
               type="button"
               className={
                 adminHeaderNavButtonClass +
@@ -341,13 +346,10 @@ function AdminLayout() {
                   ? " font-semibold text-[var(--primary-color)] border-b-[var(--primary-color)]"
                   : "")
               }
-              onClick={() => handleSectionEntryClick(section.key)}
+              onClick={() => handleSectionEntryClick(section.id)}
             >
-              {(() => {
-                const Icon = section.icon;
-                return <Icon className="w-4 h-4" />;
-              })()}
-              <span>{section.label}</span>
+              <Icon className="w-4 h-4" />
+              <span>{section.name}</span>
             </button>
           );
         })}
@@ -361,12 +363,12 @@ function AdminLayout() {
         <div className="px-2 text-[11px] text-[var(--text-color-secondary)]">
           管理导航
         </div>
-        {adminMenuItems.map(section => {
-          const Icon = section.icon;
-          const isOpen = openKeys.includes(section.key);
-          const hasActiveChild = section.children.some(child => child.key === activeKey);
+        {adminMenuTree.map(section => {
+          const Icon = getIcon(section.iconName);
+          const isOpen = openKeys.includes(section.id);
+          const hasActiveChild = section.children?.some(child => child.id === activeKey);
           return (
-            <div key={section.key} className="space-y-1">
+            <div key={section.id} className="space-y-1">
               <button
                 type="button"
                 className={
@@ -375,11 +377,11 @@ function AdminLayout() {
                     ? "bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] text-[var(--primary-color)]"
                     : "text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]")
                 }
-                onClick={() => handleSectionToggle(section.key)}
+                onClick={() => handleSectionToggle(section.id)}
               >
                 <span className="inline-flex items-center gap-2">
                   <Icon className="text-sm" />
-                  {!sidebarCollapsed && <span>{section.label}</span>}
+                  {!sidebarCollapsed && <span>{section.name}</span>}
                 </span>
                 {!sidebarCollapsed && (
                   <span className="text-[10px] text-[var(--text-color-secondary)]">
@@ -393,11 +395,11 @@ function AdminLayout() {
               </button>
               {isOpen && !sidebarCollapsed && (
                 <div className="mt-1 space-y-1">
-                  {section.children.map(child => {
-                    const active = child.key === activeKey;
+                  {section.children?.map(child => {
+                    const active = child.id === activeKey;
                     return (
                       <button
-                        key={child.key}
+                        key={child.id}
                         type="button"
                         className={
                           "w-full flex items-center justify-between gap-2 pl-6 pr-3 py-1.5 rounded-lg text-[11px] transition-colors border " +
@@ -405,9 +407,9 @@ function AdminLayout() {
                             ? "border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
                             : "border-transparent text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]")
                         }
-                        onClick={() => handleMenuItemClick(child.key)}
+                        onClick={() => handleMenuItemClick(child.id)}
                       >
-                        <span>{child.label}</span>
+                        <span>{child.name}</span>
                         {active && (
                           <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary-color)]" />
                         )}
@@ -425,21 +427,21 @@ function AdminLayout() {
 
   const renderMixedSidebar = () => {
     const currentSection =
-      adminMenuItems.find(item => item.key === activeSectionKey) ?? adminMenuItems[0];
+      adminMenuTree.find(item => item.id === activeSectionKey) ?? adminMenuTree[0];
     if (!currentSection) {
       return null;
     }
     return (
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-3">
         <div className="px-2 text-[11px] text-[var(--text-color-secondary)]">
-          {currentSection.label}
+          {currentSection.name}
         </div>
         <div className="space-y-1">
-          {currentSection.children.map(child => {
-            const active = child.key === activeKey;
+          {currentSection.children?.map(child => {
+            const active = child.id === activeKey;
             return (
               <button
-                key={child.key}
+                key={child.id}
                 type="button"
                 className={
                   "w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-[11px] transition-colors border " +
@@ -447,9 +449,9 @@ function AdminLayout() {
                     ? "border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
                     : "border-transparent text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]")
                 }
-                onClick={() => handleMenuItemClick(child.key)}
+                onClick={() => handleMenuItemClick(child.id)}
               >
-                <span>{child.label}</span>
+                <span>{child.name}</span>
                 {active && (
                   <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary-color)]" />
                 )}
@@ -462,20 +464,20 @@ function AdminLayout() {
   };
 
   const renderDoubleSidebar = () => {
-    if (!adminMenuItems.length) {
+    if (!adminMenuTree.length) {
       return null;
     }
     const currentSection =
-      adminMenuItems.find(item => item.key === activeSectionKey) ?? adminMenuItems[0];
+      adminMenuTree.find(item => item.id === activeSectionKey) ?? adminMenuTree[0];
     if (sidebarCollapsed) {
       return (
         <nav className="flex-1 flex flex-col items-center py-4 space-y-2">
-          {adminMenuItems.map(section => {
-            const Icon = section.icon;
-            const isActive = section.key === activeSectionKey;
+          {adminMenuTree.map(section => {
+            const Icon = getIcon(section.iconName);
+            const isActive = section.id === activeSectionKey;
             return (
               <button
-                key={section.key}
+                key={section.id}
                 type="button"
                 className={
                   "w-10 h-10 rounded-xl flex items-center justify-center text-xs transition-colors " +
@@ -483,7 +485,7 @@ function AdminLayout() {
                     ? "bg-[color-mix(in_srgb,var(--primary-color)_18%,transparent)] text-[var(--primary-color)]"
                     : "text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)] hover:text-[var(--text-color)]")
                 }
-                onClick={() => handleSectionEntryClick(section.key)}
+                onClick={() => handleSectionEntryClick(section.id)}
               >
                 <Icon className="text-base" />
               </button>
@@ -495,12 +497,12 @@ function AdminLayout() {
     return (
       <div className="flex flex-1 overflow-hidden">
         <nav className="w-16 flex flex-col items-center py-4 border-r border-[var(--border-color)] space-y-2">
-          {adminMenuItems.map(section => {
-            const Icon = section.icon;
-            const isActive = section.key === activeSectionKey;
+          {adminMenuTree.map(section => {
+            const Icon = getIcon(section.iconName);
+            const isActive = section.id === activeSectionKey;
             return (
               <button
-                key={section.key}
+                key={section.id}
                 type="button"
                 className={
                   "w-11 h-11 rounded-xl flex flex-col items-center justify-center text-[10px] transition-colors " +
@@ -508,10 +510,10 @@ function AdminLayout() {
                     ? "bg-[color-mix(in_srgb,var(--primary-color)_18%,transparent)] text-[var(--primary-color)]"
                     : "text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)] hover:text-[var(--text-color)]")
                 }
-                onClick={() => handleSectionEntryClick(section.key)}
+                onClick={() => handleSectionEntryClick(section.id)}
               >
                 <Icon className="text-base" />
-                <span className="mt-0.5 truncate max-w-[2.5rem]">{section.label}</span>
+                <span className="mt-0.5 truncate max-w-[2.5rem]">{section.name}</span>
               </button>
             );
           })}
@@ -519,11 +521,11 @@ function AdminLayout() {
         <nav className="flex-1 overflow-y-auto py-4 px-3">
           {currentSection && (
             <div className="space-y-1">
-              {currentSection.children.map(child => {
-                const active = child.key === activeKey;
+              {currentSection.children?.map(child => {
+                const active = child.id === activeKey;
                 return (
                   <button
-                    key={child.key}
+                    key={child.id}
                     type="button"
                     className={
                       "w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-[11px] transition-colors border " +
@@ -531,9 +533,9 @@ function AdminLayout() {
                         ? "border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
                         : "border-transparent text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]")
                     }
-                    onClick={() => handleMenuItemClick(child.key)}
+                    onClick={() => handleMenuItemClick(child.id)}
                   >
-                    <span>{child.label}</span>
+                    <span>{child.name}</span>
                     {active && (
                       <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary-color)]" />
                     )}
@@ -615,7 +617,7 @@ function AdminLayout() {
                     }}
                   >
                     <span>{item.label}</span>
-                    {item.key !== "dashboard-workbench" && (
+                    {item.key !== "001001" && (
                       <span
                         className="ml-1 opacity-60 hover:opacity-100"
                         onClick={event => {
@@ -746,10 +748,10 @@ function AdminLayout() {
                   handleMenuItemClick(String(key));
                 }}
               >
-                {adminMenuItems.flatMap(section =>
-                  section.children.map(child => (
-                    <DropdownItem key={child.key}>
-                      {child.label}
+                {adminMenuTree.flatMap(section =>
+                  (section.children || []).map(child => (
+                    <DropdownItem key={child.id}>
+                      {child.name}
                     </DropdownItem>
                   ))
                 )}
@@ -765,7 +767,7 @@ function AdminLayout() {
                     separator: "text-[var(--text-color-secondary)] px-1"
                   }}
                 >
-                  <BreadcrumbItem onPress={() => handleMenuItemClick("dashboard-workbench")}>
+                  <BreadcrumbItem onPress={() => handleMenuItemClick("001001")}>
                     后台管理
                   </BreadcrumbItem>
                   <BreadcrumbItem>{breadcrumb.parentLabel}</BreadcrumbItem>
@@ -894,7 +896,7 @@ function AdminLayout() {
                 }}
               >
                 <span>{item.label}</span>
-                {item.key !== "dashboard-workbench" && (
+                {item.key !== "001001" && (
                   <span
                     className="ml-1 cursor-pointer"
                     onClick={event => {

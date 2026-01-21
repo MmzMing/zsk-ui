@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Card, Chip, DateRangePicker, Input, Tab } from "@heroui/react";
+import { Button, Card, Chip, DateRangePicker, Input, Tab } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import type { LineConfig } from "@ant-design/plots";
 import { Line } from "@ant-design/plots";
@@ -224,6 +224,12 @@ function UserBehaviorPage() {
           ? "classicDark"
           : "classic";
 
+  const handleResetFilter = () => {
+    setKeyword("");
+    setActiveUserId("u_admin");
+    setRange("today");
+  };
+
   const activeUser = useMemo(
     () => behaviorUsers.find(item => item.id === activeUserId) ?? behaviorUsers[0],
     [activeUserId]
@@ -313,37 +319,82 @@ function UserBehaviorPage() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,1.4fr)]">
         <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-          <div className="p-4 space-y-3 text-xs">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="p-3 space-y-4 text-xs border-b border-[var(--border-color)]">
+            {/* 第一层：搜索与基础筛选 */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Input
+                size="sm"
+                variant="bordered"
+                className="w-64"
+                placeholder="按操作类型、模块或关键字搜索"
+                startContent={
+                  <FiSearch className="text-[12px] text-[var(--text-color-secondary)]" />
+                }
+                value={keyword}
+                onValueChange={value => setKeyword(value)}
+                classNames={{
+                  inputWrapper: "h-8 text-xs",
+                  input: "text-xs"
+                }}
+              />
+              <DateRangePicker
+                aria-label="用户行为时间范围"
+                size="sm"
+                variant="bordered"
+                className="w-56 text-[11px]"
+                onChange={value => {
+                  if (!value || !value.start || !value.end) {
+                    setRange("today");
+                    return;
+                  }
+                  try {
+                    const timeZone = getLocalTimeZone();
+                    const startDate = value.start.toDate(timeZone);
+                    const endDate = value.end.toDate(timeZone);
+                    const diffMs = endDate.getTime() - startDate.getTime();
+                    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+                    if (diffDays <= 1) {
+                      setRange("today");
+                    } else {
+                      setRange("7d");
+                    }
+                  } catch {
+                    setRange("today");
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                variant="light"
+                className="h-8 text-xs"
+                onPress={handleResetFilter}
+              >
+                重置筛选
+              </Button>
+            </div>
+
+            {/* 第二层：状态/用户筛选 */}
+            <div className="flex flex-wrap items-center gap-2">
               <AdminTabs
                 aria-label="选择用户"
+                size="sm"
                 selectedKey={activeUserId}
                 onSelectionChange={(key) => setActiveUserId(key as string)}
                 classNames={{
-                  tabList: "gap-2",
-                  tab: "h-7 px-3",
+                  tabList: "p-0 h-7 gap-0",
+                  tab: "h-7 px-4 text-xs",
                 }}
               >
                 {behaviorUsers.map((user) => (
                   <Tab key={user.id} title={user.name} />
                 ))}
               </AdminTabs>
-              <div className="flex flex-wrap gap-2">
-                <Input
-                  size="sm"
-                  variant="bordered"
-                  className="w-56"
-                  placeholder="按操作类型、模块或关键字搜索"
-                  startContent={
-                    <FiSearch className="text-[12px] text-[var(--text-color-secondary)]" />
-                  }
-                  value={keyword}
-                  onValueChange={value => setKeyword(value)}
-                  classNames={{
-                    inputWrapper: "h-8 text-xs",
-                    input: "text-xs"
-                  }}
-                />
+            </div>
+
+            {/* 第三层：其他操作（当前暂无，预留空间或放导出按钮） */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="text-[10px] text-[var(--text-color-secondary)] opacity-70">
+                当前展示为模拟行为数据，用于演示审计追踪与安全分析功能。
               </div>
             </div>
 
@@ -370,33 +421,7 @@ function UserBehaviorPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-[10px]">
-                      <span className="text-[var(--text-color-secondary)]">时间范围：</span>
-                      <DateRangePicker
-                        aria-label="用户行为时间范围"
-                        size="sm"
-                        variant="bordered"
-                        className="w-56 text-[11px]"
-                        onChange={value => {
-                          if (!value || !value.start || !value.end) {
-                            setRange("today");
-                            return;
-                          }
-                          try {
-                            const timeZone = getLocalTimeZone();
-                            const startDate = value.start.toDate(timeZone);
-                            const endDate = value.end.toDate(timeZone);
-                            const diffMs = endDate.getTime() - startDate.getTime();
-                            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-                            if (diffDays <= 1) {
-                              setRange("today");
-                            } else {
-                              setRange("7d");
-                            }
-                          } catch {
-                            setRange("today");
-                          }
-                        }}
-                      />
+                      <span className="text-[var(--text-color-secondary)]">当前分析基于上方选择的时间范围</span>
                     </div>
                   </div>
                   <div className="h-60">

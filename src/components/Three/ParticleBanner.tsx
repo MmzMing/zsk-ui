@@ -217,11 +217,11 @@ const Particles = ({ color, blending }: { color: string; blending: THREE.Blendin
       // pointsRef.current.rotation.y += 0.002;
       
       // 鼠标交互跟随：
-      // 1. 显著增加旋转强度 (0.8 -> 1.2) 以增强视觉明显度
-      // 2. 进一步提升响应速度 (0.1 -> 0.15) 使动效更跟手
+      // 1. 减小旋转强度 (1.2 -> 0.4) 以使交互更平滑，避免倾斜过度
+      // 2. 保持响应速度 (0.15) 使动效跟手
       // 3. 保持 X 轴中心偏移量 (0.4)，使交互中心对齐物体
-      const targetRotationX = -mouseRef.current.y * 1.2; 
-      const targetRotationY = (mouseRef.current.x - 0.4) * 1.2;
+      const targetRotationX = -mouseRef.current.y * 0.4; 
+      const targetRotationY = (mouseRef.current.x - 0.4) * 0.4;
       
       pointsRef.current.rotation.x += (targetRotationX - pointsRef.current.rotation.x) * 0.15;
       pointsRef.current.rotation.y += (targetRotationY - pointsRef.current.rotation.y) * 0.15;

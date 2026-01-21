@@ -206,104 +206,110 @@ function SystemLogPage() {
       </div>
 
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-        <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <AdminTabs
-                aria-label="日志级别"
-                size="sm"
-                selectedKey={activeLevel}
-                onSelectionChange={(key: React.Key) => setActiveLevel(key as LogLevel | "all")}
-                classNames={{
-                  tabList: "p-0 h-6 gap-0",
-                  tab: "h-6 px-3 text-xs"
-                }}
-              >
-                <Tab key="all" title="全部级别" />
-                <Tab key="INFO" title="INFO" />
-                <Tab key="WARN" title="WARN" />
-                <Tab key="ERROR" title="ERROR" />
-              </AdminTabs>
+        <div className="p-3 space-y-4 text-xs border-b border-[var(--border-color)]">
+          {/* 第一层：搜索与基础筛选 */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Input
+              size="sm"
+              variant="bordered"
+              className="w-64"
+              placeholder="按关键字、traceId 搜索日志"
+              startContent={
+                <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
+              }
+              value={keyword}
+              onValueChange={value => {
+                setKeyword(value);
+                setPage(1);
+              }}
+              classNames={{
+                inputWrapper: "h-8 text-xs",
+                input: "text-xs"
+              }}
+            />
 
-              <Select
-                aria-label="模块筛选"
-                size="sm"
-                className="w-40"
-                selectedKeys={[activeModule]}
-                onSelectionChange={keys => {
-                  const key = Array.from(keys)[0];
-                  setActiveModule(key ? String(key) : "全部模块");
-                  setPage(1);
-                }}
-                items={logModules.map(item => ({
-                  label: item,
-                  value: item
-                }))}
-                isClearable
-              >
-                {item => (
-                  <SelectItem key={item.value}>
-                    {item.label}
-                  </SelectItem>
-                )}
-              </Select>
+            <Select
+              aria-label="模块筛选"
+              size="sm"
+              className="w-40"
+              selectedKeys={[activeModule]}
+              onSelectionChange={keys => {
+                const key = Array.from(keys)[0];
+                setActiveModule(key ? String(key) : "全部模块");
+                setPage(1);
+              }}
+              items={logModules.map(item => ({
+                label: item,
+                value: item
+              }))}
+              isClearable
+            >
+              {item => (
+                <SelectItem key={item.value}>
+                  {item.label}
+                </SelectItem>
+              )}
+            </Select>
 
-              <DateRangePicker
-                aria-label="日志时间范围筛选"
-                size="sm"
-                variant="bordered"
-                className="w-60 text-xs"
-              />
-            </div>
+            <DateRangePicker
+              aria-label="日志时间范围筛选"
+              size="sm"
+              variant="bordered"
+              className="w-60 text-xs"
+            />
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                size="sm"
-                variant="bordered"
-                className="w-64"
-                placeholder="按关键字、traceId 搜索日志"
-                startContent={
-                  <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
-                }
-                value={keyword}
-                onValueChange={value => {
-                  setKeyword(value);
-                  setPage(1);
-                }}
-                classNames={{
-                  inputWrapper: "h-8 text-xs",
-                  input: "text-xs"
-                }}
-              />
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-xs"
-                onPress={handleResetFilter}
-              >
-                重置筛选
-              </Button>
-              <Button
-                size="sm"
-                variant="flat"
-                className="h-8 text-xs"
-                startContent={<FiDownload className="text-xs" />}
-                onPress={handleExportCurrent}
-              >
-                导出当前列表
-              </Button>
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-xs"
-                startContent={<FiDownload className="text-xs" />}
-                onPress={handleExportAll}
-              >
-                导出全部
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              variant="light"
+              className="h-8 text-xs"
+              onPress={handleResetFilter}
+            >
+              重置筛选
+            </Button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-color-secondary)]">
+
+          {/* 第二层：状态/级别筛选 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <AdminTabs
+              aria-label="日志级别"
+              size="sm"
+              selectedKey={activeLevel}
+              onSelectionChange={(key: React.Key) => setActiveLevel(key as LogLevel | "all")}
+              classNames={{
+                tabList: "p-0 h-7 gap-0",
+                tab: "h-7 px-4 text-xs"
+              }}
+            >
+              <Tab key="all" title="全部级别" />
+              <Tab key="INFO" title="INFO" />
+              <Tab key="WARN" title="WARN" />
+              <Tab key="ERROR" title="ERROR" />
+            </AdminTabs>
+          </div>
+
+          {/* 第三层：操作按钮 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="flat"
+              className="h-8 text-xs"
+              startContent={<FiDownload className="text-xs" />}
+              onPress={handleExportCurrent}
+            >
+              导出当前列表
+            </Button>
+            <Button
+              size="sm"
+              variant="light"
+              className="h-8 text-xs"
+              startContent={<FiDownload className="text-xs" />}
+              onPress={handleExportAll}
+            >
+              导出全部
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-[10px] text-[var(--text-color-secondary)] opacity-70">
             <span>当前展示为模拟日志数据，实际字段与格式请以后端实现为准。</span>
           </div>
         </div>

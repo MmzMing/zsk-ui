@@ -436,25 +436,33 @@ function AllSearchPage() {
             </div>
             <motion.button
               type="button"
-              className="inline-flex min-h-[34px] items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--bg-elevated)] px-3 py-2 text-xs text-[var(--text-color)] md:px-4"
+              className="inline-flex min-h-[34px] items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--bg-elevated)] px-3 py-2 text-xs text-[var(--text-color)] md:px-4 shadow-sm group"
               onClick={() => setAdvancedOpen(open => !open)}
-              whileTap={{ scale: 0.96 }}
+              whileHover={{ 
+                scale: 1.02,
+                borderColor: "var(--primary-color)",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+              }}
+              whileTap={{ scale: 0.95 }}
               transition={{
                 type: "spring",
-                stiffness: 420,
-                damping: 30
+                stiffness: 400,
+                damping: 25
               }}
             >
-              <span className="mr-1 font-medium">
-                {advancedOpen ? "更多筛选" : "更多筛选"}
+              <span className="mr-1 font-medium group-hover:text-[var(--primary-color)] transition-colors">
+                更多筛选
               </span>
-              <span className="flex items-center gap-1 text-[var(--text-color-secondary)]">
+              <span className="flex items-center gap-1 text-[var(--text-color-secondary)] group-hover:text-[var(--primary-color)] transition-colors">
                 <span className="hidden md:inline">
                   {advancedOpen ? "收起" : "更多条件"}
                 </span>
                 <motion.span
-                  animate={{ rotate: advancedOpen ? 180 : 0 }}
-                  transition={{ duration: 0.18, ease: "easeOut" }}
+                  animate={{ 
+                    rotate: advancedOpen ? 180 : 0,
+                    y: advancedOpen ? -1 : 1
+                  }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
                   className="text-[10px]"
                 >
                   ▼

@@ -165,7 +165,14 @@ function AboutPage() {
               </div>
 
               <div className="flex justify-center gap-4 pt-2">
-                <Button isIconOnly variant="light" radius="full">
+                <Button 
+                  isIconOnly 
+                  variant="light" 
+                  radius="full"
+                  as="a"
+                  href="https://github.com/MmzMing/zsk-ui"
+                  target="_blank"
+                >
                   <FiGithub className="text-xl" />
                 </Button>
                 <Button isIconOnly variant="light" radius="full">
@@ -185,7 +192,14 @@ function AboutPage() {
               <p className="text-xs text-[var(--text-color-secondary)] mb-3">
                 本项目代码已在 GitHub 开源，欢迎 Star 和 Fork。
               </p>
-              <Button size="sm" color="primary" className="w-full">
+              <Button 
+                size="sm" 
+                color="primary" 
+                className="w-full"
+                as="a"
+                href="https://github.com/MmzMing/zsk-ui"
+                target="_blank"
+              >
                 前往 GitHub
               </Button>
             </div>

@@ -275,17 +275,21 @@ function UserPage() {
   };
 
   const handleToggleStatus = (user: UserItem) => {
+    const nextStatus: UserStatus = user.status === "enabled" ? "disabled" : "enabled";
     setUsers(previous =>
       previous.map(item =>
         item.id === user.id
-          ? { ...item, status: item.status === "enabled" ? "disabled" : "enabled" }
+          ? { ...item, status: nextStatus }
           : item
       )
     );
     addToast({
-      title: "状态切换成功",
-      description: `已切换用户 ${user.username} 的启用状态，实际保存逻辑待接入用户接口。`,
-      color: "success"
+      title: nextStatus === "enabled" ? "账号已启用" : "账号已禁用",
+      description: nextStatus === "enabled"
+        ? `已成功恢复用户 ${user.username} 的启用状态。`
+        : `用户 ${user.username} 的账号已被禁用，该用户将无法再访问管理后台。`,
+      color: nextStatus === "enabled" ? "success" : "danger",
+      variant: nextStatus === "disabled" ? "flat" : "solid"
     });
   };
 
@@ -417,8 +421,96 @@ function UserPage() {
       </div>
 
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-        <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="p-4 space-y-4 text-xs border-b border-[var(--border-color)]">
+          {/* 第一层：搜索框，下拉框，重置筛选 */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Input
+              size="sm"
+              variant="bordered"
+              className="w-44"
+              placeholder="按账号 / 姓名搜索"
+              startContent={<FiSearch className="text-xs text-[var(--text-color-secondary)]" />}
+              value={keyword}
+              onValueChange={value => {
+                setKeyword(value);
+                setPage(1);
+              }}
+              classNames={{
+                inputWrapper: "h-8 text-xs",
+                input: "text-xs"
+              }}
+            />
+            <Input
+              size="sm"
+              variant="bordered"
+              className="w-40"
+              placeholder="按手机号搜索"
+              value={phoneKeyword}
+              onValueChange={value => {
+                setPhoneKeyword(value);
+                setPage(1);
+              }}
+              classNames={{
+                inputWrapper: "h-8 text-xs",
+                input: "text-xs"
+              }}
+            />
+            <Select
+              aria-label="角色筛选"
+              size="sm"
+              className="w-40"
+              selectedKeys={[roleFilter]}
+              onSelectionChange={keys => {
+                const key = Array.from(keys)[0];
+                setRoleFilter(key ? String(key) : "all");
+                setPage(1);
+              }}
+              items={[
+                { label: "全部角色", value: "all" },
+                ...allRoles.map(role => ({ label: role, value: role }))
+              ]}
+              isClearable
+              classNames={{
+                trigger: "h-8 min-h-8 text-xs"
+              }}
+            >
+              {item => (
+                <SelectItem key={item.value} className="text-xs">
+                  {item.label}
+                </SelectItem>
+              )}
+            </Select>
+            <Button
+              size="sm"
+              variant="light"
+              className="h-8 text-xs"
+              onPress={handleResetFilter}
+            >
+              重置筛选
+            </Button>
+          </div>
+
+          {/* 第二层：状态 */}
+          <div className="flex items-center gap-3">
+            <span className="text-[var(--text-color-secondary)]">状态：</span>
+            <AdminTabs
+              aria-label="用户状态筛选"
+              size="sm"
+              selectedKey={statusFilter}
+              onSelectionChange={key => {
+                const value = key as "all" | "enabled" | "disabled";
+                setStatusFilter(value);
+                setPage(1);
+              }}
+            >
+              <Tab key="all" title="全部状态" />
+              <Tab key="enabled" title="启用" />
+              <Tab key="disabled" title="禁用" />
+            </AdminTabs>
+          </div>
+
+          {/* 第三层：其他按钮 */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
@@ -468,86 +560,9 @@ function UserPage() {
                 批量删除
               </Button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Input
-                size="sm"
-                variant="bordered"
-                className="w-44"
-                placeholder="按账号 / 姓名搜索"
-                startContent={<FiSearch className="text-xs text-[var(--text-color-secondary)]" />}
-                value={keyword}
-                onValueChange={value => {
-                  setKeyword(value);
-                  setPage(1);
-                }}
-                classNames={{
-                  inputWrapper: "h-8 text-xs",
-                  input: "text-xs"
-                }}
-              />
-              <Input
-                size="sm"
-                variant="bordered"
-                className="w-40"
-                placeholder="按手机号搜索"
-                value={phoneKeyword}
-                onValueChange={value => {
-                  setPhoneKeyword(value);
-                  setPage(1);
-                }}
-                classNames={{
-                  inputWrapper: "h-8 text-xs",
-                  input: "text-xs"
-                }}
-              />
-              <Select
-                aria-label="角色筛选"
-                size="sm"
-                className="w-40"
-                selectedKeys={[roleFilter]}
-                onSelectionChange={keys => {
-                  const key = Array.from(keys)[0];
-                  setRoleFilter(key ? String(key) : "all");
-                  setPage(1);
-                }}
-                items={[
-                  { label: "全部角色", value: "all" },
-                  ...allRoles.map(role => ({ label: role, value: role }))
-                ]}
-                isClearable
-              >
-                {item => (
-                  <SelectItem key={item.value}>
-                    {item.label}
-                  </SelectItem>
-                )}
-              </Select>
-              <AdminTabs
-                aria-label="用户状态筛选"
-                size="sm"
-                selectedKey={statusFilter}
-                onSelectionChange={key => {
-                  const value = key as "all" | "enabled" | "disabled";
-                  setStatusFilter(value);
-                  setPage(1);
-                }}
-              >
-                <Tab key="all" title="全部状态" />
-                <Tab key="enabled" title="启用" />
-                <Tab key="disabled" title="禁用" />
-              </AdminTabs>
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-xs"
-                onPress={handleResetFilter}
-              >
-                重置筛选
-              </Button>
+            <div className="text-xs text-[var(--text-color-secondary)]">
+              <span>当前为示例数据，后续可与实际用户中心与权限系统对接。</span>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-color-secondary)]">
-            <span>当前为示例数据，后续可与实际用户中心与权限系统对接。</span>
           </div>
         </div>
 

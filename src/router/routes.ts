@@ -2,6 +2,7 @@ export const routes = {
   home: "/",
   allSearch: "/all-search",
   resume: "/resume",
+  craziness: "/craziness",
   tools: "/tools",
   about: "/about",
   login: "/login",

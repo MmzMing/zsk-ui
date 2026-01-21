@@ -372,77 +372,82 @@ function VideoListPage() {
           </div>
         </div>
 
-        <div className="p-3 space-y-3 text-xs">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                size="sm"
-                variant="bordered"
-                className="w-64"
-                placeholder="按标题 / ID 搜索视频"
-                value={keyword}
-                onValueChange={value => {
-                  setKeyword(value);
-                  setPage(1);
-                }}
-                startContent={
-                  <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
-                }
-                classNames={{
-                  inputWrapper: "h-8 text-xs",
-                  input: "text-xs"
-                }}
-              />
-              <Select
-                aria-label="视频分类筛选"
-                size="sm"
-                className="w-40"
-                selectedKeys={[categoryFilter]}
-                onSelectionChange={keys => {
-                  const key = Array.from(keys)[0];
-                  setCategoryFilter(key ? String(key) : "all");
-                  setPage(1);
-                }}
-                items={[
-                  { label: "全部分类", value: "all" },
-                  ...videoCategories.map(item => ({ label: item, value: item }))
-                ]}
-                isClearable
-              >
-                {item => (
-                  <SelectItem key={item.value}>
-                    {item.label}
-                  </SelectItem>
-                )}
-              </Select>
-              <AdminTabs
-                aria-label="视频状态筛选"
-                size="sm"
-                selectedKey={statusFilter}
-                onSelectionChange={key => {
-                  const value = key as StatusFilter;
-                  setStatusFilter(value);
-                  setPage(1);
-                }}
-                classNames={{
-                  tabList: "p-0 h-8 gap-0",
-                  tab: "h-8 px-3 text-[0.625rem]"
-                }}
-              >
-                <Tab key="all" title="全部状态" />
-                <Tab key="draft" title="草稿" />
-                <Tab key="published" title="已发布" />
-                <Tab key="offline" title="已下架" />
-              </AdminTabs>
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-[0.6875rem]"
-                onPress={handleResetFilter}
-              >
-                重置筛选
-              </Button>
-            </div>
+        <div className="p-3 space-y-4 text-xs">
+          {/* 第一层：搜索框、下拉框、重置筛选 */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Input
+              size="sm"
+              variant="bordered"
+              className="w-64"
+              placeholder="按标题 / ID 搜索视频"
+              value={keyword}
+              onValueChange={value => {
+                setKeyword(value);
+                setPage(1);
+              }}
+              startContent={
+                <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
+              }
+              classNames={{
+                inputWrapper: "h-8 text-xs",
+                input: "text-xs"
+              }}
+            />
+            <Select
+              aria-label="视频分类筛选"
+              size="sm"
+              className="w-40"
+              selectedKeys={[categoryFilter]}
+              onSelectionChange={keys => {
+                const key = Array.from(keys)[0];
+                setCategoryFilter(key ? String(key) : "all");
+                setPage(1);
+              }}
+              items={[
+                { label: "全部分类", value: "all" },
+                ...videoCategories.map(item => ({ label: item, value: item }))
+              ]}
+              isClearable
+            >
+              {item => (
+                <SelectItem key={item.value}>
+                  {item.label}
+                </SelectItem>
+              )}
+            </Select>
+            <Button
+              size="sm"
+              variant="light"
+              className="h-8 text-[0.6875rem]"
+              onPress={handleResetFilter}
+            >
+              重置筛选
+            </Button>
+          </div>
+
+          {/* 第二层：状态筛选 */}
+          <div className="flex flex-wrap items-center gap-3">
+            <AdminTabs
+              aria-label="视频状态筛选"
+              size="sm"
+              radius="full"
+              color="primary"
+              selectedKey={statusFilter}
+              onSelectionChange={key => {
+                const value = key as StatusFilter;
+                setStatusFilter(value);
+                setPage(1);
+              }}
+            >
+              <Tab key="all" title="全部状态" />
+              <Tab key="draft" title="草稿" />
+              <Tab key="published" title="已发布" />
+              <Tab key="offline" title="已下架" />
+            </AdminTabs>
+          </div>
+
+          {/* 第三层：其他按钮 */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
@@ -466,6 +471,7 @@ function VideoListPage() {
               </Button>
             </div>
           </div>
+
           <div className="flex flex-wrap items-center gap-2 text-[0.6875rem] text-[var(--text-color-secondary)]">
             <span>可根据业务需要扩展更多筛选条件，例如标签、难度、可见范围等。</span>
           </div>

@@ -18,8 +18,9 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-  Tab
-} from "@heroui/react";
+    Tab,
+    Textarea
+  } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
   FiAlertCircle,
@@ -198,6 +199,7 @@ function VideoReviewPage() {
   const [activeReviewItem, setActiveReviewItem] = useState<ReviewItem | null>(null);
   const [logReviewerFilter, setLogReviewerFilter] = useState("");
   const [, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const hasSelection = selectedIds.length > 0;
 
   const pageSize = 8;
@@ -229,10 +231,19 @@ function VideoReviewPage() {
         if (cancelled) {
           return;
         }
-        if (queueType === "ai") {
-          setAiQueue(response.list);
+        if (response && response.list) {
+          if (queueType === "ai") {
+            setAiQueue(response.list);
+          } else {
+            setManualQueue(response.list);
+          }
         } else {
-          setManualQueue(response.list);
+          // 如果接口返回空或失败，保持原有数据或设置为空数组
+          if (queueType === "ai") {
+            setAiQueue(initialAiQueueItems);
+          } else {
+            setManualQueue(initialManualQueueItems);
+          }
         }
         setSelectedIds([]);
         setPage(1);
@@ -308,6 +319,7 @@ function VideoReviewPage() {
   };
 
   const handleUpdateStatus = async (id: string, status: FinalReviewStatus) => {
+    setIsSubmitting(true);
     try {
       await submitReviewResult({
         reviewId: id,
@@ -340,7 +352,9 @@ function VideoReviewPage() {
         current.filter(itemId => itemId !== id)
       );
     } catch (error) {
-      console.error(error);
+      console.error("提交审核结果失败:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -553,147 +567,149 @@ function VideoReviewPage() {
           <div className="space-y-3 text-xs">
             {activeModule === "video" && (
               <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-                <div className="p-3 space-y-3 border-b border-[var(--border-color)]">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Input
-                        size="sm"
-                        variant="bordered"
-                        className="w-64"
-                        placeholder="按标题 / ID 搜索视频"
-                        value={keyword}
-                        onValueChange={value => {
-                          setKeyword(value);
-                          setPage(1);
-                          setSelectedIds([]);
-                        }}
-                        startContent={
-                          <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
-                        }
-                        classNames={{
-                          inputWrapper: "h-8 text-xs",
-                          input: "text-xs"
-                        }}
-                      />
-                      <Input
-                        size="sm"
-                        variant="bordered"
-                        className="w-40"
-                        placeholder="按上传人筛选"
-                        value={uploaderFilter}
-                        onValueChange={value => {
-                          setUploaderFilter(value);
-                          setPage(1);
-                          setSelectedIds([]);
-                        }}
-                        classNames={{
-                          inputWrapper: "h-8 text-xs",
-                          input: "text-xs"
-                        }}
-                      />
-                      <Select
-                        aria-label="视频分类筛选"
-                        size="sm"
-                        className="w-40"
-                        selectedKeys={[categoryFilter]}
-                        onSelectionChange={keys => {
-                          const key = Array.from(keys)[0];
-                          setCategoryFilter(key ? String(key) : "all");
-                          setPage(1);
-                          setSelectedIds([]);
-                        }}
-                        items={[
-                          { label: "全部分类", value: "all" },
-                          ...allCategories.map(item => ({
-                            label: item,
-                            value: item
-                          }))
-                        ]}
-                        isClearable
-                      >
-                        {item => (
-                          <SelectItem key={item.value}>
-                            {item.label}
-                          </SelectItem>
-                        )}
-                      </Select>
-                      <DateRangePicker
-                        aria-label="上传时间筛选"
-                        size="sm"
-                        variant="bordered"
-                        className="w-56 text-xs"
-                      />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <AdminTabs
-                        aria-label="审核状态筛选"
-                        size="sm"
-                        selectedKey={statusFilter}
-                        onSelectionChange={key => {
-                          const value = key as StatusFilter;
-                          setStatusFilter(value);
-                          setPage(1);
-                          setSelectedIds([]);
-                        }}
-                        classNames={{
-                          tabList: "p-0 h-8 gap-0",
-                          tab: "h-8 px-3 text-xs"
-                        }}
-                      >
-                        <Tab key="all" title="全部" />
-                        <Tab key="pending" title="待审核" />
-                        <Tab key="approved" title="已通过" />
-                        <Tab key="rejected" title="已驳回" />
-                      </AdminTabs>
-                      <Button
-                        size="sm"
-                        variant="light"
-                        className="h-8 text-xs"
-                        onPress={handleResetFilter}
-                      >
-                        重置筛选
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-color-secondary)]">
-                    <FiFilter className="text-xs" />
-                    <span>支持按审核状态、上传时间、上传人、分类等多条件组合筛选。</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <AdminTabs
-                      aria-label="视频审核子模块"
+                <div className="p-3 space-y-4 border-b border-[var(--border-color)]">
+                  {/* 第一层：搜索框，下拉框，重置筛选 */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Input
                       size="sm"
-                      selectedKey={videoTab}
-                      onSelectionChange={key => {
-                        const value = key as "queue" | "logs";
-                        setVideoTab(value);
+                      variant="bordered"
+                      className="w-64"
+                      placeholder="按标题 / ID 搜索视频"
+                      value={keyword}
+                      onValueChange={value => {
+                        setKeyword(value);
+                        setPage(1);
+                        setSelectedIds([]);
+                      }}
+                      startContent={
+                        <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
+                      }
+                      classNames={{
+                        inputWrapper: "h-8 text-xs",
+                        input: "text-xs"
+                      }}
+                    />
+                    <Input
+                      size="sm"
+                      variant="bordered"
+                      className="w-40"
+                      placeholder="按上传人筛选"
+                      value={uploaderFilter}
+                      onValueChange={value => {
+                        setUploaderFilter(value);
+                        setPage(1);
+                        setSelectedIds([]);
                       }}
                       classNames={{
-                        tabList: "p-0 h-8 gap-0",
-                        tab: "h-8 px-4 text-xs"
+                        inputWrapper: "h-8 text-xs",
+                        input: "text-xs"
                       }}
-                    >
-                      <Tab key="queue" title="审核队列" />
-                      <Tab key="logs" title="审核日志" />
-                    </AdminTabs>
-                    <AdminTabs
-                      aria-label="审核队列切换"
+                    />
+                    <Select
+                      aria-label="视频分类筛选"
                       size="sm"
-                      selectedKey={queueType}
+                      className="w-40"
+                      selectedKeys={[categoryFilter]}
+                      onSelectionChange={keys => {
+                        const key = Array.from(keys)[0];
+                        setCategoryFilter(key ? String(key) : "all");
+                        setPage(1);
+                        setSelectedIds([]);
+                      }}
+                      items={[
+                        { label: "全部分类", value: "all" },
+                        ...allCategories.map(item => ({
+                          label: item,
+                          value: item
+                        }))
+                      ]}
+                      isClearable
+                    >
+                      {item => (
+                        <SelectItem key={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      )}
+                    </Select>
+                    <DateRangePicker
+                      aria-label="上传时间筛选"
+                      size="sm"
+                      variant="bordered"
+                      className="w-56 text-xs"
+                    />
+                    <Button
+                      size="sm"
+                      variant="light"
+                      className="h-8 text-xs"
+                      onPress={handleResetFilter}
+                    >
+                      重置筛选
+                    </Button>
+                  </div>
+
+                  {/* 第二层：状态 */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-[var(--text-color-secondary)]">状态：</span>
+                    <AdminTabs
+                      aria-label="审核状态筛选"
+                      size="sm"
+                      selectedKey={statusFilter}
                       onSelectionChange={key => {
-                        const value = key as QueueType;
-                        setQueueType(value);
+                        const value = key as StatusFilter;
+                        setStatusFilter(value);
                         setPage(1);
                         setSelectedIds([]);
                       }}
                       classNames={{
                         tabList: "p-0 h-8 gap-0",
-                        tab: "h-8 px-4 text-xs"
+                        tab: "h-8 px-3 text-xs"
                       }}
                     >
-                      <Tab key="ai" title="AI 预审核队列" />
-                      <Tab key="manual" title="人工审核队列" />
+                      <Tab key="all" title="全部" />
+                      <Tab key="pending" title="待审核" />
+                      <Tab key="approved" title="已通过" />
+                      <Tab key="rejected" title="已驳回" />
                     </AdminTabs>
+                  </div>
+
+                  {/* 第三层：其他按钮 */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <div className="flex items-center gap-2">
+                      <AdminTabs
+                        aria-label="视频审核子模块"
+                        size="sm"
+                        selectedKey={videoTab}
+                        onSelectionChange={key => {
+                          const value = key as "queue" | "logs";
+                          setVideoTab(value);
+                        }}
+                        classNames={{
+                          tabList: "p-0 h-8 gap-0",
+                          tab: "h-8 px-4 text-xs"
+                        }}
+                      >
+                        <Tab key="queue" title="审核队列" />
+                        <Tab key="logs" title="审核日志" />
+                      </AdminTabs>
+                      <AdminTabs
+                        aria-label="审核队列切换"
+                        size="sm"
+                        selectedKey={queueType}
+                        onSelectionChange={key => {
+                          const value = key as QueueType;
+                          setQueueType(value);
+                          setPage(1);
+                          setSelectedIds([]);
+                        }}
+                        classNames={{
+                          tabList: "p-0 h-8 gap-0",
+                          tab: "h-8 px-4 text-xs"
+                        }}
+                      >
+                        <Tab key="ai" title="AI 预审核队列" />
+                        <Tab key="manual" title="人工审核队列" />
+                      </AdminTabs>
+                    </div>
                   </div>
                 </div>
 
@@ -830,126 +846,6 @@ function VideoReviewPage() {
                                   >
                                     审核
                                   </Button>
-                                  <Modal
-                                    isOpen={activeReviewItem?.id === item.id}
-                                    onOpenChange={isOpen => {
-                                      if (!isOpen && activeReviewItem?.id === item.id) {
-                                        setActiveReviewItem(null);
-                                      }
-                                    }}
-                                  >
-                                    <ModalContent>
-                                      {onClose => (
-                                        <>
-                                          <ModalHeader className="flex flex-col gap-1">
-                                            <div className="text-sm">视频审核面板</div>
-                                            <div className="text-xs text-[var(--text-color-secondary)]">
-                                              结合左侧预览与右侧审核表单，完成「通过 / 驳回」操作。
-                                            </div>
-                                          </ModalHeader>
-                                          <ModalBody>
-                                            <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)] text-xs">
-                                              <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                  <div className="flex items-center gap-1.5">
-                                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[var(--bg-elevated)] border border-[var(--border-color)]">
-                                                      <FiPlayCircle className="text-base" />
-                                                    </span>
-                                                    <span className="text-xs font-medium">
-                                                      视频预览
-                                                    </span>
-                                                  </div>
-                                                  <Chip
-                                                    size="sm"
-                                                    variant="flat"
-                                                    className="text-xs"
-                                                  >
-                                                    倍速 / 全屏占位
-                                                  </Chip>
-                                                </div>
-                                                <div className="aspect-video rounded-lg border border-[var(--border-color)] bg-[color-mix(in_srgb,var(--bg-elevated)_70%,black_30%)] flex items-center justify-center text-xs text-[var(--text-color-secondary)]">
-                                                  {activeReviewItem?.title ?? item.title}
-                                                </div>
-                                                <div className="space-y-1 text-xs text-[var(--text-color-secondary)]">
-                                                  <div>视频 ID：{item.id}</div>
-                                                  <div>
-                                                    上传人：{item.uploader} · 分类：{item.category}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                              <div className="space-y-3">
-                                                <div className="space-y-1">
-                                                  <div className="text-xs font-medium">
-                                                    审核结论
-                                                  </div>
-                                                  <div className="grid grid-cols-2 gap-2">
-                                                    <Button
-                                                      size="sm"
-                                                      variant="flat"
-                                                      color="success"
-                                                      className="h-8 text-xs"
-                                                      onPress={() => {
-                                                        handleUpdateStatus(item.id, "approved");
-                                                        onClose();
-                                                      }}
-                                                    >
-                                                      直接通过
-                                                    </Button>
-                                                    <Button
-                                                      size="sm"
-                                                      variant="flat"
-                                                      color="danger"
-                                                      className="h-8 text-xs"
-                                                      onPress={() => {
-                                                        handleUpdateStatus(item.id, "rejected");
-                                                        onClose();
-                                                      }}
-                                                    >
-                                                      直接驳回
-                                                    </Button>
-                                                  </div>
-                                                </div>
-                                                <div className="space-y-1">
-                                                  <div className="text-xs font-medium">
-                                                    预设驳回原因占位
-                                                  </div>
-                                                  <Input
-                                                    size="sm"
-                                                    variant="bordered"
-                                                    placeholder="例如：涉及高风险敏感词 / 画面不合规"
-                                                    classNames={{
-                                                      inputWrapper: "h-8 text-xs",
-                                                      input: "text-xs"
-                                                    }}
-                                                  />
-                                                </div>
-                                                <div className="space-y-1">
-                                                  <div className="text-xs font-medium">
-                                                    审核说明占位
-                                                  </div>
-                                                  <textarea
-                                                    className="w-full min-h-[80px] rounded-md border border-[var(--border-color)] bg-[var(--bg-elevated)] px-2.5 py-1.5 text-xs outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary-color)]"
-                                                    placeholder="补充说明本次审核结论，后续会与后端审核日志字段对齐。"
-                                                  />
-                                                </div>
-                                                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-color-secondary)]">
-                                                  <span>审核结果与完整轨迹建议统一由后端返回。</span>
-                                                  <Button
-                                                    size="sm"
-                                                    variant="light"
-                                                    className="h-8 text-xs"
-                                                    onPress={onClose}
-                                                  >
-                                                    关闭
-                                                  </Button>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </ModalBody>
-                                        </>
-                                      )}
-                                    </ModalContent>
-                                  </Modal>
                                   <Button
                                     size="sm"
                                     variant="light"
@@ -1383,9 +1279,233 @@ function VideoReviewPage() {
             </span>
           </div>
         </div>
-      </Card>
-    </div>
-  );
+        </Card>
+
+        {/* 视频审核弹窗 */}
+        <Modal
+          size="4xl"
+          isOpen={!!activeReviewItem}
+          scrollBehavior="inside"
+          onOpenChange={isOpen => {
+            if (!isOpen && !isSubmitting) {
+              setActiveReviewItem(null);
+            }
+          }}
+          classNames={{
+            base: "max-h-[90vh]",
+            header: "border-b border-[var(--border-color)]",
+            footer: "border-t border-[var(--border-color)]",
+            body: "p-0"
+          }}
+        >
+          <ModalContent>
+            {onClose => (
+              <>
+                <ModalHeader className="flex flex-col gap-1 py-4">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary-color)]/10 text-[var(--primary-color)]">
+                      <FiPlayCircle className="text-lg" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="text-lg font-semibold leading-none">视频审核面板</div>
+                      <div className="text-xs font-normal text-[var(--text-color-secondary)]">
+                        审核任务 ID: {activeReviewItem?.id}
+                      </div>
+                    </div>
+                  </div>
+                </ModalHeader>
+                <ModalBody>
+                  <div className="grid h-full md:grid-cols-[1fr_1.2fr]">
+                    {/* 左侧：预览区域 */}
+                    <div className="flex flex-col border-r border-[var(--border-color)] bg-[var(--bg-elevated)]/30">
+                      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-elevated)]/80 px-4 py-3 backdrop-blur-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">内容预览</span>
+                          <Chip size="sm" variant="flat" color="primary" className="h-5 text-[10px]">
+                            视频模式
+                          </Chip>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 overflow-auto p-4 space-y-4">
+                        <Card className="aspect-video flex items-center justify-center border border-[var(--border-color)] bg-black p-4 text-center shadow-none overflow-hidden">
+                          <div className="space-y-3">
+                            <FiPlayCircle className="mx-auto text-5xl text-white/30" />
+                            <div className="text-xs text-white/50">
+                              视频流加载中...
+                            </div>
+                          </div>
+                        </Card>
+
+                        <div className="space-y-4">
+                          <div className="rounded-xl border border-[var(--border-color)] bg-white dark:bg-zinc-900 p-4 space-y-3">
+                            <div className="flex items-center gap-2 pb-2 border-b border-[var(--border-color)]">
+                              <FiAlertCircle className="text-primary" />
+                              <span className="text-xs font-semibold">视频基本信息</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
+                              <div className="space-y-1">
+                                <div className="text-[var(--text-color-secondary)]">视频标题</div>
+                                <div className="font-medium truncate">{activeReviewItem?.title}</div>
+                              </div>
+                              <div className="space-y-1 text-right">
+                                <div className="text-[var(--text-color-secondary)]">上传者</div>
+                                <div className="font-medium">{activeReviewItem?.uploader}</div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="text-[var(--text-color-secondary)]">所属分类</div>
+                                <div className="font-medium">{activeReviewItem?.category}</div>
+                              </div>
+                              <div className="space-y-1 text-right">
+                                <div className="text-[var(--text-color-secondary)]">风险等级</div>
+                                <div>
+                                  <Chip
+                                    size="sm"
+                                    variant="flat"
+                                    color={getRiskColor(activeReviewItem?.riskLevel || "low")}
+                                    className="h-5 text-[10px]"
+                                  >
+                                    {getRiskLabel(activeReviewItem?.riskLevel || "low")}风险
+                                  </Chip>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="rounded-xl border border-dashed border-[var(--border-color)] p-4">
+                            <div className="text-[11px] text-[var(--text-color-secondary)] leading-relaxed text-center italic">
+                              "AI 预审核结果：检测到部分画面可能包含敏感内容，建议人工核实 01:23 - 01:45 处的背景展示。"
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 右侧：操作区域 */}
+                    <div className="flex flex-col bg-white dark:bg-zinc-950">
+                      <div className="flex-1 overflow-auto p-6 space-y-8">
+                        {/* 审核操作 */}
+                        <section className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-semibold">审核操作</div>
+                            <div className="text-[11px] text-[var(--text-color-secondary)]">请选择最终处理结果</div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <Button
+                              color="success"
+                              variant="flat"
+                              className="h-16 flex-col gap-1 border-2 border-transparent transition-all hover:border-success/30 data-[selected=true]:border-success data-[selected=true]:bg-success/10"
+                              startContent={<FiCheck className="text-lg" />}
+                              onPress={() => {
+                                if (activeReviewItem) {
+                                  handleUpdateStatus(activeReviewItem.id, "approved");
+                                  onClose();
+                                }
+                              }}
+                            >
+                              <span className="text-sm font-semibold">审核通过</span>
+                              <span className="text-[10px] opacity-70">内容符合规范，允许发布</span>
+                            </Button>
+                            <Button
+                              color="danger"
+                              variant="flat"
+                              className="h-16 flex-col gap-1 border-2 border-transparent transition-all hover:border-danger/30 data-[selected=true]:border-danger data-[selected=true]:bg-danger/10"
+                              startContent={<FiX className="text-lg" />}
+                              onPress={() => {
+                                if (activeReviewItem) {
+                                  handleUpdateStatus(activeReviewItem.id, "rejected");
+                                  onClose();
+                                }
+                              }}
+                            >
+                              <span className="text-sm font-semibold">驳回视频</span>
+                              <span className="text-[10px] opacity-70">内容违规，禁止发布</span>
+                            </Button>
+                          </div>
+                        </section>
+
+                        {/* 审核意见 */}
+                        <section className="space-y-4">
+                          <div className="text-sm font-semibold">审核意见</div>
+                          <div className="space-y-4">
+                            <Select
+                              label="违规原因预设"
+                              labelPlacement="outside"
+                              placeholder="请选择违规原因（可选）"
+                              variant="bordered"
+                              classNames={{
+                                label: "text-xs font-medium text-[var(--text-color)] mb-1",
+                                trigger: "h-10"
+                              }}
+                            >
+                              <SelectItem key="content">画面包含违规内容</SelectItem>
+                              <SelectItem key="audio">音频包含违规言论</SelectItem>
+                              <SelectItem key="quality">画质模糊或无法播放</SelectItem>
+                              <SelectItem key="copyright">版权侵权争议</SelectItem>
+                              <SelectItem key="other">其他原因</SelectItem>
+                            </Select>
+
+                            <Textarea
+                              label="审核备注"
+                              labelPlacement="outside"
+                              placeholder="请补充审核说明，该说明将作为通知发送给上传者..."
+                              variant="bordered"
+                              minRows={6}
+                              classNames={{
+                                label: "text-xs font-medium text-[var(--text-color)] mb-1",
+                                input: "text-xs"
+                              }}
+                            />
+                          </div>
+                        </section>
+
+                        {/* 提示信息 */}
+                        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 p-4 border border-amber-200 dark:border-amber-900/30">
+                          <div className="flex gap-3">
+                            <FiAlertCircle className="mt-0.5 shrink-0 text-amber-600" />
+                            <div className="space-y-1">
+                              <div className="text-xs font-semibold text-amber-800 dark:text-amber-400">操作须知</div>
+                              <p className="text-[11px] text-amber-700/80 dark:text-amber-500/80 leading-relaxed">
+                                审核操作具有不可逆性。视频一旦通过，将立即进入公开播放队列并推送给相关订阅用户。驳回操作将通过系统通知告知上传者。
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 底部按钮 */}
+                      <div className="flex items-center justify-end gap-3 border-t border-[var(--border-color)] p-6 bg-[var(--bg-elevated)]/20">
+                        <Button
+                          variant="light"
+                          onPress={onClose}
+                          className="h-10 px-6"
+                          isDisabled={isSubmitting}
+                        >
+                          取消
+                        </Button>
+                        <Button
+                          color="primary"
+                          className="h-10 px-10 font-semibold"
+                          isLoading={isSubmitting}
+                          onPress={() => {
+                            if (activeReviewItem) {
+                              handleUpdateStatus(activeReviewItem.id, "approved");
+                              onClose();
+                            }
+                          }}
+                        >
+                          确认并提交
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </ModalBody>
+              </>
+            )}
+          </ModalContent>
+        </Modal>
+      </div>
+    );
 }
 
 export default VideoReviewPage;

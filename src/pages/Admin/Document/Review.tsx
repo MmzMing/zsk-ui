@@ -18,7 +18,8 @@ import {
   TableCell,
   TableColumn,
   TableHeader,
-  TableRow
+  TableRow,
+  Textarea
 } from "@heroui/react";
 import {
   FiAlertCircle,
@@ -193,7 +194,11 @@ function DocumentReviewPage() {
           status: statusFilter === "all" ? undefined : statusFilter,
           keyword: keyword.trim() || undefined
         });
-        setQueue(data.list as ReviewItem[]);
+        if (data && data.list) {
+          setQueue(data.list as ReviewItem[]);
+        } else {
+          setQueue(reviewQueueItems);
+        }
       } catch {
         setQueue(reviewQueueItems);
       }
@@ -263,28 +268,33 @@ function DocumentReviewPage() {
     setSelectedIds([]);
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleUpdateStatus = async (id: string, status: FinalReviewStatus) => {
+    setIsSubmitting(true);
     try {
       await submitDocumentReview({
         reviewId: id,
         status
       });
+      setQueue(previous =>
+        previous.map(item =>
+          item.id === id
+            ? {
+                ...item,
+                status
+              }
+            : item
+        )
+      );
+      setSelectedIds(current =>
+        current.filter(itemId => itemId !== id)
+      );
     } catch (error) {
       console.error("提交审核结果失败:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-    setQueue(previous =>
-      previous.map(item =>
-        item.id === id
-          ? {
-              ...item,
-              status
-            }
-          : item
-      )
-    );
-    setSelectedIds(current =>
-      current.filter(itemId => itemId !== id)
-    );
   };
 
   const handleTableSelectionChange = (keys: "all" | Set<React.Key>) => {
@@ -468,121 +478,130 @@ function DocumentReviewPage() {
           <div className="space-y-3 text-xs">
             {activeModule === "document" && (
               <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-                <div className="p-3 space-y-3 border-b border-[var(--border-color)]">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Input
-                        size="sm"
-                        variant="bordered"
-                        className="w-64"
-                        placeholder="按标题 / ID 搜索文档"
-                        value={keyword}
-                        onValueChange={value => {
-                          setKeyword(value);
-                          setPage(1);
-                          setSelectedIds([]);
-                        }}
-                        startContent={
-                          <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
-                        }
-                        classNames={{
-                          inputWrapper: "h-8 text-xs",
-                          input: "text-xs"
-                        }}
-                      />
-                      <Input
-                        size="sm"
-                        variant="bordered"
-                        className="w-40"
-                        placeholder="按上传人筛选"
-                        value={uploaderFilter}
-                        onValueChange={value => {
-                          setUploaderFilter(value);
-                          setPage(1);
-                          setSelectedIds([]);
-                        }}
-                        classNames={{
-                          inputWrapper: "h-8 text-xs",
-                          input: "text-xs"
-                        }}
-                      />
-                      <Select
-                        aria-label="文档分类筛选"
-                        size="sm"
-                        className="w-40"
-                        selectedKeys={[categoryFilter]}
-                        onSelectionChange={keys => {
-                          const key = Array.from(keys)[0];
-                          setCategoryFilter(key ? String(key) : "all");
-                          setPage(1);
-                          setSelectedIds([]);
-                        }}
-                        items={[
-                          { label: "全部分类", value: "all" },
-                          ...allCategories.map(item => ({
-                            label: item,
-                            value: item
-                          }))
-                        ]}
-                        isClearable
-                      >
-                        {item => (
-                          <SelectItem key={item.value}>
-                            {item.label}
-                          </SelectItem>
-                        )}
-                      </Select>
-                      <DateRangePicker
-                        aria-label="提交时间筛选"
-                        size="sm"
-                        variant="bordered"
-                        className="w-56 text-xs"
-                      />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <AdminTabs
-                        aria-label="审核状态筛选"
-                        size="sm"
-                        selectedKey={statusFilter}
-                        onSelectionChange={key => {
-                          const value = key as StatusFilter;
-                          setStatusFilter(value);
-                          setPage(1);
-                          setSelectedIds([]);
-                        }}
-                      >
-                        <Tab key="all" title="全部" />
-                        <Tab key="pending" title="待审核" />
-                        <Tab key="approved" title="已通过" />
-                        <Tab key="rejected" title="已驳回" />
-                      </AdminTabs>
-                      <Button
-                        size="sm"
-                        variant="light"
-                        className="h-8 text-xs"
-                        onPress={handleResetFilter}
-                      >
-                        重置筛选
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-color-secondary)]">
-                    <FiFilter className="text-xs" />
-                    <span>支持按审核状态、提交时间、上传人、分类等多条件组合筛选。</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <AdminTabs
-                      aria-label="文档审核子模块"
+                <div className="p-4 space-y-4 text-xs border-b border-[var(--border-color)]">
+                  {/* 第一层：搜索框，下拉框，重置筛选 */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Input
                       size="sm"
-                      selectedKey={tab}
-                      onSelectionChange={key => {
-                        const value = key as "queue" | "logs";
-                        setTab(value);
+                      variant="bordered"
+                      className="w-64"
+                      placeholder="按标题 / ID 搜索文档"
+                      value={keyword}
+                      onValueChange={value => {
+                        setKeyword(value);
+                        setPage(1);
+                        setSelectedIds([]);
+                      }}
+                      startContent={
+                        <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
+                      }
+                      classNames={{
+                        inputWrapper: "h-8 text-xs",
+                        input: "text-xs"
+                      }}
+                    />
+                    <Input
+                      size="sm"
+                      variant="bordered"
+                      className="w-40"
+                      placeholder="按上传人筛选"
+                      value={uploaderFilter}
+                      onValueChange={value => {
+                        setUploaderFilter(value);
+                        setPage(1);
+                        setSelectedIds([]);
+                      }}
+                      classNames={{
+                        inputWrapper: "h-8 text-xs",
+                        input: "text-xs"
+                      }}
+                    />
+                    <Select
+                      aria-label="文档分类筛选"
+                      size="sm"
+                      className="w-40"
+                      selectedKeys={[categoryFilter]}
+                      onSelectionChange={keys => {
+                        const key = Array.from(keys)[0];
+                        setCategoryFilter(key ? String(key) : "all");
+                        setPage(1);
+                        setSelectedIds([]);
+                      }}
+                      items={[
+                        { label: "全部分类", value: "all" },
+                        ...allCategories.map(item => ({
+                          label: item,
+                          value: item
+                        }))
+                      ]}
+                      isClearable
+                      classNames={{
+                        trigger: "h-8 min-h-8 text-xs"
                       }}
                     >
-                      <Tab key="queue" title="审核队列" />
-                      <Tab key="logs" title="审核日志" />
+                      {item => (
+                        <SelectItem key={item.value} className="text-xs">
+                          {item.label}
+                        </SelectItem>
+                      )}
+                    </Select>
+                    <DateRangePicker
+                      aria-label="提交时间筛选"
+                      size="sm"
+                      variant="bordered"
+                      className="w-56 text-xs"
+                    />
+                    <Button
+                      size="sm"
+                      variant="light"
+                      className="h-8 text-xs"
+                      onPress={handleResetFilter}
+                    >
+                      重置筛选
+                    </Button>
+                  </div>
+
+                  {/* 第二层：状态 */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-[var(--text-color-secondary)]">状态：</span>
+                    <AdminTabs
+                      aria-label="审核状态筛选"
+                      size="sm"
+                      selectedKey={statusFilter}
+                      onSelectionChange={key => {
+                        const value = key as StatusFilter;
+                        setStatusFilter(value);
+                        setPage(1);
+                        setSelectedIds([]);
+                      }}
+                    >
+                      <Tab key="all" title="全部" />
+                      <Tab key="pending" title="待审核" />
+                      <Tab key="approved" title="已通过" />
+                      <Tab key="rejected" title="已驳回" />
                     </AdminTabs>
+                  </div>
+
+                  {/* 第三层：其他按钮 */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <div className="flex items-center gap-2">
+                      <AdminTabs
+                        aria-label="文档审核子模块"
+                        size="sm"
+                        selectedKey={tab}
+                        onSelectionChange={key => {
+                          const value = key as "queue" | "logs";
+                          setTab(value);
+                        }}
+                      >
+                        <Tab key="queue" title="审核队列" />
+                        <Tab key="logs" title="审核日志" />
+                      </AdminTabs>
+                    </div>
+                    <div className="flex items-center gap-2 text-[var(--text-color-secondary)]">
+                      <FiFilter className="text-xs" />
+                      <span>支持按审核状态、提交时间、上传人、分类等多条件组合筛选。</span>
+                    </div>
                   </div>
                 </div>
 
@@ -698,134 +717,16 @@ function DocumentReviewPage() {
                                   <Button
                                     size="sm"
                                     variant="light"
+                                    color="primary"
                                     className="h-7 text-xs"
                                     onPress={() => setActiveReviewItem(item)}
                                   >
                                     审核
                                   </Button>
-                                  <Modal
-                                    isOpen={activeReviewItem?.id === item.id}
-                                    onOpenChange={isOpen => {
-                                      if (!isOpen && activeReviewItem?.id === item.id) {
-                                        setActiveReviewItem(null);
-                                      }
-                                    }}
-                                  >
-                                    <ModalContent>
-                                      {onClose => (
-                                        <>
-                                          <ModalHeader className="flex flex-col gap-1">
-                                            <div className="text-sm">文档审核面板</div>
-                                            <div className="text-xs text-[var(--text-color-secondary)]">
-                                              左侧预览文档内容，右侧填写审核结论与说明，完成「通过 / 驳回」操作。
-                                            </div>
-                                          </ModalHeader>
-                                          <ModalBody>
-                                            <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)] text-xs">
-                                              <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                  <div className="flex items-center gap-1.5">
-                                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[var(--bg-elevated)] border border-[var(--border-color)]">
-                                                      <FiFileText className="text-base" />
-                                                    </span>
-                                                    <span className="text-xs font-medium">
-                                                      文档预览占位
-                                                    </span>
-                                                  </div>
-                                                  <Chip
-                                                    size="sm"
-                                                    variant="flat"
-                                                    className="text-xs"
-                                                  >
-                                                    翻页 / 搜索占位
-                                                  </Chip>
-                                                </div>
-                                                <div className="h-40 rounded-lg border border-[var(--border-color)] bg-[color-mix(in_srgb,var(--bg-elevated)_70%,black_30%)] flex items-center justify-center text-xs text-[var(--text-color-secondary)]">
-                                                  {activeReviewItem?.title ?? item.title}
-                                                </div>
-                                                <div className="space-y-1 text-xs text-[var(--text-color-secondary)]">
-                                                  <div>文档 ID：{item.id}</div>
-                                                  <div>
-                                                    上传人：{item.uploader} · 分类：{item.category}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                              <div className="space-y-3">
-                                                <div className="space-y-1">
-                                                  <div className="text-xs font-medium">
-                                                    审核结论
-                                                  </div>
-                                                  <div className="grid grid-cols-2 gap-2">
-                                                    <Button
-                                                      size="sm"
-                                                      variant="flat"
-                                                      color="success"
-                                                      className="h-8 text-xs"
-                                                      onPress={() => {
-                                                        handleUpdateStatus(item.id, "approved");
-                                                        onClose();
-                                                      }}
-                                                    >
-                                                      直接通过
-                                                    </Button>
-                                                    <Button
-                                                      size="sm"
-                                                      variant="flat"
-                                                      color="danger"
-                                                      className="h-8 text-xs"
-                                                      onPress={() => {
-                                                        handleUpdateStatus(item.id, "rejected");
-                                                        onClose();
-                                                      }}
-                                                    >
-                                                      直接驳回
-                                                    </Button>
-                                                  </div>
-                                                </div>
-                                                <div className="space-y-1">
-                                                  <div className="text-xs font-medium">
-                                                    预设驳回原因占位
-                                                  </div>
-                                                  <Input
-                                                    size="sm"
-                                                    variant="bordered"
-                                                    placeholder="例如：内容不够清晰 / 涉及不适宜内容"
-                                                    classNames={{
-                                                      inputWrapper: "h-8 text-xs",
-                                                      input: "text-xs"
-                                                    }}
-                                                  />
-                                                </div>
-                                                <div className="space-y-1">
-                                                  <div className="text-xs font-medium">
-                                                    审核说明占位
-                                                  </div>
-                                                  <textarea
-                                                    className="w-full min-h-[80px] rounded-md border border-[var(--border-color)] bg-[var(--bg-elevated)] px-2.5 py-1.5 text-xs outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary-color)]"
-                                                    placeholder="补充说明本次审核结论，后续会与后端审核日志字段对齐。"
-                                                  />
-                                                </div>
-                                                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-color-secondary)]">
-                                                  <span>审核结果与完整轨迹建议统一由后端返回。</span>
-                                                  <Button
-                                                    size="sm"
-                                                    variant="light"
-                                                    className="h-8 text-xs"
-                                                    onPress={onClose}
-                                                  >
-                                                    关闭
-                                                  </Button>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </ModalBody>
-                                        </>
-                                      )}
-                                    </ModalContent>
-                                  </Modal>
                                   <Button
                                     size="sm"
                                     variant="light"
+                                    color="warning"
                                     className="h-7 text-xs"
                                     startContent={<FiFlag className="text-xs" />}
                                   >
@@ -842,6 +743,7 @@ function DocumentReviewPage() {
                                   <Button
                                     size="sm"
                                     variant="light"
+                                    color="success"
                                     className="h-7 text-xs"
                                     startContent={<FiCheck className="text-xs" />}
                                     onPress={() => handleUpdateStatus(item.id, "approved")}
@@ -1086,7 +988,7 @@ function DocumentReviewPage() {
                           </TableCell>
                           <TableCell className="px-3 py-2 align-top">
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <Button size="sm" variant="light" className="h-7 text-[10px]">
+                              <Button size="sm" variant="light" color="success" className="h-7 text-[10px]">
                                 通过
                               </Button>
                               <Button
@@ -1097,7 +999,7 @@ function DocumentReviewPage() {
                               >
                                 驳回
                               </Button>
-                              <Button size="sm" variant="light" className="h-7 text-[10px]">
+                              <Button size="sm" variant="light" color="warning" className="h-7 text-[10px]">
                                 标记违规
                               </Button>
                             </div>
@@ -1246,6 +1148,230 @@ function DocumentReviewPage() {
           </div>
         </div>
       </Card>
+      {/* 文档审核弹窗 */}
+      <Modal
+        size="4xl"
+        isOpen={!!activeReviewItem}
+        scrollBehavior="inside"
+        onOpenChange={isOpen => {
+          if (!isOpen && !isSubmitting) {
+            setActiveReviewItem(null);
+          }
+        }}
+        classNames={{
+          base: "max-h-[90vh]",
+          header: "border-b border-[var(--border-color)]",
+          footer: "border-t border-[var(--border-color)]",
+          body: "p-0"
+        }}
+      >
+        <ModalContent>
+          {onClose => (
+            <>
+              <ModalHeader className="flex flex-col gap-1 py-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary-color)]/10 text-[var(--primary-color)]">
+                    <FiFileText className="text-lg" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-lg font-semibold leading-none">文档审核面板</div>
+                    <div className="text-xs font-normal text-[var(--text-color-secondary)]">
+                      审核任务 ID: {activeReviewItem?.id}
+                    </div>
+                  </div>
+                </div>
+              </ModalHeader>
+              <ModalBody>
+                <div className="grid h-full md:grid-cols-[1fr_1.2fr]">
+                  {/* 左侧：预览区域 */}
+                  <div className="flex flex-col border-r border-[var(--border-color)] bg-[var(--bg-elevated)]/30">
+                    <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-elevated)]/80 px-4 py-3 backdrop-blur-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">内容预览</span>
+                        <Chip size="sm" variant="flat" color="primary" className="h-5 text-[10px]">
+                          实时加载
+                        </Chip>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button isIconOnly size="sm" variant="light" className="h-7 w-7">
+                          <FiSearch className="text-xs" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-auto p-6">
+                      <Card className="mx-auto aspect-[3/4] max-w-md border border-[var(--border-color)] bg-white shadow-sm dark:bg-zinc-900">
+                        <div className="flex h-full flex-col items-center justify-center space-y-4 p-8 text-center">
+                          <div className="relative">
+                            <FiFileText className="text-6xl text-[var(--primary-color)]/20" />
+                            <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm dark:bg-zinc-800">
+                              <FiCheck className="text-xs text-success" />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="text-base font-semibold text-[var(--text-color)]">
+                              {activeReviewItem?.title}
+                            </div>
+                            <div className="text-xs text-[var(--text-color-secondary)]">
+                              点击下方「通过」或「驳回」完成审核任务
+                            </div>
+                          </div>
+                          <div className="w-full space-y-3 pt-4 text-left">
+                            <div className="h-2 w-full rounded bg-[var(--border-color)]/50" />
+                            <div className="h-2 w-[90%] rounded bg-[var(--border-color)]/50" />
+                            <div className="h-2 w-[95%] rounded bg-[var(--border-color)]/50" />
+                            <div className="h-2 w-[80%] rounded bg-[var(--border-color)]/50" />
+                          </div>
+                        </div>
+                      </Card>
+
+                      <div className="mt-6 space-y-4">
+                        <div className="text-xs font-medium uppercase tracking-wider text-[var(--text-color-secondary)]">
+                          元数据信息
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-elevated)]/50 p-4">
+                          <div className="space-y-1">
+                            <div className="text-[10px] text-[var(--text-color-secondary)]">上传人</div>
+                            <div className="text-sm font-medium">{activeReviewItem?.uploader}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-[10px] text-[var(--text-color-secondary)]">分类</div>
+                            <div className="text-sm font-medium">{activeReviewItem?.category}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-[10px] text-[var(--text-color-secondary)]">风险等级</div>
+                            <Chip
+                              size="sm"
+                              variant="flat"
+                              color={activeReviewItem ? getRiskColor(activeReviewItem.riskLevel) : "default"}
+                              className="h-5 text-[10px]"
+                            >
+                              {activeReviewItem ? getRiskLabel(activeReviewItem.riskLevel) : ""}风险
+                            </Chip>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-[10px] text-[var(--text-color-secondary)]">提交时间</div>
+                            <div className="text-sm font-medium">{activeReviewItem?.createdAt}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 右侧：操作区域 */}
+                  <div className="flex flex-col bg-white dark:bg-zinc-950">
+                    <div className="flex-1 overflow-auto p-6 space-y-8">
+                      <section className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-semibold">审核操作</div>
+                          <div className="text-[11px] text-[var(--text-color-secondary)]">请选择最终处理结果</div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <Button
+                            color="success"
+                            variant="flat"
+                            className="h-16 flex-col gap-1 border-2 border-transparent transition-all hover:border-success/30 data-[selected=true]:border-success data-[selected=true]:bg-success/10"
+                            startContent={<FiCheck className="text-lg" />}
+                            onPress={() => {
+                              if (activeReviewItem) {
+                                handleUpdateStatus(activeReviewItem.id, "approved");
+                                onClose();
+                              }
+                            }}
+                          >
+                            <span className="text-sm font-semibold">审核通过</span>
+                            <span className="text-[10px] opacity-70">内容符合规范，允许发布</span>
+                          </Button>
+                          <Button
+                            color="danger"
+                            variant="flat"
+                            className="h-16 flex-col gap-1 border-2 border-transparent transition-all hover:border-danger/30 data-[selected=true]:border-danger data-[selected=true]:bg-danger/10"
+                            startContent={<FiX className="text-lg" />}
+                            onPress={() => {
+                              if (activeReviewItem) {
+                                handleUpdateStatus(activeReviewItem.id, "rejected");
+                                onClose();
+                              }
+                            }}
+                          >
+                            <span className="text-sm font-semibold">驳回文档</span>
+                            <span className="text-[10px] opacity-70">内容违规，禁止发布</span>
+                          </Button>
+                        </div>
+                      </section>
+
+                      <section className="space-y-4">
+                        <div className="text-sm font-semibold">审核意见</div>
+                        <div className="space-y-4">
+                          <Select
+                            label="驳回原因模板"
+                            labelPlacement="outside"
+                            placeholder="请选择预设驳回原因..."
+                            variant="bordered"
+                            size="md"
+                            className="w-full"
+                          >
+                            <SelectItem key="content_violation">内容包含违规词汇</SelectItem>
+                            <SelectItem key="copyright">涉及版权纠纷</SelectItem>
+                            <SelectItem key="format">格式不符合要求</SelectItem>
+                            <SelectItem key="quality">内容质量过低</SelectItem>
+                          </Select>
+
+                          <Textarea
+                            label="审核备注"
+                            labelPlacement="outside"
+                            placeholder="请详细说明审核理由，该备注将推送给上传者..."
+                            variant="bordered"
+                            minRows={6}
+                            classNames={{
+                              label: "text-sm font-medium text-[var(--text-color)] mb-1",
+                              input: "text-sm"
+                            }}
+                          />
+                        </div>
+                      </section>
+
+                      <div className="rounded-xl bg-amber-500/5 p-4 text-xs text-amber-600 border border-amber-500/10 space-y-2">
+                        <div className="flex items-center gap-2 font-semibold">
+                          <FiAlertCircle className="shrink-0" />
+                          <span>审核须知</span>
+                        </div>
+                        <p className="leading-relaxed opacity-90">
+                          请仔细检查文档中的文字、图片及外部链接。审核通过后，该文档将立即进入公开库并可能被推送到首页。若内容涉及敏感话题，请务必进行多轮核实。
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 border-t border-[var(--border-color)] p-6 bg-[var(--bg-elevated)]/20">
+                      <Button
+                        variant="light"
+                        onPress={onClose}
+                        className="h-10 px-6"
+                        isDisabled={isSubmitting}
+                      >
+                        取消
+                      </Button>
+                      <Button
+                        color="primary"
+                        className="h-10 px-10 font-semibold"
+                        isLoading={isSubmitting}
+                        onPress={() => {
+                          if (activeReviewItem) {
+                            handleUpdateStatus(activeReviewItem.id, "approved");
+                            onClose();
+                          }
+                        }}
+                      >
+                        确认并提交
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </ModalBody>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

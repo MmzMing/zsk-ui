@@ -167,13 +167,13 @@ const Masonry: React.FC<MasonryProps> = ({
     };
   }, [imageUrls]);
 
-  const grid = useMemo<GridItem[]>(() => {
-    if (!width) return [];
+  const [grid, maxHeight] = useMemo<[GridItem[], number]>(() => {
+    if (!width) return [[], 0];
 
     const colHeights = new Array(columns).fill(0);
     const columnWidth = width / columns;
 
-    return items.map(child => {
+    const gridItems = items.map(child => {
       const col = colHeights.indexOf(Math.min(...colHeights));
       const x = columnWidth * col;
       const height = child.height / 2;
@@ -183,6 +183,8 @@ const Masonry: React.FC<MasonryProps> = ({
 
       return { ...child, x, y, w: columnWidth, h: height };
     });
+
+    return [gridItems, Math.max(...colHeights)];
   }, [columns, items, width]);
 
   const hasMounted = useRef(false);
@@ -278,7 +280,11 @@ const Masonry: React.FC<MasonryProps> = ({
   };
 
   return (
-    <div ref={containerRef} className="list">
+    <div
+      ref={containerRef}
+      className="list"
+      style={{ height: maxHeight > 0 ? `${maxHeight}px` : '100%' }}
+    >
       {grid.map(item => {
         return (
           <div

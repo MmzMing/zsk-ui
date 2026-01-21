@@ -81,7 +81,8 @@ function BasicLayout() {
     () => [
       { path: routes.home, label: "首页", icon: FiHome },
       { path: routes.allSearch, label: "知识库", icon: FiBookOpen },
-      { path: routes.resume, label: "简历", icon: FiFileText },
+      { path: routes.resume, label: "制作简历", icon: FiFileText },
+      { path: routes.craziness, label: "发癫区", icon: FiMessageSquare },
       { path: routes.tools, label: "百宝袋", icon: FiBox },
       { path: routes.about, label: "关于博主", icon: FiUser }
     ],
@@ -533,7 +534,7 @@ function BasicLayout() {
                   社交
                 </div>
                 <a
-                  href="https://github.com"
+                  href="https://github.com/MmzMing/zsk-ui"
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center gap-1 hover:text-[var(--primary-color)]"

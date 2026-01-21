@@ -543,16 +543,23 @@ function DocumentUploadPage() {
                     {drafts.map(item => {
                       const active = selectedDraftId === item.id;
                       return (
-                        <button
+                        <div
                           key={item.id}
-                          type="button"
+                          role="button"
+                          tabIndex={0}
                           className={
-                            "w-full flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-[11px] transition-colors " +
+                            "w-full flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-[11px] transition-colors cursor-pointer " +
                             (active
                               ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] text-[var(--primary-color)]"
                               : "border-[var(--border-color)] bg-[var(--bg-elevated)]/80 text-[var(--text-color-secondary)] hover:border-[var(--primary-color)]/60 hover:text-[var(--text-color)]")
                           }
                           onClick={() => handleApplyDraft(item)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleApplyDraft(item);
+                            }
+                          }}
                         >
                           <div className="space-y-0.5">
                             <div className="text-xs font-medium line-clamp-1">
@@ -568,13 +575,14 @@ function DocumentUploadPage() {
                             variant="light"
                             className="h-7 text-[10px]"
                             startContent={<FiX className="text-[11px]" />}
-                            onPress={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               handleRemoveDraft(item.id);
                             }}
                           >
                             删除
                           </Button>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>

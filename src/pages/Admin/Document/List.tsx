@@ -473,78 +473,85 @@ function DocumentListPage() {
           </div>
         </div>
 
-        <div className="p-3 space-y-3 text-xs">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                size="sm"
-                variant="bordered"
-                className="w-64"
-                placeholder="按标题 / ID 搜索文档"
-                value={keyword}
-                onValueChange={value => {
-                  setKeyword(value);
-                  setPage(1);
-                }}
-                startContent={
-                  <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
-                }
-                classNames={{
-                  inputWrapper: "h-8 text-xs",
-                  input: "text-xs"
-                }}
-              />
-              <Select
-                aria-label="文档分类筛选"
-                size="sm"
-                className="w-40"
-                selectedKeys={[categoryFilter]}
-                onSelectionChange={keys => {
-                  const key = Array.from(keys)[0];
-                  setCategoryFilter(key ? String(key) : "all");
-                  setPage(1);
-                }}
-                items={[
-                  { label: "全部分类", value: "all" },
-                  ...documentCategories.map(item => ({ label: item, value: item }))
-                ]}
-                isClearable
-              >
-                {item => (
-                  <SelectItem key={item.value}>
-                    {item.label}
-                  </SelectItem>
-                )}
-              </Select>
-              <AdminTabs
-                aria-label="文档状态筛选"
-                size="sm"
-                radius="full"
-                color="primary"
-                selectedKey={statusFilter}
-                onSelectionChange={key => {
-                  const value = key as StatusFilter;
-                  setStatusFilter(value);
-                  setPage(1);
-                }}
-              >
-                <Tab key="all" title="全部状态" />
-                <Tab key="draft" title="草稿" />
-                <Tab key="pending" title="待审核" />
-                <Tab key="approved" title="已通过" />
-                <Tab key="rejected" title="已驳回" />
-                <Tab key="offline" title="已下架" />
-                <Tab key="scheduled" title="定时发布" />
-              </AdminTabs>
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-[0.6875rem]"
-                onPress={handleResetFilter}
-              >
-                重置筛选
-              </Button>
-            </div>
+        <div className="p-3 space-y-4 text-xs">
+          {/* 第一层：搜索框、下拉框、重置筛选 */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Input
+              size="sm"
+              variant="bordered"
+              className="w-64"
+              placeholder="按标题 / ID 搜索文档"
+              value={keyword}
+              onValueChange={value => {
+                setKeyword(value);
+                setPage(1);
+              }}
+              startContent={
+                <FiSearch className="text-xs text-[var(--text-color-secondary)]" />
+              }
+              classNames={{
+                inputWrapper: "h-8 text-xs",
+                input: "text-xs"
+              }}
+            />
+            <Select
+              aria-label="文档分类筛选"
+              size="sm"
+              className="w-40"
+              selectedKeys={[categoryFilter]}
+              onSelectionChange={keys => {
+                const key = Array.from(keys)[0];
+                setCategoryFilter(key ? String(key) : "all");
+                setPage(1);
+              }}
+              items={[
+                { label: "全部分类", value: "all" },
+                ...documentCategories.map(item => ({ label: item, value: item }))
+              ]}
+              isClearable
+            >
+              {item => (
+                <SelectItem key={item.value}>
+                  {item.label}
+                </SelectItem>
+              )}
+            </Select>
+            <Button
+              size="sm"
+              variant="light"
+              className="h-8 text-[0.6875rem]"
+              onPress={handleResetFilter}
+            >
+              重置筛选
+            </Button>
+          </div>
+
+          {/* 第二层：状态筛选 */}
+          <div className="flex flex-wrap items-center gap-3">
+            <AdminTabs
+              aria-label="文档状态筛选"
+              size="sm"
+              radius="full"
+              color="primary"
+              selectedKey={statusFilter}
+              onSelectionChange={key => {
+                const value = key as StatusFilter;
+                setStatusFilter(value);
+                setPage(1);
+              }}
+            >
+              <Tab key="all" title="全部状态" />
+              <Tab key="draft" title="草稿" />
+              <Tab key="pending" title="待审核" />
+              <Tab key="approved" title="已通过" />
+              <Tab key="rejected" title="已驳回" />
+              <Tab key="offline" title="已下架" />
+              <Tab key="scheduled" title="定时发布" />
+            </AdminTabs>
+          </div>
+
+          {/* 第三层：其他按钮 */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
@@ -594,6 +601,7 @@ function DocumentListPage() {
                  <Button isIconOnly size="sm" variant={viewMode === "grid" ? "solid" : "light"} onPress={() => setViewMode("grid")}><FiGrid /></Button>
             </div>
           </div>
+
           <div className="flex flex-wrap items-center gap-2 text-[0.6875rem] text-[var(--text-color-secondary)]">
             <span>可根据业务需要扩展更多筛选条件，例如标签、难度、可见范围等。</span>
           </div>
@@ -778,6 +786,7 @@ function DocumentListPage() {
                         <Button
                           size="sm"
                           variant="light"
+                          color="success"
                           className="h-7 text-[0.625rem]"
                           startContent={<FiEdit2 className="text-[0.6875rem]" />}
                           onPress={() => navigate(`/admin/document/edit/${item.id}`)}
@@ -787,6 +796,7 @@ function DocumentListPage() {
                         <Button
                           size="sm"
                           variant="light"
+                          color="primary"
                           className="h-7 text-[0.625rem]"
                           startContent={<FiEye className="text-[0.6875rem]" />}
                           onPress={() => handleOpenSidebar(item.id)}
@@ -796,6 +806,7 @@ function DocumentListPage() {
                         <Button
                           size="sm"
                           variant="light"
+                          color="primary"
                           className="h-7 text-[0.625rem]"
                           startContent={<FiBarChart2 className="text-[0.6875rem]" />}
                           onPress={() => handleOpenSidebar(item.id)}
@@ -832,8 +843,8 @@ function DocumentListPage() {
                    <div className="flex justify-between items-start mb-3">
                       <Chip size="sm" color={getStatusColor(item.status)} variant="flat" className="text-[0.625rem]">{getStatusLabel(item.status)}</Chip>
                       <div className="flex gap-1">
-                         <Button isIconOnly size="sm" variant="light" className="h-6 w-6 min-w-6" onPress={() => navigate(`/admin/document/edit/${item.id}`)}><FiEdit2 className="text-xs" /></Button>
-                         <Button isIconOnly size="sm" variant="light" className="h-6 w-6 min-w-6" onPress={() => handleOpenSidebar(item.id)}><FiBarChart2 className="text-xs" /></Button>
+                         <Button isIconOnly size="sm" variant="light" color="success" className="h-6 w-6 min-w-6" onPress={() => navigate(`/admin/document/edit/${item.id}`)}><FiEdit2 className="text-xs" /></Button>
+                         <Button isIconOnly size="sm" variant="light" color="primary" className="h-6 w-6 min-w-6" onPress={() => handleOpenSidebar(item.id)}><FiBarChart2 className="text-xs" /></Button>
                       </div>
                    </div>
                    <div className="mb-2">

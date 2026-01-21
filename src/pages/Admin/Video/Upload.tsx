@@ -697,6 +697,7 @@ function VideoUploadPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Switch
+                    aria-label="开启 AI 预审核"
                     size="sm"
                     isSelected={aiCheckEnabled}
                     onValueChange={setAiCheckEnabled}
@@ -850,6 +851,7 @@ function VideoUploadPage() {
                               透明度（{watermarkOpacity}%）
                             </div>
                             <Slider
+                              aria-label="水印透明度"
                               size="sm"
                               minValue={0}
                               maxValue={100}
@@ -890,6 +892,7 @@ function VideoUploadPage() {
                             缩放比例（{watermarkScale}%）
                           </div>
                           <Slider
+                            aria-label="水印缩放比例"
                             size="sm"
                             minValue={10}
                             maxValue={100}
@@ -903,6 +906,7 @@ function VideoUploadPage() {
                         </div>
                         <div className="flex items-center gap-2 text-xs text-[var(--text-color-secondary)]">
                           <Switch
+                            aria-label="自适应视频尺寸"
                             size="sm"
                             isSelected={watermarkAutoFit}
                             onValueChange={setWatermarkAutoFit}

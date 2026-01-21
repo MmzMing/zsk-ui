@@ -1,18 +1,5 @@
 import { request } from "../axios";
 
-export type AdminMenuItem = {
-  id: string;
-  name: string;
-  path: string;
-  icon?: string;
-  permission?: string;
-  children?: AdminMenuItem[];
-};
-
-export async function fetchAdminMenuTree() {
-  return request.get<AdminMenuItem[]>("/admin/menu/tree");
-}
-
 export type DashboardOverview = {
   docTotal: number;
   docIncrease: number;
