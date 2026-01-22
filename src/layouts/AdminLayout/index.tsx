@@ -742,9 +742,11 @@ function AdminLayout() {
             className="flex items-center gap-2"
             onClick={handleLogoClick}
           >
-            <div className="h-9 w-9 rounded-xl bg-[var(--primary-color)] flex items-center justify-center text-[var(--bg-elevated)] text-sm font-semibold">
-              管
-            </div>
+            <img
+              src="/logo/MyLogo.png"
+              alt="Logo"
+              className="w-8 h-8 rounded-lg object-contain dark:invert"
+            />
             <div className="flex flex-col items-start">
               <span className="text-sm font-semibold">知识库后台</span>
             </div>

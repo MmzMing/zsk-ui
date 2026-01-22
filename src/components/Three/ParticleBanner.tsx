@@ -3,16 +3,10 @@ import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useAppStore } from '../../store';
 import gsap from 'gsap';
-
-// 粒子总数
-const PARTICLE_COUNT = 8000;
-// 字体大小
-const FONT_SIZE = 172;
-// 粒子大小
-const PARTICLE_SIZE = 0.04;
+import { particleBannerConfig } from '../../config/particleBanner';
 
 // 工具：从 Canvas 获取文字粒子坐标
-function getTextCoordinates(text: string, width: number, height: number): Float32Array {
+function getTextCoordinates(text: string, width: number, height: number, scale: number = 0.014): Float32Array {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return new Float32Array(0);
@@ -25,7 +19,7 @@ function getTextCoordinates(text: string, width: number, height: number): Float3
   ctx.fillRect(0, 0, width, height);
 
   // 绘制文字
-  ctx.font = `bold ${FONT_SIZE}px "ArkPixel-12px", system-ui, sans-serif`;
+  ctx.font = `bold ${particleBannerConfig.fontSize}px "ArkPixel-12px", system-ui, sans-serif`;
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -45,13 +39,13 @@ function getTextCoordinates(text: string, width: number, height: number): Float3
       // 提高阈值，减少边缘模糊粒子
       if (data[index] > 100) {
         // 坐标归一化并居中，Y轴反转
-        // 调整缩放系数以适应全屏 (0.012 * 1.15 = 0.0138 -> 0.014)
-        // 并添加偏移量，让文字显示在右侧 (4 * 1.15 = 4.6)
+        // 调整缩放系数以适应全屏
+        // 并添加偏移量，让文字显示在右侧
         // 增加随机抖动，让拼接不要太贴合 (jitter +/- 0.05)
         const jitter = 0.05;
-        // 移除偏移量 +4.6，改为在组件层级移动位置，确保旋转中心在几何体中心
-        const px = (x - width / 2) * 0.014 + (Math.random() - 0.5) * jitter; 
-        const py = -(y - height / 2) * 0.014 + (Math.random() - 0.5) * jitter;
+        // 使用传入的 scale 参数
+        const px = (x - width / 2) * scale + (Math.random() - 0.5) * jitter; 
+        const py = -(y - height / 2) * scale + (Math.random() - 0.5) * jitter;
         const pz = (Math.random() - 0.5) * jitter; // Z轴也加一点抖动，增加立体感
         particles.push(px, py, pz);
       }
@@ -92,32 +86,33 @@ function fillWithClone(array: Float32Array, startIndex: number, count: number) {
 
 // 生成所有坐标数据
 function generateAllCoordinates() {
+  const { particleCount, sphereRadius, texts } = particleBannerConfig;
+
   // 1. 球体坐标
-  // 用户反馈球太大，从 4.0 缩小至 3.2
-  const sphere = getSphereCoordinates(PARTICLE_COUNT, 3); 
+  const sphere = getSphereCoordinates(particleCount, sphereRadius); 
   
-  // 2. 文字坐标 "知识库"
-  // 增大 Canvas 尺寸以获得更高精度的采样
-  const text1Raw = getTextCoordinates('知识库', 1200, 600);
-  const text1 = new Float32Array(PARTICLE_COUNT * 3);
-  
-  // 复制文字坐标 (防止溢出)
-  const text1Count = Math.min(Math.floor(text1Raw.length / 3), PARTICLE_COUNT);
-  text1.set(text1Raw.subarray(0, text1Count * 3));
-  
-  // 填充剩余部分（叠加）
-  fillWithClone(text1, text1Count, PARTICLE_COUNT);
+  // 2. 动态生成文字坐标
+  const textCoordinates = texts.map((textConfig) => {
+    const textRaw = getTextCoordinates(
+      textConfig.content,
+      textConfig.canvasWidth,
+      textConfig.canvasHeight,
+      textConfig.scale
+    );
+    
+    const textParticles = new Float32Array(particleCount * 3);
+    
+    // 复制文字坐标 (防止溢出)
+    const count = Math.min(Math.floor(textRaw.length / 3), particleCount);
+    textParticles.set(textRaw.subarray(0, count * 3));
+    
+    // 填充剩余部分（叠加）
+    fillWithClone(textParticles, count, particleCount);
+    
+    return textParticles;
+  });
 
-  // 3. 文字坐标 "小破站"
-  const text2Raw = getTextCoordinates('小破站', 1200, 600);
-  const text2 = new Float32Array(PARTICLE_COUNT * 3);
-  
-  const text2Count = Math.min(Math.floor(text2Raw.length / 3), PARTICLE_COUNT);
-  text2.set(text2Raw.subarray(0, text2Count * 3));
-  
-  fillWithClone(text2, text2Count, PARTICLE_COUNT);
-
-  return { sphere, text1, text2 };
+  return { sphere, texts: textCoordinates };
 }
 
 // 粒子组件
@@ -158,6 +153,7 @@ const Particles = ({ color, blending }: { color: string; blending: THREE.Blendin
     // 动画序列
     const tl = gsap.timeline({ repeat: -1 });
     const state = animState.current;
+    const { morphDuration, stayDuration } = particleBannerConfig.animation;
 
     // 辅助函数：切换目标并缓动
     const toShape = (targetShape: Float32Array, duration: number, delay: number = 0) => {
@@ -179,21 +175,16 @@ const Particles = ({ color, blending }: { color: string; blending: THREE.Blendin
       });
     };
 
-    // 初始状态是 Sphere
-    // 流程更新：Sphere -> (2s) -> Text1 -> (3s) -> Sphere -> (2s) -> Text2 -> (3s) -> Sphere
+    // 动态生成动画流程：Sphere -> Text[i] -> Sphere -> Text[i+1] ...
     
-    // 1. Sphere -> Text1 (2s)
-    toShape(coordinates.text1, 2, 0);
-    // 2. Stay (3s) -> implicit via delay of next anim
-    // 3. Text1 -> Sphere (2s)
-    toShape(coordinates.sphere, 2, 3);
-    // 4. Sphere -> Text2 (2s) - 紧接着球体完成后开始
-    toShape(coordinates.text2, 2, 0); 
-    // 5. Stay (3s)
-    // 6. Text2 -> Sphere (2s)
-    toShape(coordinates.sphere, 2, 3);
-    // 7. Sphere -> Text1 (loop start)
-    // 这里的 repeat -1 会回到开头
+    coordinates.texts.forEach((textCoords) => {
+      // 1. Sphere -> Text
+      toShape(textCoords, morphDuration, 0);
+      
+      // 2. Stay (stayDuration) -> implicit via delay of next anim
+      // 3. Text -> Sphere
+      toShape(coordinates.sphere, morphDuration, stayDuration);
+    });
 
     return () => {
       tl.kill();
@@ -237,7 +228,7 @@ const Particles = ({ color, blending }: { color: string; blending: THREE.Blendin
         />
       </bufferGeometry>
       <pointsMaterial
-        size={PARTICLE_SIZE}
+        size={particleBannerConfig.particleSize}
         color={color}
         sizeAttenuation={true}
         transparent={true}

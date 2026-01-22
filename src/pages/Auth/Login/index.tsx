@@ -320,9 +320,11 @@ function LoginPage() {
         <div className="relative z-10 flex flex-col p-10 xl:p-14 w-full h-full">
           <div className="flex items-center justify-between text-xs text-slate-200/80">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-xl bg-[var(--primary-color)] flex items-center justify-center text-[var(--bg-elevated)] text-sm font-semibold">
-                知
-              </div>
+              <img
+                src="/logo/MyLogo.png"
+                alt="Logo"
+                className="w-8 h-8 rounded-lg object-contain"
+              />
               <div className="space-y-0.5">
                 <div className="text-sm font-semibold">知识库小破站</div>
                 <div className="text-[10px] text-slate-200/70">
@@ -335,7 +337,7 @@ function LoginPage() {
               variant="light"
               className="group text-white/70 transition-all hover:bg-transparent data-[hover=true]:bg-transparent"
               aria-label="返回前台"
-              onPress={() => navigate(routes.home)}
+              onPress={() => navigate(routes.home, { state: { fromAuth: true } })}
             >
               <RiHome4Line className="h-6 w-6 transition-all duration-500 group-hover:rotate-[360deg] group-hover:text-[var(--primary-color)]" />
             </Button>
@@ -573,36 +575,30 @@ function LoginPage() {
               </span>
               <div className="h-px flex-1 bg-[var(--border-color)]" />
             </div>
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-6">
               <Button
                 isIconOnly
                 aria-label="GitHub 登录"
-                size="sm"
-                radius="full"
-                variant="bordered"
-                className="h-8 w-8 min-w-8 border-[var(--border-color)] bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] hover:text-[var(--primary-color)]"
+                variant="light"
+                className="group h-10 w-10 min-w-10 bg-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]"
               >
-                <FaGithub className="h-4 w-4" />
+                <FaGithub className="h-6 w-6 transition-transform group-hover:scale-110" />
               </Button>
               <Button
                 isIconOnly
                 aria-label="QQ 登录"
-                size="sm"
-                radius="full"
-                variant="bordered"
-                className="h-8 w-8 min-w-8 border-[var(--border-color)] bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] hover:text-[var(--primary-color)]"
+                variant="light"
+                className="group h-10 w-10 min-w-10 bg-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]"
               >
-                <FaQq className="h-4 w-4" />
+                <FaQq className="h-6 w-6 transition-transform group-hover:scale-110" />
               </Button>
               <Button
                 isIconOnly
                 aria-label="微信 登录"
-                size="sm"
-                radius="full"
-                variant="bordered"
-                className="h-8 w-8 min-w-8 border-[var(--border-color)] bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] hover:text-[var(--primary-color)]"
+                variant="light"
+                className="group h-10 w-10 min-w-10 bg-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]"
               >
-                <FaWeixin className="h-4 w-4" />
+                <FaWeixin className="h-6 w-6 transition-transform group-hover:scale-110" />
               </Button>
             </div>
             <div className="flex items-center justify-center gap-1 text-[11px] text-[var(--text-color-secondary)]">

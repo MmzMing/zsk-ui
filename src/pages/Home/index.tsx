@@ -11,6 +11,7 @@ import {
 } from "../../api/front/home";
 import { routes } from "../../router/routes";
 import HomeBanner from "./components/HomeBanner";
+import HsrIntroAnimation from "../../components/Motion/HsrIntroAnimation";
 import { LazyLoadWrapper } from "../../components/LazyLoadWrapper";
 
 const VideoRecommend = React.lazy(() => import("./components/VideoRecommend"));
@@ -280,7 +281,8 @@ function HomePage() {
   );
 
   return (
-    <div className="space-y-0">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
+      <HsrIntroAnimation />
       <HomeBanner />
 
       <LazyLoadWrapper minHeight="400px" rootMargin="800px">

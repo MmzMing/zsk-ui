@@ -311,9 +311,11 @@ function RegisterPage() {
         <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-14 w-full">
           <div className="flex items-center justify-between text-xs text-slate-200/80">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-xl bg-[var(--primary-color)] flex items-center justify-center text-[var(--bg-elevated)] text-sm font-semibold">
-                知
-              </div>
+              <img
+                src="/logo/MyLogo.png"
+                alt="Logo"
+                className="w-8 h-8 rounded-lg object-contain"
+              />
               <div className="space-y-0.5">
                 <div className="text-sm font-semibold">知识库小破站</div>
                 <div className="text-[10px] text-slate-200/70">
@@ -326,7 +328,7 @@ function RegisterPage() {
               variant="light"
               className="group text-white/70 transition-all hover:bg-transparent data-[hover=true]:bg-transparent"
               aria-label="返回前台"
-              onPress={() => navigate(routes.home)}
+              onPress={() => navigate(routes.home, { state: { fromAuth: true } })}
             >
               <RiHome4Line className="h-6 w-6 transition-all duration-500 group-hover:rotate-[360deg] group-hover:text-[var(--primary-color)]" />
             </Button>

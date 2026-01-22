@@ -14,7 +14,6 @@ import SystemSettingsPanel from "../../components/SystemSettings/Panel";
 import { useAppStore } from "../../store";
 import { useUserStore } from "../../store/modules/userStore";
 import PageTransitionWrapper from "../../components/Motion/PageTransitionWrapper";
-import StickerPeel from "../../components/Motion/StickerPeel";
 import WordRotate from "../../components/Motion/WordRotate";
 import { ThemeToggler } from "../../components/MagicUI/ThemeToggler";
 import {
@@ -70,7 +69,7 @@ function BasicLayout() {
     menuWidth,
     multiTabEnabled,
     breadcrumbEnabled,
-    // themeMode,
+    themeMode,
     // setThemeMode,
     language,
     setLanguage,
@@ -135,6 +134,8 @@ function BasicLayout() {
   const effectiveBoxShadowEnabled = isAdmin ? boxShadowEnabled : false;
   const effectiveMultiTabEnabled = isAdmin ? multiTabEnabled : false;
   const effectiveBreadcrumbEnabled = isAdmin ? breadcrumbEnabled : false;
+
+  const isDark = themeMode === 'dark' || (themeMode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   const containerClassName =
     "w-full" +
@@ -255,14 +256,26 @@ function BasicLayout() {
           <div className="flex items-center gap-4 shrink-0">
             <button
               type="button"
-              className="flex items-center gap-2 text-base font-bold rounded-full px-3 py-1 transition-colors transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-sm hover:bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)]"
+              className="group flex items-center gap-2 text-base font-bold rounded-full px-3 py-1 transition-all duration-150 hover:-translate-y-0.5"
               onClick={() => handleNavClick(routes.home)}
             >
-              <StickerPeel className="w-7 h-7 rounded bg-[var(--primary-color)] text-white flex items-center justify-center text-xs">
-                <span>KB</span>
-              </StickerPeel>
+              <div className="relative w-8 h-8">
+                <img
+                  src="/logo/MyLogo.png"
+                  alt="Logo"
+                  className={`w-full h-full rounded-lg object-contain transition-all duration-300 ${isDark ? 'invert' : ''} group-hover:opacity-0`}
+                />
+                <img
+                  src="/logo/MyLogo.png"
+                  alt="Logo"
+                  className="absolute inset-0 w-full h-full rounded-lg object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    filter: 'drop-shadow(0 0 0 var(--primary-color)) brightness(0) saturate(100%) invert(43%) sepia(87%) saturate(1478%) hue-rotate(218deg) brightness(101%) contrast(96%)'
+                  }}
+                />
+              </div>
               <WordRotate
-                className="hidden sm:inline-block"
+                className="hidden sm:inline-block transition-colors group-hover:text-[var(--primary-color)]"
                 words={["知识库小破站", "欢迎您的到来"]}
               />
             </button>
