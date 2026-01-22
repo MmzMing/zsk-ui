@@ -9,6 +9,15 @@ export default defineConfig({
       "@": "/src",
     },
   },
+    server: {
+    host: '0.0.0.0',
+    port: 4000,
+    strictPort: false,
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1'
+    ]
+  },
   define: {
     global: "window",
   },

@@ -36,8 +36,9 @@ export default function VideoRecommend({ items }: Props) {
     : undefined;
 
   const defaultSources: VideoSource[] = [
-    {
-      src: "https://v16.toutiao50.com/cb6f9ab562e3a0f382ac50aed1aa67a8/696e0ef1/video/tos/alisg/tos-alisg-v-0051c001-sg/o4BEgE2gNWUEpAhf3raNc4ZHDjjDDBFcQFxBme/",
+    { 
+      //src: "https://v16.toutiao50.com/cb6f9ab562e3a0f382ac50aed1aa67a8/696e0ef1/video/tos/alisg/tos-alisg-v-0051c001-sg/o4BEgE2gNWUEpAhf3raNc4ZHDjjDDBFcQFxBme/",
+      src: "/videoTest/【鸣潮_千咲】_Luna - Unveil feat.ねんね.mp4",
       type: "video/mp4"
     }
   ];

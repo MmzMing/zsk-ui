@@ -238,6 +238,20 @@ function DocumentUploadPage() {
       setSelectedFileSize(0);
       return;
     }
+
+    const fileName = file.name;
+    const extension = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
+    const allowedExtensions = [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".md"];
+
+    if (!allowedExtensions.includes(extension)) {
+      setMessage("仅支持 PDF、Word、PPT、Markdown 格式的文档上传");
+      setSelectedFileName("");
+      setSelectedFileSize(0);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setMessage(""); // 清除错误提示
     setSelectedFileName(file.name);
     setSelectedFileSize(file.size);
     // 自动填充标题
@@ -363,7 +377,7 @@ function DocumentUploadPage() {
           统一上传与配置知识库文档内容
         </h1>
         <p className="text-xs text-[var(--text-color-secondary)] max-w-2xl">
-          支持 PDF、Word、PPT 等多种格式文档上传，自动解析内容并建立知识索引。
+          支持 PDF、Word、PPT、Markdown 格式文档上传，自动解析内容并建立知识索引。
         </p>
         {message && (
           <div className="mt-2 text-xs text-[var(--primary-color)] flex items-center gap-1">
@@ -763,7 +777,7 @@ function DocumentUploadPage() {
                   ref={fileInputRef}
                   className="hidden"
                   onChange={handleFileChange}
-                  accept=".pdf,.doc,.docx,.ppt,.pptx,.md,.txt"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.md"
                 />
                 {!selectedFileName ? (
                   <div 

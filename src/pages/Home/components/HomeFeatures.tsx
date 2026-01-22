@@ -1,5 +1,7 @@
 import React, { useMemo, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { routes } from "@/router/routes";
 
 const featureCards = [
   {
@@ -35,6 +37,7 @@ const featureCards = [
 ];
 
 export default function HomeFeatures() {
+  const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement | null>(null);
 
   const { scrollYProgress } = useScroll({
@@ -203,7 +206,14 @@ export default function HomeFeatures() {
                       <div className="flex flex-wrap items-center gap-3">
                         <button
                           type="button"
-                          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--primary-color)] px-4 py-2 text-xs font-medium text-black shadow-[0_14px_30px_rgba(56,189,248,0.55)]"
+                          onClick={() => {
+                            if (index === 2) {
+                              navigate(routes.resume);
+                            } else {
+                              navigate(routes.allSearch);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--primary-color),transparent_85%)] px-4 py-2 text-xs font-medium text-[var(--primary-color)] transition-all duration-300 hover:bg-[var(--primary-color)] hover:text-black"
                         >
                           <span>立即体验</span>
                         </button>

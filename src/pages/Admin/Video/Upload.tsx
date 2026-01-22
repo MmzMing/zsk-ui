@@ -241,6 +241,7 @@ function VideoUploadPage() {
   const [watermarkImageName, setWatermarkImageName] = useState("");
   const [watermarkScale, setWatermarkScale] = useState(40);
   const [watermarkAutoFit, setWatermarkAutoFit] = useState(true);
+  const [watermarkEnabled, setWatermarkEnabled] = useState(false);
 
   // New states for upload interaction
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -450,7 +451,19 @@ function VideoUploadPage() {
       isAiChecked: aiCheckEnabled,
       aiRiskLevel: aiCheckEnabled ? "low" : undefined,
       createdAt: now.toISOString().replace("T", " ").slice(0, 19),
-      coverImage: coverImage === DEFAULT_COVER ? undefined : coverImage
+      coverImage: coverImage === DEFAULT_COVER ? undefined : coverImage,
+      // 水印配置
+      watermarkEnabled,
+      watermarkConfig: watermarkEnabled ? {
+        type: watermarkType,
+        text: watermarkType === "text" ? watermarkText : undefined,
+        fontSize: watermarkType === "text" ? watermarkFontSize : undefined,
+        opacity: watermarkOpacity,
+        position: watermarkPosition,
+        imageName: watermarkType === "image" ? watermarkImageName : undefined,
+        scale: watermarkType === "image" ? watermarkScale : undefined,
+        autoFit: watermarkType === "image" ? watermarkAutoFit : undefined,
+      } : undefined
     };
     setTasks(previous => [nextTask, ...previous]);
     setTitle("");
@@ -870,13 +883,191 @@ function VideoUploadPage() {
                 <div className="text-sm font-medium">高级配置</div>
              </div>
              
-             <div className="p-4">
-                 <div className="grid gap-6 md:grid-cols-2">
-                   {/* 左列：章节与水印设置 */}
-                   <div className="space-y-6">
-                      {/* 水印设置 */}
-                      <div className="space-y-3">
-                        <div className="text-xs font-medium text-[var(--text-color-secondary)] border-b border-dashed border-[var(--border-color)] pb-1">水印设置</div>
+             <div className="p-4 space-y-8">
+                 <div className="grid gap-8 md:grid-cols-2 items-start">
+                    {/* 1. 章节标记 */}
+                    <div className="space-y-3">
+                       <div className="text-xs font-medium text-[var(--text-color-secondary)] border-b border-dashed border-[var(--border-color)] pb-1">章节标记</div>
+                       <div className="flex gap-2">
+                          <Input
+                            size="sm"
+                            variant="bordered"
+                            placeholder="章节标题"
+                            value={chapterTitle}
+                            onValueChange={setChapterTitle}
+                            classNames={{
+                              inputWrapper: [
+                                "h-8",
+                                "bg-transparent",
+                                "border border-[var(--border-color)]",
+                                "dark:border-white/20",
+                                "hover:border-[var(--primary-color)]/80!",
+                                "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                "transition-colors",
+                                "shadow-none"
+                              ].join(" "),
+                              input: "text-xs"
+                            }}
+                            className="flex-1"
+                          />
+                          <Input
+                            size="sm"
+                            variant="bordered"
+                            placeholder="秒数"
+                            value={chapterTime}
+                            onValueChange={setChapterTime}
+                            classNames={{
+                              inputWrapper: [
+                                "h-8",
+                                "bg-transparent",
+                                "border border-[var(--border-color)]",
+                                "dark:border-white/20",
+                                "hover:border-[var(--primary-color)]/80!",
+                                "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                "transition-colors",
+                                "shadow-none"
+                              ].join(" "),
+                              input: "text-xs"
+                            }}
+                            className="w-20"
+                          />
+                          <Button size="sm" className="h-8 min-w-0 px-3" onPress={handleAddChapter}>添加</Button>
+                       </div>
+                       <div className="border border-[var(--border-color)] rounded-md h-32 overflow-auto">
+                          <ul className="divide-y divide-[var(--border-color)]">
+                            {chapters.length === 0 && <li className="px-3 py-2 text-[10px] text-[var(--text-color-secondary)]">暂无章节</li>}
+                            {chapters.map((item, idx) => (
+                              <li key={item.id} className="px-3 py-1.5 flex justify-between items-center text-[11px] hover:bg-[var(--bg-elevated)]/50">
+                                 <div className="flex gap-2">
+                                    <span className="text-[var(--text-color-secondary)] font-mono">{String(idx+1).padStart(2, '0')}</span>
+                                    <span>{item.title}</span>
+                                    <span className="text-[var(--text-color-secondary)]">({item.timeInSeconds}s)</span>
+                                 </div>
+                                 <FiTrash2 className="cursor-pointer text-red-400 hover:text-red-500" onClick={() => handleRemoveChapter(item.id)} />
+                              </li>
+                            ))}
+                          </ul>
+                       </div>
+                    </div>
+
+                    {/* 2. 权限设置 */}
+                    <div className="space-y-3">
+                       <div className="text-xs font-medium text-[var(--text-color-secondary)] border-b border-dashed border-[var(--border-color)] pb-1">权限设置</div>
+                       <AdminTabs selectedKey={permissionType} onSelectionChange={handlePermissionTypeChange} size="sm">
+                          <Tab key="public" title="公开" />
+                          <Tab key="private" title="私有" />
+                          <Tab key="password" title="密码访问" />
+                       </AdminTabs>
+                       
+                       <div className="p-4 border border-[var(--border-color)] rounded-lg bg-[var(--bg-elevated)]/30 min-h-[100px]">
+                          {permissionType === "public" && <div className="text-xs text-[var(--text-color-secondary)]">此视频将对所有访客可见。</div>}
+                          {permissionType === "private" && (
+                             <div className="space-y-3">
+                                <div className="flex gap-2">
+                                   <Input 
+                                  size="sm" 
+                                  variant="bordered" 
+                                  aria-label="用户名"
+                                  placeholder="输入用户名添加可见权限" 
+                                  value={visibleUserInput} 
+                                  onValueChange={setVisibleUserInput} 
+                                  classNames={{
+                                    inputWrapper: [
+                                      "h-8",
+                                      "bg-transparent",
+                                      "border border-[var(--border-color)]",
+                                      "dark:border-white/20",
+                                      "hover:border-[var(--primary-color)]/80!",
+                                      "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                      "transition-colors",
+                                      "shadow-none"
+                                    ].join(" "),
+                                    input: "text-xs"
+                                  }}
+                                  className="flex-1"
+                                />
+                                <Button size="sm" className="h-8" onPress={handleAddVisibleUser}>添加</Button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                   {visibleUsers.map(u => <Chip key={u} onClose={() => handleRemoveVisibleUser(u)} size="sm" variant="flat">{u}</Chip>)}
+                                   {visibleUsers.length === 0 && <span className="text-xs text-[var(--text-color-secondary)]">暂无指定用户，仅自己可见。</span>}
+                                </div>
+                             </div>
+                          )}
+                          {permissionType === "password" && (
+                             <div className="space-y-3">
+                                <Input 
+                                  type="password" 
+                                  size="sm" 
+                                  variant="bordered" 
+                                  label="设置密码" 
+                                  labelPlacement="outside" 
+                                  placeholder="******" 
+                                  value={accessPassword} 
+                                  onValueChange={setAccessPassword} 
+                                  classNames={{
+                                    label: "text-xs font-medium text-[var(--text-color-secondary)]",
+                                    inputWrapper: [
+                                      "h-8",
+                                      "bg-transparent",
+                                      "border border-[var(--border-color)]",
+                                      "dark:border-white/20",
+                                      "hover:border-[var(--primary-color)]/80!",
+                                      "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                      "transition-colors",
+                                      "shadow-none"
+                                    ].join(" "),
+                                    input: "text-xs"
+                                  }}
+                                />
+                                <Input 
+                                  type="password" 
+                                  size="sm" 
+                                  variant="bordered" 
+                                  label="确认密码" 
+                                  labelPlacement="outside" 
+                                  placeholder="******" 
+                                  value={accessPasswordConfirm} 
+                                  onValueChange={setAccessPasswordConfirm} 
+                                  classNames={{
+                                    label: "text-xs font-medium text-[var(--text-color-secondary)]",
+                                    inputWrapper: [
+                                      "h-8",
+                                      "bg-transparent",
+                                      "border border-[var(--border-color)]",
+                                      "dark:border-white/20",
+                                      "hover:border-[var(--primary-color)]/80!",
+                                      "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                      "transition-colors",
+                                      "shadow-none"
+                                    ].join(" "),
+                                    input: "text-xs"
+                                  }}
+                                />
+                                {accessPassword !== accessPasswordConfirm && <span className="text-xs text-red-500">密码不一致</span>}
+                             </div>
+                          )}
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* 3. 水印设置 (Full width) */}
+                 <div className="space-y-4 pt-4 border-t border-dashed border-[var(--border-color)]">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium text-[var(--text-color-secondary)]">水印设置</div>
+                      <Switch 
+                        size="sm" 
+                        isSelected={watermarkEnabled} 
+                        onValueChange={setWatermarkEnabled}
+                        classNames={{
+                          wrapper: "group-data-[selected=true]:bg-[var(--primary-color)]",
+                        }}
+                      />
+                    </div>
+
+                    <div className={`grid md:grid-cols-2 gap-12 transition-all duration-200 ${watermarkEnabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+                      {/* 水印配置左列 */}
+                      <div className="space-y-5">
                         <AdminTabs
                           aria-label="水印类型选择"
                           size="sm"
@@ -888,7 +1079,7 @@ function VideoUploadPage() {
                         </AdminTabs>
                         
                         {watermarkType === "text" && (
-                          <div className="space-y-3">
+                          <div className="space-y-4">
                             <Input
                               size="sm"
                               variant="bordered"
@@ -912,7 +1103,7 @@ function VideoUploadPage() {
                                 input: "text-xs"
                               }}
                             />
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-6">
                                <Input
                                   size="sm"
                                   variant="bordered"
@@ -945,204 +1136,43 @@ function VideoUploadPage() {
                         )}
                         
                         {watermarkType === "image" && (
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2">
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3">
                               <Button size="sm" className="h-8 text-xs" onPress={handleSelectWatermarkImage}>选择图片</Button>
-                              <div className="text-[10px] text-[var(--text-color-secondary)] truncate">{watermarkImageName || "未选择图片"}</div>
+                              <div className="text-[10px] text-[var(--text-color-secondary)] truncate flex-1">{watermarkImageName || "未选择图片"}</div>
                               <input ref={watermarkImageInputRef} type="file" accept=".png,.jpg" className="hidden" onChange={handleWatermarkImageChange} />
                             </div>
-                            <div className="space-y-1">
-                               <div className="text-xs text-[var(--text-color-secondary)]">缩放 ({watermarkScale}%)</div>
-                               <Slider size="sm" step={1} minValue={10} maxValue={100} value={watermarkScale} onChange={v => setWatermarkScale(Number(v))} aria-label="缩放" />
-                            </div>
-                            <div className="flex items-center gap-2">
-                               <Switch size="sm" isSelected={watermarkAutoFit} onValueChange={setWatermarkAutoFit} aria-label="自适应" />
-                               <span className="text-xs text-[var(--text-color-secondary)]">自适应视频尺寸</span>
+                            <div className="grid grid-cols-2 gap-6 items-end">
+                              <div className="space-y-1">
+                                 <div className="text-xs text-[var(--text-color-secondary)]">缩放 ({watermarkScale}%)</div>
+                                 <Slider size="sm" step={1} minValue={10} maxValue={100} value={watermarkScale} onChange={v => setWatermarkScale(Number(v))} aria-label="缩放" />
+                              </div>
+                              <div className="flex items-center gap-2 pb-1">
+                                 <Switch size="sm" isSelected={watermarkAutoFit} onValueChange={setWatermarkAutoFit} aria-label="自适应" />
+                                 <span className="text-xs text-[var(--text-color-secondary)]">自适应视频尺寸</span>
+                              </div>
                             </div>
                           </div>
                         )}
-                        
-                        <div className="space-y-1">
-                           <div className="text-xs text-[var(--text-color-secondary)]">位置布局</div>
-                           <div className="grid grid-cols-3 gap-1 w-32">
-                             {["top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right"].map(pos => (
-                               <div 
-                                 key={pos}
-                                 className={`h-6 rounded border cursor-pointer flex items-center justify-center transition-colors ${watermarkPosition === pos ? "bg-[var(--primary-color)] border-[var(--primary-color)] text-white" : "border-[var(--border-color)] hover:bg-[var(--bg-elevated)]"}`}
-                                 onClick={() => setWatermarkPosition(pos as WatermarkPosition)}
-                               >
-                                 <div className={`w-1.5 h-1.5 rounded-full ${watermarkPosition === pos ? "bg-white" : "bg-[var(--text-color-secondary)]"}`}></div>
-                               </div>
-                             ))}
-                           </div>
-                        </div>
                       </div>
 
-                      {/* 章节标记 */}
+                      {/* 水印配置右列：位置布局 */}
                       <div className="space-y-3">
-                         <div className="text-xs font-medium text-[var(--text-color-secondary)] border-b border-dashed border-[var(--border-color)] pb-1">章节标记</div>
-                         <div className="flex gap-2">
-                            <Input
-                              size="sm"
-                              variant="bordered"
-                              placeholder="章节标题"
-                              value={chapterTitle}
-                              onValueChange={setChapterTitle}
-                              classNames={{
-                                inputWrapper: [
-                                  "h-8",
-                                  "bg-transparent",
-                                  "border border-[var(--border-color)]",
-                                  "dark:border-white/20",
-                                  "hover:border-[var(--primary-color)]/80!",
-                                  "group-data-[focus=true]:border-[var(--primary-color)]!",
-                                  "transition-colors",
-                                  "shadow-none"
-                                ].join(" "),
-                                input: "text-xs"
-                              }}
-                              className="flex-1"
-                            />
-                            <Input
-                              size="sm"
-                              variant="bordered"
-                              placeholder="秒数"
-                              value={chapterTime}
-                              onValueChange={setChapterTime}
-                              classNames={{
-                                inputWrapper: [
-                                  "h-8",
-                                  "bg-transparent",
-                                  "border border-[var(--border-color)]",
-                                  "dark:border-white/20",
-                                  "hover:border-[var(--primary-color)]/80!",
-                                  "group-data-[focus=true]:border-[var(--primary-color)]!",
-                                  "transition-colors",
-                                  "shadow-none"
-                                ].join(" "),
-                                input: "text-xs"
-                              }}
-                              className="w-20"
-                            />
-                            <Button size="sm" className="h-8 min-w-0 px-3" onPress={handleAddChapter}>添加</Button>
+                         <div className="text-xs font-medium text-[var(--text-color-secondary)]">位置布局</div>
+                         <div className="grid grid-cols-3 gap-2 w-48">
+                           {["top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right"].map(pos => (
+                             <div 
+                               key={pos}
+                               className={`h-8 rounded border cursor-pointer flex items-center justify-center transition-colors ${watermarkPosition === pos ? "bg-[var(--primary-color)] border-[var(--primary-color)] text-white" : "border-[var(--border-color)] hover:bg-[var(--bg-elevated)]"}`}
+                               onClick={() => setWatermarkPosition(pos as WatermarkPosition)}
+                             >
+                               <div className={`w-2 h-2 rounded-full ${watermarkPosition === pos ? "bg-white" : "bg-[var(--text-color-secondary)]"}`}></div>
+                             </div>
+                           ))}
                          </div>
-                         <div className="border border-[var(--border-color)] rounded-md h-32 overflow-auto">
-                            <ul className="divide-y divide-[var(--border-color)]">
-                              {chapters.length === 0 && <li className="px-3 py-2 text-[10px] text-[var(--text-color-secondary)]">暂无章节</li>}
-                              {chapters.map((item, idx) => (
-                                <li key={item.id} className="px-3 py-1.5 flex justify-between items-center text-[11px] hover:bg-[var(--bg-elevated)]/50">
-                                   <div className="flex gap-2">
-                                      <span className="text-[var(--text-color-secondary)] font-mono">{String(idx+1).padStart(2, '0')}</span>
-                                      <span>{item.title}</span>
-                                      <span className="text-[var(--text-color-secondary)]">({item.timeInSeconds}s)</span>
-                                   </div>
-                                   <FiTrash2 className="cursor-pointer text-red-400 hover:text-red-500" onClick={() => handleRemoveChapter(item.id)} />
-                                </li>
-                              ))}
-                            </ul>
-                         </div>
+                         <div className="text-[10px] text-[var(--text-color-secondary)] mt-2 italic">选择水印在视频画面中显示的参考方位。</div>
                       </div>
-                   </div>
-
-                   {/* 右列：权限设置 */}
-                   <div className="space-y-3">
-                      <div className="text-xs font-medium text-[var(--text-color-secondary)] border-b border-dashed border-[var(--border-color)] pb-1">权限设置</div>
-                      <AdminTabs selectedKey={permissionType} onSelectionChange={handlePermissionTypeChange} size="sm">
-                         <Tab key="public" title="公开" />
-                         <Tab key="private" title="私有" />
-                         <Tab key="password" title="密码访问" />
-                      </AdminTabs>
-                      
-                      <div className="p-4 border border-[var(--border-color)] rounded-lg bg-[var(--bg-elevated)]/30 min-h-[100px]">
-                         {permissionType === "public" && <div className="text-xs text-[var(--text-color-secondary)]">此视频将对所有访客可见。</div>}
-                         {permissionType === "private" && (
-                            <div className="space-y-3">
-                               <div className="flex gap-2">
-                                  <Input 
-                                 size="sm" 
-                                 variant="bordered" 
-                                 aria-label="用户名"
-                                 placeholder="输入用户名添加可见权限" 
-                                 value={visibleUserInput} 
-                                 onValueChange={setVisibleUserInput} 
-                                 classNames={{
-                                   inputWrapper: [
-                                     "h-8",
-                                     "bg-transparent",
-                                     "border border-[var(--border-color)]",
-                                     "dark:border-white/20",
-                                     "hover:border-[var(--primary-color)]/80!",
-                                     "group-data-[focus=true]:border-[var(--primary-color)]!",
-                                     "transition-colors",
-                                     "shadow-none"
-                                   ].join(" "),
-                                   input: "text-xs"
-                                 }}
-                                 className="max-w-xs" 
-                               />
-                                  <Button size="sm" onPress={handleAddVisibleUser}>添加</Button>
-                               </div>
-                               <div className="flex flex-wrap gap-2">
-                                  {visibleUsers.map(u => <Chip key={u} onClose={() => handleRemoveVisibleUser(u)} size="sm" variant="flat">{u}</Chip>)}
-                                  {visibleUsers.length === 0 && <span className="text-xs text-[var(--text-color-secondary)]">暂无指定用户，仅自己可见。</span>}
-                               </div>
-                            </div>
-                         )}
-                         {permissionType === "password" && (
-                            <div className="grid gap-4 max-w-sm">
-                               <Input
-                                 type="password"
-                                 size="sm"
-                                 variant="bordered"
-                                 label="设置密码"
-                                 placeholder="******"
-                                 value={accessPassword}
-                                 onValueChange={setAccessPassword}
-                                 labelPlacement="outside"
-                                 classNames={{
-                                   label: "text-xs font-medium text-[var(--text-color-secondary)]",
-                                   inputWrapper: [
-                                     "h-8",
-                                     "bg-transparent",
-                                     "border border-[var(--border-color)]",
-                                     "dark:border-white/20",
-                                     "hover:border-[var(--primary-color)]/80!",
-                                     "group-data-[focus=true]:border-[var(--primary-color)]!",
-                                     "transition-colors",
-                                     "shadow-none"
-                                   ].join(" "),
-                                   input: "text-xs"
-                                 }}
-                               />
-                               <Input
-                                 type="password"
-                                 size="sm"
-                                 variant="bordered"
-                                 label="确认密码"
-                                 placeholder="******"
-                                 value={accessPasswordConfirm}
-                                 onValueChange={setAccessPasswordConfirm}
-                                 labelPlacement="outside"
-                                 classNames={{
-                                   label: "text-xs font-medium text-[var(--text-color-secondary)]",
-                                   inputWrapper: [
-                                     "h-8",
-                                     "bg-transparent",
-                                     "border border-[var(--border-color)]",
-                                     "dark:border-white/20",
-                                     "hover:border-[var(--primary-color)]/80!",
-                                     "group-data-[focus=true]:border(--primary-color)]!",
-                                     "transition-colors",
-                                     "shadow-none"
-                                   ].join(" "),
-                                   input: "text-xs"
-                                 }}
-                               />
-                               {accessPassword !== accessPasswordConfirm && <span className="text-xs text-red-500">密码不一致</span>}
-                            </div>
-                         )}
-                      </div>
-                   </div>
+                    </div>
                  </div>
              </div>
           </Card>
