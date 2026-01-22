@@ -3,7 +3,7 @@ import {
   SelectItem,
   Button,
   Card,
-  Input,
+  Chip,
   Pagination,
   Switch,
   Checkbox,
@@ -14,19 +14,23 @@ import {
   TableRow,
   TableCell,
   Tab,
+  Tooltip,
   addToast
 } from "@heroui/react";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
+import { AdminInput } from "@/components/Admin/AdminInput";
 import {
   FiDownload,
   FiEdit2,
   FiKey,
   FiPlus,
+  FiRotateCcw,
   FiTrash2,
   FiUpload,
-  FiUserCheck
+  FiUserCheck,
+  FiX
 } from "react-icons/fi";
 
 type UserStatus = "enabled" | "disabled";
@@ -274,25 +278,6 @@ function UserPage() {
     setUserFormError("");
   };
 
-  const handleToggleStatus = (user: UserItem) => {
-    const nextStatus: UserStatus = user.status === "enabled" ? "disabled" : "enabled";
-    setUsers(previous =>
-      previous.map(item =>
-        item.id === user.id
-          ? { ...item, status: nextStatus }
-          : item
-      )
-    );
-    addToast({
-      title: nextStatus === "enabled" ? "账号已启用" : "账号已禁用",
-      description: nextStatus === "enabled"
-        ? `已成功恢复用户 ${user.username} 的启用状态。`
-        : `用户 ${user.username} 的账号已被禁用，该用户将无法再访问管理后台。`,
-      color: nextStatus === "enabled" ? "success" : "danger",
-      variant: nextStatus === "disabled" ? "flat" : "solid"
-    });
-  };
-
   const handleDeleteUser = (user: UserItem) => {
     const confirmed = window.confirm(`确定要删除用户 ${user.username} 吗？此操作需谨慎。`);
     if (!confirmed) {
@@ -467,14 +452,17 @@ function UserPage() {
                 </SelectItem>
               )}
             </AdminSelect>
-            <Button
-              size="sm"
-              variant="light"
-              className="h-8 text-xs"
-              onPress={handleResetFilter}
-            >
-              重置筛选
-            </Button>
+            <Tooltip content="重置筛选">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                onPress={handleResetFilter}
+              >
+                <FiRotateCcw className="text-sm" />
+              </Button>
+            </Tooltip>
           </div>
 
           {/* 第二层：状态 */}
@@ -616,16 +604,14 @@ function UserPage() {
                         <span>{user.roles.join("、") || "-"}</span>
                       </TableCell>
                       <TableCell className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            size="sm"
-                            isSelected={enabled}
-                            onValueChange={() => handleToggleStatus(user)}
-                          />
-                          <span className="text-xs text-[var(--text-color-secondary)]">
-                            {enabled ? "启用" : "禁用"}
-                          </span>
-                        </div>
+                        <Chip
+                          size="sm"
+                          variant="flat"
+                          className="text-xs"
+                          color={enabled ? "success" : "danger"}
+                        >
+                          {enabled ? "启用" : "禁用"}
+                        </Chip>
                       </TableCell>
                       <TableCell className="px-3 py-2">
                         <span>{user.createdAt}</span>
@@ -707,13 +693,15 @@ function UserPage() {
               <div className="text-sm font-medium">
                 {userFormMode === "create" ? "新增用户" : "编辑用户信息"}
               </div>
-              <button
-                type="button"
-                className="text-xs text-[var(--text-color-secondary)]"
-                onClick={handleCloseUserForm}
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="h-8 w-8 text-[var(--text-color-secondary)]"
+                onPress={handleCloseUserForm}
               >
-                关闭
-              </button>
+                <FiX className="text-base" />
+              </Button>
             </div>
             <div className="px-4 py-3 space-y-3 text-xs">
               {userFormError && (
@@ -723,41 +711,23 @@ function UserPage() {
               )}
               <div className="space-y-1">
                 <div>账号（必填）</div>
-                <Input
-                  size="sm"
-                  variant="bordered"
+                <AdminInput
                   value={userForm.username}
                   onValueChange={value => handleUserFormChange({ username: value })}
-                  classNames={{
-                    inputWrapper: "h-8 text-xs",
-                    input: "text-xs"
-                  }}
                 />
               </div>
               <div className="space-y-1">
                 <div>姓名（必填）</div>
-                <Input
-                  size="sm"
-                  variant="bordered"
+                <AdminInput
                   value={userForm.name}
                   onValueChange={value => handleUserFormChange({ name: value })}
-                  classNames={{
-                    inputWrapper: "h-8 text-xs",
-                    input: "text-xs"
-                  }}
                 />
               </div>
               <div className="space-y-1">
                 <div>手机号</div>
-                <Input
-                  size="sm"
-                  variant="bordered"
+                <AdminInput
                   value={userForm.phone}
                   onValueChange={value => handleUserFormChange({ phone: value })}
-                  classNames={{
-                    inputWrapper: "h-8 text-xs",
-                    input: "text-xs"
-                  }}
                 />
               </div>
               <div className="space-y-1">
@@ -825,13 +795,15 @@ function UserPage() {
           <div className="w-full max-w-md rounded-[var(--radius-base)] bg-[var(--bg-elevated)] border border-[var(--border-color)] shadow-lg">
             <div className="px-4 py-3 border-b border-[var(--border-color)] flex items-center justify-between">
               <div className="text-sm font-medium">分配角色 · {roleAssign.name}</div>
-              <button
-                type="button"
-                className="text-xs text-[var(--text-color-secondary)]"
-                onClick={() => setRoleAssign(null)}
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="h-8 w-8 text-[var(--text-color-secondary)]"
+                onPress={() => setRoleAssign(null)}
               >
-                关闭
-              </button>
+                <FiX className="text-base" />
+              </Button>
             </div>
             <div className="px-4 py-3 space-y-3 text-xs">
               <div className="text-xs text-[var(--text-color-secondary)]">

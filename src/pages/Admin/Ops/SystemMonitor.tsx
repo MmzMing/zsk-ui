@@ -187,6 +187,20 @@ function SystemMonitorPage() {
                   size="sm"
                   variant="bordered"
                   className="w-56 text-xs"
+                  classNames={{
+                    inputWrapper: [
+                      "h-8",
+                      "bg-transparent",
+                      "border border-[var(--border-color)]",
+                      "dark:border-white/20",
+                      "hover:border-[var(--primary-color)]/80!",
+                      "group-data-[focus=true]:border-[var(--primary-color)]!",
+                      "transition-colors",
+                      "shadow-none"
+                    ].join(" "),
+                    input: "text-xs",
+                    selectorButton: "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors"
+                  }}
                 />
               </div>
               <Button

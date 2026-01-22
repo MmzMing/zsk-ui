@@ -12,7 +12,9 @@ import {
   TableCell,
   TableColumn,
   TableHeader,
-  TableRow
+  TableRow,
+  Tooltip,
+  addToast
 } from "@heroui/react";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
@@ -29,7 +31,9 @@ import {
   FiTrash2,
   FiMove,
   FiCheckSquare,
-  FiPlus
+  FiPlus,
+  FiRotateCcw,
+  FiX
 } from "react-icons/fi";
 
 import {
@@ -297,6 +301,11 @@ function DocumentListPage() {
     
     await deleteDocument(selectedIds).catch(() => undefined);
     setDocuments(prev => prev.filter(item => !selectedIds.includes(item.id)));
+    addToast({
+      title: "批量删除成功",
+      description: `已成功删除 ${selectedIds.length} 个文档`,
+      color: "success"
+    });
     setSelectedIds([]);
   };
 
@@ -307,6 +316,11 @@ function DocumentListPage() {
 
     await moveDocumentCategory(selectedIds, category).catch(() => undefined);
     setDocuments(prev => prev.map(item => selectedIds.includes(item.id) ? { ...item, category } : item));
+    addToast({
+      title: "批量移动成功",
+      description: `已成功移动 ${selectedIds.length} 个文档至「${category}」`,
+      color: "success"
+    });
     setSelectedIds([]);
   };
 
@@ -333,6 +347,11 @@ function DocumentListPage() {
         };
       })
     );
+    addToast({
+      title: "批量下架成功",
+      description: `已成功下架 ${selectedIds.length} 个文档`,
+      color: "success"
+    });
     setSelectedIds([]);
   };
 
@@ -359,32 +378,51 @@ function DocumentListPage() {
         };
       })
     );
+    addToast({
+      title: "批量上架成功",
+      description: `已成功上架 ${selectedIds.length} 个文档`,
+      color: "success"
+    });
     setSelectedIds([]);
   };
 
   const handleTogglePinned = (id: string) => {
     setDocuments(previous =>
-      previous.map(item =>
-        item.id === id
-          ? {
-              ...item,
-              pinned: !item.pinned
-            }
-          : item
-      )
+      previous.map(item => {
+        if (item.id === id) {
+          const nextPinned = !item.pinned;
+          addToast({
+            title: nextPinned ? "已设为置顶" : "已取消置顶",
+            description: `文档「${item.title}」${nextPinned ? "已设为置顶" : "已取消置顶"}`,
+            color: "success"
+          });
+          return {
+            ...item,
+            pinned: nextPinned
+          };
+        }
+        return item;
+      })
     );
   };
 
   const handleToggleRecommended = (id: string) => {
     setDocuments(previous =>
-      previous.map(item =>
-        item.id === id
-          ? {
-              ...item,
-              recommended: !item.recommended
-            }
-          : item
-      )
+      previous.map(item => {
+        if (item.id === id) {
+          const nextRecommended = !item.recommended;
+          addToast({
+            title: nextRecommended ? "已设为推荐" : "已取消推荐",
+            description: `文档「${item.title}」${nextRecommended ? "已设为推荐" : "已取消推荐"}`,
+            color: "success"
+          });
+          return {
+            ...item,
+            recommended: nextRecommended
+          };
+        }
+        return item;
+      })
     );
   };
 
@@ -593,14 +631,17 @@ function DocumentListPage() {
                 </SelectItem>
               )}
             </AdminSelect>
-            <Button
-              size="sm"
-              variant="light"
-              className="h-8 text-[0.6875rem]"
-              onPress={handleResetFilter}
-            >
-              重置筛选
-            </Button>
+            <Tooltip content="重置筛选">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                onPress={handleResetFilter}
+              >
+                <FiRotateCcw className="text-sm" />
+              </Button>
+            </Tooltip>
           </div>
 
           {/* 第二层：状态筛选 */}
@@ -958,12 +999,13 @@ function DocumentListPage() {
                 </div>
               </div>
               <Button
+                isIconOnly
                 size="sm"
                 variant="light"
-                className="h-8 text-[0.6875rem]"
+                className="h-8 w-8 text-[var(--text-color-secondary)]"
                 onPress={handleCloseSidebar}
               >
-                关闭
+                <FiX className="text-sm" />
               </Button>
             </div>
 

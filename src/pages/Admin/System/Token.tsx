@@ -10,9 +10,11 @@ import {
   TableColumn,
   TableBody,
   TableRow,
-  TableCell
+  TableCell,
+  Tooltip,
+  addToast
 } from "@heroui/react";
-import { FiCopy, FiRefreshCw, FiTrash2 } from "react-icons/fi";
+import { FiCopy, FiRefreshCw, FiRotateCcw, FiTrash2 } from "react-icons/fi";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 
@@ -118,7 +120,6 @@ function TokenPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<TokenItem[]>(() => initialTokens);
-  const [message, setMessage] = useState("");
 
   const filteredItems = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
@@ -158,19 +159,30 @@ function TokenPage() {
     setKeyword("");
     setStatusFilter("all");
     setPage(1);
-    setMessage("");
   };
 
   const handleCopyToken = (item: TokenItem) => {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(item.token);
-        setMessage(`已复制令牌 ${item.name} 到剪贴板，请妥善保管。`);
+        addToast({
+          title: "复制成功",
+          description: `已复制令牌 ${item.name} 到剪贴板，请妥善保管。`,
+          color: "success"
+        });
       } else {
-        setMessage("当前环境不支持直接复制令牌，请手动选择复制。");
+        addToast({
+          title: "复制失败",
+          description: "当前环境不支持直接复制令牌，请手动选择复制。",
+          color: "danger"
+        });
       }
     } catch {
-      setMessage("复制令牌失败，请稍后重试。");
+      addToast({
+        title: "复制失败",
+        description: "复制令牌失败，请稍后重试。",
+        color: "danger"
+      });
     }
   };
 
@@ -188,11 +200,19 @@ function TokenPage() {
           : row
       )
     );
-    setMessage(`已标记令牌 ${item.name} 为已吊销，实际逻辑待接入接口。`);
+    addToast({
+      title: "操作成功",
+      description: `已标记令牌 ${item.name} 为已吊销，实际逻辑待接入接口。`,
+      color: "success"
+    });
   };
 
   const handleRefreshToken = (item: TokenItem) => {
-    setMessage(`已为令牌 ${item.name} 触发续期申请，实际逻辑待接入接口。`);
+    addToast({
+      title: "申请成功",
+      description: `已为令牌 ${item.name} 触发续期申请，实际逻辑待接入接口。`,
+      color: "success"
+    });
   };
 
   return (
@@ -245,14 +265,17 @@ function TokenPage() {
                   </SelectItem>
                 )}
               </AdminSelect>
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-[11px]"
-                onPress={handleResetFilter}
-              >
-                重置筛选
-              </Button>
+              <Tooltip content="重置筛选">
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                  onPress={handleResetFilter}
+                >
+                  <FiRotateCcw className="text-sm" />
+                </Button>
+              </Tooltip>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -268,20 +291,6 @@ function TokenPage() {
             <span>令牌仅展示部分片段，完整值仅在创建时展示一次，后续可通过复制按钮带出。</span>
           </div>
         </div>
-
-        {message && (
-          <div className="px-4 py-2 flex items-center justify-between text-[11px] border-b border-[var(--border-color)] bg-[var(--bg-elevated)]/80">
-            <span className="text-[var(--text-color-secondary)]">{message}</span>
-            <Button
-              size="sm"
-              variant="light"
-              className="h-7 text-[10px]"
-              onPress={() => setMessage("")}
-            >
-              知道了
-            </Button>
-          </div>
-        )}
 
         <div className="p-3">
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">

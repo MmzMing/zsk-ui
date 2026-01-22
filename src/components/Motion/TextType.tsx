@@ -145,4 +145,5 @@ const TextType: React.FC<TextTypeProps> = ({
   );
 };
 
+export { TextType };
 export default TextType;

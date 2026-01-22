@@ -645,7 +645,16 @@ function MenuPage() {
                         value={activeNode.name}
                         onValueChange={value => handleFieldChange({ name: value })}
                         classNames={{
-                          inputWrapper: "h-8 text-xs",
+                          inputWrapper: [
+                            "h-8",
+                            "bg-transparent",
+                            "border border-[var(--border-color)]",
+                            "dark:border-white/20",
+                            "hover:border-[var(--primary-color)]/80!",
+                            "group-data-[focus=true]:border-[var(--primary-color)]!",
+                            "transition-colors",
+                            "shadow-none"
+                          ].join(" "),
                           input: "text-xs"
                         }}
                       />
@@ -659,7 +668,16 @@ function MenuPage() {
                         value={activeNode.path}
                         onValueChange={value => handleFieldChange({ path: value })}
                         classNames={{
-                          inputWrapper: "h-8 text-xs",
+                          inputWrapper: [
+                            "h-8",
+                            "bg-transparent",
+                            "border border-[var(--border-color)]",
+                            "dark:border-white/20",
+                            "hover:border-[var(--primary-color)]/80!",
+                            "group-data-[focus=true]:border-[var(--primary-color)]!",
+                            "transition-colors",
+                            "shadow-none"
+                          ].join(" "),
                           input: "text-xs"
                         }}
                       />
@@ -673,7 +691,16 @@ function MenuPage() {
                         value={activeNode.permissionKey}
                         onValueChange={value => handleFieldChange({ permissionKey: value })}
                         classNames={{
-                          inputWrapper: "h-8 text-xs",
+                          inputWrapper: [
+                            "h-8",
+                            "bg-transparent",
+                            "border border-[var(--border-color)]",
+                            "dark:border-white/20",
+                            "hover:border-[var(--primary-color)]/80!",
+                            "group-data-[focus=true]:border-[var(--primary-color)]!",
+                            "transition-colors",
+                            "shadow-none"
+                          ].join(" "),
                           input: "text-xs"
                         }}
                       />
@@ -700,7 +727,16 @@ function MenuPage() {
                           })
                         }
                         classNames={{
-                          inputWrapper: "h-8 text-xs",
+                          inputWrapper: [
+                            "h-8",
+                            "bg-transparent",
+                            "border border-[var(--border-color)]",
+                            "dark:border-white/20",
+                            "hover:border-[var(--primary-color)]/80!",
+                            "group-data-[focus=true]:border-[var(--primary-color)]!",
+                            "transition-colors",
+                            "shadow-none"
+                          ].join(" "),
                           input: "text-xs"
                         }}
                       />

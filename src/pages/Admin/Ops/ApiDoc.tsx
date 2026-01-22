@@ -1,597 +1,469 @@
-import React, { useMemo, useState } from "react";
+import React, { useState, useMemo } from 'react';
 import {
-  Button,
   Card,
   Chip,
-  Input,
-  Tab,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
+  Accordion,
+  AccordionItem,
+  ScrollShadow,
+  Button,
+  Snippet,
+  Code,
   Table,
   TableHeader,
   TableColumn,
   TableBody,
   TableRow,
   TableCell,
-  Textarea
-} from "@heroui/react";
-import { AdminTabs } from "@/components/Admin/AdminTabs";
-import { FiFileText, FiDownload, FiLink, FiChevronDown, FiCopy, FiChevronUp } from "react-icons/fi";
+} from '@heroui/react';
+import { Server, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
+import apiDocsDataRaw from '@/config/api-docs-data.json';
+import { AdminSearchInput } from '@/components/Admin/AdminSearchInput';
 
-type ApiCategory = {
+// --- Types ---
+interface ApiItem {
+  id: string;
+  name: string;
+  method: string;
+  path: string;
+  status: string;
+  owner: string;
+  funcName: string;
+  params: string;
+  returnType?: string;
+  types?: Record<string, string>;
+}
+
+interface ApiCategory {
   id: string;
   name: string;
   children: ApiItem[];
-};
+}
 
-type ApiItem = {
-  id: string;
-  name: string;
-  method: "GET" | "POST";
-  path: string;
-  status: "enabled" | "disabled";
-  owner: string;
-  description?: string;
-  tag?: string;
-};
+const apiDocsData = apiDocsDataRaw as ApiCategory[];
 
-const apiTreeData: ApiCategory[] = [
-  {
-    id: "dashboard",
-    name: "仪表盘相关",
-    children: [
-      {
-        id: "dashboard-overview",
-        name: "获取仪表盘核心指标",
-        method: "GET",
-        path: "/api/admin/dashboard/overview",
-        status: "enabled",
-        owner: "admin"
-      },
-      {
-        id: "dashboard-traffic",
-        name: "获取访问结构柱状图数据",
-        method: "GET",
-        path: "/api/admin/dashboard/traffic",
-        status: "enabled",
-        owner: "admin"
-      }
-    ]
-  },
-  {
-    id: "content",
-    name: "内容管理",
-    children: [
-      {
-        id: "content-doc-list",
-        name: "获取文档列表",
-        method: "GET",
-        path: "/api/admin/content/docs",
-        status: "enabled",
-        owner: "editor"
-      },
-      {
-        id: "content-doc-create",
-        name: "创建文档",
-        method: "POST",
-        path: "/api/admin/content/docs",
-        status: "enabled",
-        owner: "editor"
-      }
-    ]
+// --- Helper Functions ---
+
+// Parse "params: { id: string }" or "params: MyType"
+const parseParams = (paramsStr: string, typesMap: Record<string, string> = {}) => {
+  if (!paramsStr) return [];
+
+  // Remove "params: " prefix
+  let cleanStr = paramsStr.trim();
+  if (cleanStr.startsWith('params:')) {
+    cleanStr = cleanStr.substring(7).trim();
   }
-];
+  if (cleanStr.startsWith('data:')) {
+    cleanStr = cleanStr.substring(5).trim();
+  }
 
-import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+  // Check if it's a named type
+  // e.g., "RecentAdminLogParams"
+  const typeNameMatch = cleanStr.match(/^(\w+)$/);
+  if (typeNameMatch && typesMap[typeNameMatch[1]]) {
+    cleanStr = typesMap[typeNameMatch[1]];
+  }
 
-function ApiDocPage() {
-  const [keyword, setKeyword] = useState("");
-  const [activeApiId, setActiveApiId] = useState("dashboard-overview");
-  const [expandedCategoryIds, setExpandedCategoryIds] = useState<string[]>(() =>
-    apiTreeData.map(category => category.id)
-  );
-  const [debugBody, setDebugBody] = useState<string>(() => `{
-  "range": "7d"
-}`);
-  const [debugResponse, setDebugResponse] = useState<string>(() => `{
-  "code": 0,
-  "msg": "mock only",
-  "data": null
-}`);
-  const [debugLoading, setDebugLoading] = useState(false);
+  // If it's an object definition "{ ... }"
+  if (cleanStr.startsWith('{') && cleanStr.endsWith('}')) {
+    const inner = cleanStr.substring(1, cleanStr.length - 1);
+    // Split by ; or newline
+    const lines = inner.split(/[;\n]/).filter(l => l.trim());
+    return lines.map(line => {
+      const parts = line.split(':');
+      if (parts.length < 2) return null;
+      const keyPart = parts[0].trim();
+      const typePart = parts.slice(1).join(':').trim();
+      
+      const isOptional = keyPart.endsWith('?');
+      const name = isOptional ? keyPart.slice(0, -1) : keyPart;
+      
+      return {
+        name,
+        type: typePart,
+        required: !isOptional,
+        desc: '' // No description available in current extraction
+      };
+    }).filter(Boolean) as { name: string, type: string, required: boolean, desc: string }[];
+  }
 
-  const flatApiList = useMemo(
-    () =>
-      apiTreeData.flatMap(category =>
-        category.children.map(item => ({
-          categoryId: category.id,
-          categoryName: category.name,
-          item
-        }))
-      ),
-    []
-  );
+  return [];
+};
 
-  const filteredTree = useMemo(() => {
-    if (!keyword.trim()) {
-      return apiTreeData;
-    }
-    const lower = keyword.toLowerCase();
-    return apiTreeData
-      .map(category => {
-        const children = category.children.filter(item => {
-          const text = `${item.name} ${item.path} ${item.method}`.toLowerCase();
-          return text.includes(lower);
-        });
-        return { ...category, children };
-      })
-      .filter(category => category.children.length > 0);
-  }, [keyword]);
+// Generate mock data from return type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const generateMockData = (returnType: string | undefined, typesMap: Record<string, string> = {}): any => {
+  if (!returnType) return {};
+  if (returnType === 'void') return {};
+  if (returnType === 'any') return {};
 
-  const activeApi = useMemo(() => {
-    const found = flatApiList.find(item => item.item.id === activeApiId);
-    if (found) {
-      return found;
-    }
-    return flatApiList[0] ?? null;
-  }, [flatApiList, activeApiId]);
+  // Array type "Item[]"
+  if (returnType.endsWith('[]')) {
+    const itemType = returnType.slice(0, -2);
+    return [generateMockData(itemType, typesMap)];
+  }
 
-  const renderMethodChip = (method: ApiItem["method"]) => {
-    const color = method === "GET" ? "success" : "warning";
-    return (
-      <Chip size="sm" color={color} variant="flat" className="text-xs">
-        {method}
-      </Chip>
-    );
-  };
+  // Basic types
+  if (returnType === 'string') return "string_value";
+  if (returnType === 'number') return 0;
+  if (returnType === 'boolean') return true;
+  
+  // Named type
+  if (typesMap[returnType]) {
+    const typeDef = typesMap[returnType];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: any = {};
+    const params = parseParams(typeDef, typesMap); // Reuse parser
+    params.forEach(p => {
+      // Avoid infinite recursion if type references itself (simplistic check)
+      if (p.type === returnType) {
+        result[p.name] = null;
+      } else if (p.type.includes('|')) {
+        // Union type: take first
+        const first = p.type.split('|')[0].trim().replace(/['"]/g, '');
+        result[p.name] = first;
+      } else {
+        result[p.name] = generateMockData(p.type, typesMap);
+      }
+    });
+    return result;
+  }
 
-  const renderStatusChip = (status: ApiItem["status"]) => {
-    if (status === "enabled") {
-      return (
-        <Chip size="sm" color="success" variant="dot" className="text-xs">
-          启用
-        </Chip>
-      );
-    }
-    return (
-      <Chip size="sm" color="default" variant="flat" className="text-xs">
-        禁用
-      </Chip>
-    );
-  };
+  return null;
+};
 
-  const handleToggleExpandAll = () => {
-    if (expandedCategoryIds.length === apiTreeData.length) {
-      setExpandedCategoryIds([]);
+// --- Main Component ---
+
+export default function ApiDocPage() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedApiId, setSelectedApiId] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [expandedKeys, setExpandedKeys] = useState<any>(new Set(apiDocsData.map(d => d.id)));
+
+  // 切换一键折叠/展开
+  const toggleExpandAll = () => {
+    if (expandedKeys.size === apiDocsData.length) {
+      setExpandedKeys(new Set());
     } else {
-      setExpandedCategoryIds(apiTreeData.map(category => category.id));
+      setExpandedKeys(new Set(apiDocsData.map(d => d.id)));
     }
   };
 
-  const handleCategoryToggle = (id: string) => {
-    setExpandedCategoryIds(previous =>
-      previous.includes(id) ? previous.filter(item => item !== id) : [...previous, id]
-    );
+  // 过滤逻辑
+  const filteredData = useMemo(() => {
+    if (!searchQuery) return apiDocsData;
+    const lowerQuery = searchQuery.toLowerCase();
+    
+    return apiDocsData.map(category => {
+      const filteredChildren = category.children.filter(item => 
+        item.name.toLowerCase().includes(lowerQuery) ||
+        item.path.toLowerCase().includes(lowerQuery) ||
+        item.funcName.toLowerCase().includes(lowerQuery)
+      );
+      
+      if (filteredChildren.length > 0) {
+        return { ...category, children: filteredChildren };
+      }
+      return null;
+    }).filter(Boolean) as ApiCategory[];
+  }, [searchQuery]);
+
+  // 获取当前选中的 API
+  const selectedApi = useMemo(() => {
+    if (!selectedApiId) {
+        if (apiDocsData.length > 0 && apiDocsData[0].children.length > 0) {
+            return apiDocsData[0].children[0];
+        }
+        return null;
+    }
+    for (const category of apiDocsData) {
+      const found = category.children.find(item => item.id === selectedApiId);
+      if (found) return found;
+    }
+    return null;
+  }, [selectedApiId]);
+
+  // Method Colors
+  const getMethodColor = (method: string) => {
+    switch (method.toUpperCase()) {
+      case 'GET': return 'success';
+      case 'POST': return 'warning';
+      case 'PUT': return 'primary';
+      case 'DELETE': return 'danger';
+      case 'PATCH': return 'secondary';
+      default: return 'default';
+    }
   };
 
-  const handlePresetApply = (type: string) => {
-    if (type === "today") {
-      setDebugBody(`{
-  "range": "1d"
-}`);
-      return;
-    }
-    if (type === "7d") {
-      setDebugBody(`{
-  "range": "7d"
-}`);
-      return;
-    }
-    setDebugBody(`{
-  "range": "30d"
-}`);
+  // Method Short Name for Sidebar
+  const getMethodShortName = (method: string) => {
+    const m = method.toUpperCase();
+    if (m === 'DELETE') return 'DEL';
+    return m;
   };
 
-  const handleCopyResponse = () => {
-    try {
-      window.navigator.clipboard.writeText(debugResponse);
-    } catch {
-      setDebugResponse(previous => previous);
-    }
-  };
+  // Parsed Params
+  const requestParams = useMemo(() => {
+    if (!selectedApi) return [];
+    return parseParams(selectedApi.params, selectedApi.types);
+  }, [selectedApi]);
 
-  const handleDebugSend = () => {
-    setDebugLoading(true);
-    window.setTimeout(() => {
-      const now = new Date().toISOString();
-      setDebugResponse(`{
-  "code": 0,
-  "msg": "mock success",
-  "data": {
-    "echoedBody": ${debugBody || "{}"},
-    "debugTime": "${now}"
-  }
-}`);
-      setDebugLoading(false);
-    }, 600);
-  };
+  // Request Params JSON for copying
+  const requestParamsJson = useMemo(() => {
+    if (!selectedApi || requestParams.length === 0) return '{}';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const obj: any = {};
+    requestParams.forEach(p => {
+      obj[p.name] = generateMockData(p.type, selectedApi.types);
+    });
+    return JSON.stringify(obj, null, 2);
+  }, [requestParams, selectedApi]);
+
+  // Mock Response
+  const mockResponse = useMemo(() => {
+    if (!selectedApi) return {};
+    return {
+      code: 200,
+      message: "success",
+      data: generateMockData(selectedApi.returnType, selectedApi.types),
+      timestamp: 1737111241000 // Fixed timestamp for purity
+    };
+  }, [selectedApi]);
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] px-3 py-1 text-xs text-[var(--primary-color)]">
-            <FiFileText className="text-xs" />
-            <span>系统运维 · 接口文档中心</span>
-          </div>
-          <h1 className="text-lg md:text-xl font-semibold tracking-tight">
-            按模块集中管理后台接口说明
-          </h1>
-          <p className="text-xs text-[var(--text-color-secondary)]">
-            支持按模块浏览接口、查看详细请求参数与响应示例，为前后端联调与长期维护提供统一入口。
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <AdminSearchInput
-            placeholder="按名称 / 路径搜索接口"
-            value={keyword}
-            onValueChange={setKeyword}
-          />
-          <Button
-            size="sm"
-            variant="bordered"
-            startContent={<FiDownload className="text-xs" />}
-            className="text-xs"
-          >
-            导出文档
-          </Button>
-          <Button
-            size="sm"
-            variant="light"
-            className="text-xs"
-            onPress={handleToggleExpandAll}
-          >
-            {expandedCategoryIds.length === apiTreeData.length ? "折叠全部" : "展开全部"}
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)] h-[calc(100vh-220px)]">
-        <Card className="h-full border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 overflow-hidden">
-          <div className="p-3 border-b border-[var(--border-color)] flex items-center justify-between">
-            <div className="text-xs font-medium">接口分类树</div>
-            <Chip size="sm" variant="flat" className="text-xs">
-              共 {flatApiList.length} 个接口
-            </Chip>
-          </div>
-          <div className="h-full overflow-auto p-2 space-y-2 text-xs">
-            {filteredTree.map(category => {
-              const isExpanded = expandedCategoryIds.includes(category.id);
-              return (
-                <div key={category.id} className="space-y-1">
-                  <button
-                    type="button"
-                    className="w-full flex items-center justify-between px-2 py-1 rounded-md hover:bg-[var(--bg-elevated)]/80"
-                    onClick={() => handleCategoryToggle(category.id)}
-                  >
-                    <span className="text-xs font-medium text-[var(--text-color-secondary)]">
-                      {category.name}
-                    </span>
-                    {isExpanded ? (
-                      <FiChevronUp className="text-xs text-[var(--text-color-secondary)]" />
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] w-full gap-4">
+      {/* Sidebar - API List */}
+      <Card className="w-full lg:w-[300px] flex-none border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 shadow-sm overflow-hidden flex flex-col">
+        <div className="p-3 flex flex-col gap-3 border-b border-[var(--border-color)]">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-bold text-[var(--text-color-secondary)] uppercase tracking-wider">接口列表</span>
+            <div className="flex gap-1">
+                 <Button 
+                    isIconOnly 
+                    size="sm" 
+                    variant="light" 
+                    radius="full" 
+                    className="h-7 w-7 min-w-0"
+                    onPress={toggleExpandAll}
+                    title={expandedKeys.size === apiDocsData.length ? "全部折叠" : "全部展开"}
+                 >
+                    {expandedKeys.size === apiDocsData.length ? (
+                      <ChevronsDownUp className="w-3.5 h-3.5 text-[var(--text-color-secondary)]" />
                     ) : (
-                      <FiChevronDown className="text-xs text-[var(--text-color-secondary)]" />
+                      <ChevronsUpDown className="w-3.5 h-3.5 text-[var(--text-color-secondary)]" />
                     )}
-                  </button>
-                  {isExpanded && (
-                    <div className="space-y-1">
-                      {category.children.map(item => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className={
-                            "w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-left transition-colors " +
-                            (activeApi?.item.id === item.id
-                              ? "bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
-                              : "text-[var(--text-color-secondary)] hover:bg-[var(--bg-elevated)]/90")
-                          }
-                          onClick={() => setActiveApiId(item.id)}
-                        >
-                          {renderMethodChip(item.method)}
-                          <span className="flex-1 truncate">{item.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        <Card className="h-full border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 overflow-hidden">
-          <div className="p-4 border-b border-[var(--border-color)] flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              {activeApi && renderMethodChip(activeApi.item.method)}
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium truncate">
-                    {activeApi?.item.name ?? "请选择接口"}
-                  </span>
-                  {activeApi && renderStatusChip(activeApi.item.status)}
-                </div>
-                <div className="text-xs text-[var(--text-color-secondary)] flex items-center gap-1">
-                  <FiLink className="text-xs" />
-                  <span className="truncate">{activeApi?.item.path}</span>
-                  {activeApi && (
-                    <span className="ml-2">
-                      负责人：{activeApi.item.owner}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 ml-auto">
-              <Chip size="sm" variant="flat" className="text-xs">
-                在线调试面板仅示例交互
-              </Chip>
+                 </Button>
             </div>
           </div>
-
-          <div className="h-[calc(100%-76px)]">
-            <AdminTabs
-              aria-label="接口详情"
-              size="sm"
-              className="px-4 pt-1"
+          <AdminSearchInput
+            placeholder="搜索接口..."
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+            className="w-full"
+          />
+        </div>
+        
+        <ScrollShadow className="flex-1 p-2">
+            <Accordion 
+              selectionMode="multiple" 
+              selectedKeys={expandedKeys}
+              onSelectionChange={setExpandedKeys}
+              showDivider={false}
+              itemClasses={{
+                base: "py-0 w-full",
+                title: "text-[11px] font-medium text-[var(--text-color-secondary)]",
+                trigger: "py-2 px-2 data-[hover=true]:bg-[var(--bg-elevated)]/60 rounded-lg h-8 flex items-center",
+                indicator: "text-[var(--text-color-secondary)] text-[10px]",
+                content: "pb-2 pt-0"
+              }}
             >
-              <Tab key="basic" title="基本信息">
-                <div className="p-4 space-y-3 text-xs">
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <div className="space-y-1">
-                      <div className="text-[var(--text-color-secondary)]">
-                        接口名称
-                      </div>
-                      <div>{activeApi?.item.name}</div>
+              {filteredData.map((category) => (
+                <AccordionItem 
+                  key={category.id} 
+                  aria-label={category.name} 
+                  title={
+                    <div className="flex items-center gap-2 truncate">
+                      <Server className="w-3.5 h-3.5" />
+                      <span className="truncate">{category.name}</span>
                     </div>
-                    <div className="space-y-1">
-                      <div className="text-[var(--text-color-secondary)]">
-                        接口路径
-                      </div>
-                      <div>{activeApi?.item.path}</div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-[var(--text-color-secondary)]">
-                        请求方式
-                      </div>
-                      <div>{activeApi?.item.method}</div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-[var(--text-color-secondary)]">
-                        负责人
-                      </div>
-                      <div>{activeApi?.item.owner}</div>
-                    </div>
+                  }
+                >
+                  <div className="flex flex-col gap-0.5 pl-2 border-l border-[var(--border-color)] ml-3">
+                    {category.children.map((api) => (
+                      <button
+                        key={api.id}
+                        onClick={() => setSelectedApiId(api.id)}
+                        className={`
+                          group flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-all w-full text-left
+                          ${selectedApi?.id === api.id 
+                            ? 'bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] text-[var(--primary-color)]' 
+                            : 'text-[var(--text-color-secondary)] hover:bg-[var(--bg-elevated)]/80 hover:text-[var(--text-color)]'}
+                        `}
+                      >
+                        <span className={`
+                            text-[9px] font-bold px-1 py-0.5 rounded min-w-[32px] text-center
+                            ${selectedApi?.id === api.id ? `bg-${getMethodColor(api.method)}/20 text-${getMethodColor(api.method)}` : 'bg-[var(--bg-elevated)]/80 text-[var(--text-color-secondary)]'}
+                        `}>
+                            {getMethodShortName(api.method)}
+                        </span>
+                        <span className="text-[11px] truncate flex-1">{api.funcName}</span>
+                      </button>
+                    ))}
                   </div>
-                  <div className="space-y-1">
-                    <div className="text-[var(--text-color-secondary)]">
-                      状态说明
+                </AccordionItem>
+              ))}
+            </Accordion>
+        </ScrollShadow>
+      </Card>
+
+      {/* Main Content - API Details */}
+      <Card className="flex-1 border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 shadow-sm overflow-hidden flex flex-col">
+        {selectedApi ? (
+          <>
+            {/* Top Bar - URL & Copy */}
+            <div className="p-3 border-b border-[var(--border-color)]">
+                <div className="flex items-center bg-[var(--bg-elevated)]/50 border border-[var(--border-color)] h-10 rounded-lg overflow-hidden">
+                    <div className={`px-4 h-10 flex items-center text-[11px] font-bold border-r border-[var(--border-color)] bg-[var(--bg-elevated)]/80 text-${getMethodColor(selectedApi.method)}`}>
+                        {selectedApi.method}
                     </div>
-                    <div>
-                      启用表示接口已对外开放并可正常调用，禁用表示接口暂不可用或处于预留状态。
-                    </div>
-                  </div>
-                </div>
-              </Tab>
-              <Tab key="request" title="请求参数">
-                <div className="p-4 space-y-3 text-xs">
-                  <div className="text-[var(--text-color-secondary)]">
-                    示例参数定义，仅用于前端占位演示，后续将与后端实际字段对齐。
-                  </div>
-                  <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
-                    <Table
-                      aria-label="请求参数示例"
-                      className="min-w-full text-xs"
+                    <Snippet 
+                        fullWidth
+                        symbol=""
+                        variant="flat"
+                        className="bg-transparent h-10 p-0 flex-1 shadow-none"
+                        classNames={{
+                            pre: "px-4 text-xs text-[var(--text-color-secondary)] font-mono truncate",
+                            copyButton: "mr-1 text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]"
+                        }}
                     >
-                      <TableHeader className="bg-[var(--bg-elevated)]/80">
-                        <TableColumn className="px-3 py-2 text-left font-medium">
-                          参数名
-                        </TableColumn>
-                        <TableColumn className="px-3 py-2 text-left font-medium">
-                          类型
-                        </TableColumn>
-                        <TableColumn className="px-3 py-2 text-left font-medium">
-                          是否必填
-                        </TableColumn>
-                        <TableColumn className="px-3 py-2 text-left font-medium">
-                          说明
-                        </TableColumn>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow className="border-t border-[var(--border-color)]" key="range">
-                          <TableCell className="px-3 py-2">range</TableCell>
-                          <TableCell className="px-3 py-2">string</TableCell>
-                          <TableCell className="px-3 py-2">否</TableCell>
-                          <TableCell className="px-3 py-2">
-                            时间范围，如 7d、30d，具体规则见接口 TODO 文档。
-                          </TableCell>
-                        </TableRow>
-                        <TableRow className="border-t border-[var(--border-color)]" key="page">
-                          <TableCell className="px-3 py-2">page</TableCell>
-                          <TableCell className="px-3 py-2">number</TableCell>
-                          <TableCell className="px-3 py-2">否</TableCell>
-                          <TableCell className="px-3 py-2">
-                            分页页码，从 1 开始。
-                          </TableCell>
-                        </TableRow>
-                        <TableRow className="border-t border-[var(--border-color)]" key="pageSize">
-                          <TableCell className="px-3 py-2">pageSize</TableCell>
-                          <TableCell className="px-3 py-2">number</TableCell>
-                          <TableCell className="px-3 py-2">否</TableCell>
-                          <TableCell className="px-3 py-2">
-                            分页大小，建议在 10 - 50 之间选择。
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
+                        http://localhost:8080{selectedApi.path}
+                    </Snippet>
                 </div>
-              </Tab>
-              <Tab key="response" title="响应示例">
-                <div className="p-4 space-y-3 text-xs">
-                  <div className="text-[var(--text-color-secondary)]">
-                    下方为示意性响应示例，格式与项目约定的统一响应结构保持一致。
-                  </div>
-                  <div className="border border-[var(--border-color)] rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 flex items-center justify-between bg-[var(--bg-elevated)]/80">
-                      <span className="text-xs text-[var(--text-color-secondary)]">
-                        统一响应结构示例
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="light"
-                        className="text-xs px-2 h-7"
-                        startContent={<FiCopy className="text-xs" />}
-                        onPress={handleCopyResponse}
-                      >
-                        复制示例
-                      </Button>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-hidden flex flex-col">
+                <ScrollShadow className="flex-1">
+                    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6 sm:space-y-8">
+                        {/* Header */}
+                        <div className="space-y-4">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <h1 className="text-lg font-bold text-[var(--text-color)]">{selectedApi.funcName}</h1>
+                                <Chip size="sm" variant="flat" color={selectedApi.status === 'enabled' ? "success" : "warning"} className="h-5 text-[10px]">
+                                    {selectedApi.status}
+                                </Chip>
+                                <div className="ml-auto flex items-center gap-2">
+                                  <span className="text-[11px] text-[var(--text-color-secondary)]">维护者:</span>
+                                  <Chip size="sm" variant="flat" className="h-5 text-[10px]">{selectedApi.owner}</Chip>
+                                </div>
+                            </div>
+                            <div className="text-xs text-[var(--text-color-secondary)] bg-[var(--bg-elevated)]/40 p-3 rounded-lg border border-[var(--border-color)] grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-8">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-16 flex-none">接口路径:</span>
+                                  <span className="font-mono text-[var(--text-color)] break-all">{selectedApi.path}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="w-16 flex-none">返回类型:</span>
+                                  <span className="font-mono text-[var(--primary-color)]">{selectedApi.returnType || 'unknown'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Request Params */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-[13px] font-bold text-[var(--text-color)] flex items-center gap-2">
+                                <div className="w-1 h-3.5 bg-[var(--primary-color)] rounded-full"></div>
+                                请求参数
+                              </h3>
+                              {requestParams.length > 0 && (
+                                <Snippet 
+                                  size="sm" 
+                                  symbol="" 
+                                  variant="flat" 
+                                  className="h-7 px-2 bg-[var(--bg-elevated)]/50 border border-[var(--border-color)] text-[var(--text-color-secondary)]"
+                                  classNames={{ pre: "hidden" }}
+                                  tooltipProps={{ content: "复制请求参数 JSON" }}
+                                >
+                                  {requestParamsJson}
+                                </Snippet>
+                              )}
+                            </div>
+                            
+                            {requestParams.length > 0 ? (
+                                <Table 
+                                    aria-label="Params Table" 
+                                    className="min-w-full"
+                                >
+                                    <TableHeader>
+                                        <TableColumn>参数名</TableColumn>
+                                        <TableColumn>类型</TableColumn>
+                                        <TableColumn>必填</TableColumn>
+                                        <TableColumn>说明</TableColumn>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {requestParams.map((param, idx) => (
+                                            <TableRow key={idx}>
+                                                <TableCell className="font-mono text-[11px]">{param.name}</TableCell>
+                                                <TableCell>
+                                                    <Chip size="sm" variant="flat" color="secondary" className="h-4.5 text-[9px] px-1">{param.type}</Chip>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {param.required ? 
+                                                        <span className="text-danger text-[11px]">是</span> : 
+                                                        <span className="text-[var(--text-color-secondary)] text-[11px]">否</span>
+                                                    }
+                                                </TableCell>
+                                                <TableCell className="text-[var(--text-color-secondary)] text-[11px]">-</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <div className="border border-[var(--border-color)] rounded-lg p-8 text-center text-[var(--text-color-secondary)] text-xs bg-[var(--bg-elevated)]/20">
+                                    <div className="opacity-40 mb-2">无需参数或参数解析失败</div>
+                                    {selectedApi.params && <div className="text-[10px] font-mono opacity-30">{selectedApi.params}</div>}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Response */}
+                        <div className="space-y-4">
+                            <h3 className="text-[13px] font-bold text-[var(--text-color)] flex items-center gap-2">
+                              <div className="w-1 h-3.5 bg-success rounded-full"></div>
+                              返回响应 (Mock)
+                            </h3>
+                             <div className="border border-[var(--border-color)] rounded-lg overflow-hidden bg-[var(--bg-elevated)]/30">
+                                <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-color)] bg-[var(--bg-elevated)]/60">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold text-success bg-success/10 px-1.5 py-0.5 rounded">200 OK</span>
+                                        <span className="text-[10px] text-[var(--text-color-secondary)] font-medium">application/json</span>
+                                    </div>
+                                    <Snippet size="sm" symbol="" variant="flat" className="p-0 h-6 min-w-0 bg-transparent text-[var(--text-color-secondary)]" classNames={{ pre: "hidden" }}>
+                                      {JSON.stringify(mockResponse)}
+                                    </Snippet>
+                                </div>
+                                <div className="p-0 bg-transparent">
+                                    <Code className="w-full bg-transparent p-4 text-[11px] font-mono text-[var(--text-color)] block whitespace-pre-wrap shadow-none">
+                                        {JSON.stringify(mockResponse, null, 2)}
+                                    </Code>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="h-10"></div>
                     </div>
-                    <pre className="text-xs bg-[var(--bg-elevated)]/80 p-3 overflow-auto">
-{`{
-  "code": 0,
-  "msg": "ok",
-  "data": { }
-}`}
-                    </pre>
-                  </div>
-                </div>
-              </Tab>
-              <Tab key="debug" title="在线调试">
-                <div className="p-4 space-y-3 text-xs">
-                  <div className="grid gap-3 md:grid-cols-[minmax(0,3fr)_minmax(0,4fr)]">
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <div className="text-[var(--text-color-secondary)]">
-                          请求地址
-                        </div>
-                        <Input
-                          size="sm"
-                          variant="bordered"
-                          value={activeApi?.item.path ?? ""}
-                          startContent={
-                            activeApi && renderMethodChip(activeApi.item.method)
-                          }
-                          classNames={{
-                            inputWrapper: "h-8",
-                            input: "text-xs"
-                          }}
-                          isReadOnly
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-[var(--text-color-secondary)]">
-                          请求体示例
-                        </div>
-                        <Textarea
-                          size="sm"
-                          variant="bordered"
-                          value={debugBody}
-                          onValueChange={setDebugBody}
-                          minRows={6}
-                          classNames={{
-                            inputWrapper:
-                              "h-40 text-xs bg-[var(--bg-elevated)]/80 border-[var(--border-color)]",
-                            input: "text-xs"
-                          }}
-                        />
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs text-[var(--text-color-secondary)]">
-                            参数预设：
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="light"
-                            className="text-xs h-7"
-                            onPress={() => handlePresetApply("today")}
-                          >
-                            今日
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="light"
-                            className="text-xs h-7"
-                            onPress={() => handlePresetApply("7d")}
-                          >
-                            最近 7 天
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="light"
-                            className="text-xs h-7"
-                            onPress={() => handlePresetApply("30d")}
-                          >
-                            最近 30 天
-                          </Button>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        color="primary"
-                        className="text-xs"
-                        isLoading={debugLoading}
-                        onPress={handleDebugSend}
-                      >
-                        发送请求
-                      </Button>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-[var(--text-color-secondary)]">
-                        响应结果
-                      </div>
-                      <div className="w-full h-56 text-xs rounded-lg border border-[var(--border-color)] bg-[var(--bg-elevated)]/80 flex flex-col overflow-hidden">
-                        <div className="px-2.5 py-1.5 flex items-center justify-between border-b border-[var(--border-color)]">
-                          <span className="text-xs text-[var(--text-color-secondary)]">
-                            模拟响应（本地格式化）
-                          </span>
-                          <Dropdown>
-                            <DropdownTrigger>
-                              <Button
-                                size="sm"
-                                variant="light"
-                                className="text-xs h-6 px-2"
-                                endContent={<FiChevronDown className="text-xs" />}
-                              >
-                                操作
-                              </Button>
-                            </DropdownTrigger>
-                            <DropdownMenu aria-label="响应操作">
-                              <DropdownItem
-                                key="copy"
-                                startContent={<FiCopy className="text-xs" />}
-                                onPress={handleCopyResponse}
-                              >
-                                复制响应
-                              </DropdownItem>
-                            </DropdownMenu>
-                          </Dropdown>
-                        </div>
-                        <pre className="flex-1 px-2.5 py-2 overflow-auto">
-{debugResponse}
-                        </pre>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Tab>
-            </AdminTabs>
+                </ScrollShadow>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-[var(--text-color-secondary)] p-8 text-center">
+             <div className="w-16 h-16 mb-4 rounded-2xl bg-[var(--bg-elevated)] flex items-center justify-center border border-[var(--border-color)]">
+                <Server className="w-8 h-8 opacity-20" />
+             </div>
+             <p className="text-sm">请从左侧列表选择一个接口以查看详情</p>
           </div>
-        </Card>
-      </div>
+        )}
+      </Card>
     </div>
   );
 }
-
-export default ApiDocPage;
-

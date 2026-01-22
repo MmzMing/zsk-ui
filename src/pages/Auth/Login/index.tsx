@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import SliderCaptcha, { VerifyParam } from "rc-slider-captcha";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Button,
   Card,
@@ -19,7 +20,12 @@ import { useUserStore } from "../../../store/modules/userStore";
 import { useAppStore } from "../../../store";
 import { UserAgreementModal, PrivacyPolicyModal } from "../../../components/AgreementModals";
 import { fetchSliderCaptcha, verifySliderCaptcha } from "../../../api/auth";
+import Shuffle from "../../../components/Motion/Shuffle";
+import TextType from "../../../components/Motion/TextType";
+import { RiHome4Line } from "react-icons/ri";
 import { FaGithub, FaQq, FaWeixin, FaEye, FaEyeSlash } from "react-icons/fa6";
+
+const bgImages = ["/auth/auth-Polling-1.png", "/auth/auth-Polling-2.png" , "/auth/auth-Polling-3.png"];
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -48,6 +54,16 @@ function LoginPage() {
   const [sliderError, setSliderError] = React.useState("");
   const [showUserAgreement, setShowUserAgreement] = React.useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = React.useState(false);
+
+  // Background image polling
+  const [currentBgIndex, setCurrentBgIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentBgIndex((prev) => (prev + 1) % bgImages.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   React.useEffect(() => {
     try {
@@ -286,10 +302,22 @@ function LoginPage() {
 
   return (
     <div className="min-h-screen flex bg-[var(--bg-color)] text-[var(--text-color)]">
-      <div className="hidden lg:flex lg:basis-2/3 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-black" />
-        <div className="absolute inset-0 opacity-80 bg-[radial-gradient(circle_at_0%_0%,rgba(244,114,182,0.35),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.35),transparent_55%)]" />
-        <div className="relative z-10 flex flex-col justify-between p-10 xl:p-14 w-full">
+      <div className="hidden lg:flex lg:basis-2/3 relative overflow-hidden bg-slate-950">
+        <AnimatePresence>
+          <motion.img
+            key={currentBgIndex}
+            src={bgImages[currentBgIndex]}
+            alt="Background"
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.5 }}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </AnimatePresence>
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/30 via-slate-950/40 to-black/50" />
+        <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_0%_0%,rgba(244,114,182,0.2),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.2),transparent_60%)]" />
+        <div className="relative z-10 flex flex-col p-10 xl:p-14 w-full h-full">
           <div className="flex items-center justify-between text-xs text-slate-200/80">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-xl bg-[var(--primary-color)] flex items-center justify-center text-[var(--bg-elevated)] text-sm font-semibold">
@@ -303,50 +331,62 @@ function LoginPage() {
               </div>
             </div>
             <Button
-              size="sm"
-              radius="full"
-              variant="bordered"
-              className="inline-flex items-center gap-1 bg-black/30 border-white/20 px-3 py-1 text-[10px] text-slate-100 hover:bg-black/50"
+              isIconOnly
+              variant="light"
+              className="group text-white/70 transition-all hover:bg-transparent data-[hover=true]:bg-transparent"
+              aria-label="返回前台"
               onPress={() => navigate(routes.home)}
             >
-              返回前台
+              <RiHome4Line className="h-6 w-6 transition-all duration-500 group-hover:rotate-[360deg] group-hover:text-[var(--primary-color)]" />
             </Button>
           </div>
-          <div className="space-y-6 text-slate-100">
+          <div className="mt-auto space-y-6 text-slate-100">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full bg-black/30 px-3 py-1 text-[11px]">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 <span>专注个人知识管理与创作的轻量级小站</span>
               </div>
-              <h2 className="text-2xl font-semibold tracking-tight">
-                将零散灵感收纳进一座有序的知识库
-              </h2>
-              <p className="text-xs text-slate-200/80 leading-relaxed max-w-md">
-                支持文档、视频、工具百宝袋等多种内容形态，帮助你搭建一套长期可维护的知识体系。
-              </p>
+              <Shuffle
+                text="将零散灵感收纳进一座有序的知识库"
+                tag="h2"
+                className="text-2xl font-semibold tracking-tight"
+                triggerOnHover={false}
+                loop={true}
+                loopDelay={5000}
+              />
+              <TextType
+                text="支持文档、视频、工具百宝袋等多种内容形态，帮助你搭建一套长期可维护的知识体系。"
+                asElement="p"
+                className="text-xs text-slate-200/80 leading-relaxed max-w-md"
+                typingSpeed={50}
+                showCursor={true}
+                loop={false}
+                hideCursorOnComplete={true}
+                initialDelay={500}
+              />
             </div>
             <div className="grid grid-cols-3 gap-3 text-[11px]">
-              <Card className="rounded-2xl border border-[color-mix(in_srgb,var(--border-color)_70%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_92%,black_8%)] px-3 py-2.5">
+              <Card className="rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md px-3 py-2.5 shadow-sm">
                 <div className="font-medium mb-0.5">知识空间</div>
-                <div className="text-[10px] text-[var(--text-color-secondary)]">
+                <div className="text-[10px] text-slate-300/90">
                   结构化管理你的文档与代码片段。
                 </div>
               </Card>
-              <Card className="rounded-2xl border border-[color-mix(in_srgb,var(--border-color)_70%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_92%,black_8%)] px-3 py-2.5">
+              <Card className="rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md px-3 py-2.5 shadow-sm">
                 <div className="font-medium mb-0.5">创作中台</div>
-                <div className="text-[10px] text-[var(--text-color-secondary)]">
+                <div className="text-[10px] text-slate-300/90">
                   富文本与 Markdown 双模式写作。
                 </div>
               </Card>
-              <Card className="rounded-2xl border border-[color-mix(in_srgb,var(--border-color)_70%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_92%,black_8%)] px-3 py-2.5">
+              <Card className="rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md px-3 py-2.5 shadow-sm">
                 <div className="font-medium mb-0.5">前台展示</div>
-                <div className="text-[10px] text-[var(--text-color-secondary)]">
+                <div className="text-[10px] text-slate-300/90">
                   把作品以知识库小站的形式呈现。
                 </div>
               </Card>
             </div>
           </div>
-          <div className="text-[10px] text-slate-400/80">
+          <div className="mt-8 text-[10px] text-slate-400/80">
             © {new Date().getFullYear()} 知识库小破站 · Frontend Playground
           </div>
         </div>

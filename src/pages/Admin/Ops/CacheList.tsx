@@ -10,9 +10,11 @@ import {
   TableColumn,
   TableBody,
   TableRow,
-  TableCell
+  TableCell,
+  Tooltip,
+  addToast
 } from "@heroui/react";
-import { FiRefreshCw, FiTrash2 } from "react-icons/fi";
+import { FiRefreshCw, FiRotateCcw, FiTrash2 } from "react-icons/fi";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 
 type CacheKeyItem = {
@@ -180,7 +182,6 @@ function CacheListPage() {
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<CacheKeyItem[]>(() => initialKeys);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [message, setMessage] = useState("");
 
   const filteredItems = useMemo(() => {
     const trimmedKeyword = keyword.trim().toLowerCase();
@@ -227,7 +228,6 @@ function CacheListPage() {
     setTtlFilter("all");
     setPage(1);
     setSelectedIds([]);
-    setMessage("");
   };
 
   const handleBatchRefresh = () => {
@@ -235,7 +235,11 @@ function CacheListPage() {
       return;
     }
     const count = selectedIds.length;
-    setMessage(`已提交批量刷新任务，共 ${count} 个键，实际逻辑待接入缓存接口。`);
+    addToast({
+      title: "批量刷新任务已提交",
+      description: `共提交 ${count} 个键的刷新任务，实际逻辑待接入缓存接口。`,
+      color: "success"
+    });
   };
 
   const handleBatchDelete = () => {
@@ -245,18 +249,30 @@ function CacheListPage() {
     const count = selectedIds.length;
     setItems(previous => previous.filter(item => !selectedIds.includes(item.id)));
     setSelectedIds([]);
-    setMessage(`已从当前列表中删除 ${count} 个键，实际删除逻辑待接入缓存接口。`);
+    addToast({
+      title: "批量删除成功",
+      description: `已从当前列表中删除 ${count} 个键，实际删除逻辑待接入缓存接口。`,
+      color: "success"
+    });
     setPage(1);
   };
 
   const handleItemRefresh = (item: CacheKeyItem) => {
-    setMessage(`已对键 ${item.key} 触发单次刷新操作，实际逻辑待接入缓存接口。`);
+    addToast({
+      title: "刷新任务已提交",
+      description: `已对键 ${item.key} 触发单次刷新操作，实际逻辑待接入缓存接口。`,
+      color: "success"
+    });
   };
 
   const handleItemDelete = (item: CacheKeyItem) => {
     setItems(previous => previous.filter(row => row.id !== item.id));
     setSelectedIds(previous => previous.filter(id => id !== item.id));
-    setMessage(`已从当前列表中删除键 ${item.key}，实际删除逻辑待接入缓存接口。`);
+    addToast({
+      title: "缓存键已删除",
+      description: `已从当前列表中删除键 ${item.key}，实际删除逻辑待接入缓存接口。`,
+      color: "success"
+    });
     setPage(1);
   };
 
@@ -339,14 +355,17 @@ function CacheListPage() {
                   </SelectItem>
                 )}
               </AdminSelect>
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-xs"
-                onPress={handleResetFilter}
-              >
-                重置筛选
-              </Button>
+              <Tooltip content="重置筛选">
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                  onPress={handleResetFilter}
+                >
+                  <FiRotateCcw className="text-sm" />
+                </Button>
+              </Tooltip>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -373,25 +392,11 @@ function CacheListPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-color-secondary)]">
-            <span>当前列表仅为示例数据，实际字段与操作行为请以接口实现为准。</span>
-          </div>
+          <span>当前列表仅为示例数据，实际字段与操作行为请以接口实现为准。</span>
         </div>
+      </div>
 
-        {message && (
-          <div className="px-4 py-2 flex items-center justify-between text-xs border-b border-[var(--border-color)] bg-[var(--bg-elevated)]/80">
-            <span className="text-[var(--text-color-secondary)]">{message}</span>
-            <Button
-              size="sm"
-              variant="light"
-              className="h-7 text-xs"
-              onPress={() => setMessage("")}
-            >
-              知道了
-            </Button>
-          </div>
-        )}
-
-        <div className="p-3">
+      <div className="p-3">
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
             <Table
               aria-label="缓存键列表"

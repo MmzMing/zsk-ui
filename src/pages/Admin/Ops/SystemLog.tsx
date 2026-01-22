@@ -12,12 +12,13 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Tab
+  Tab,
+  Tooltip
 } from "@heroui/react";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
-import { FiDownload } from "react-icons/fi";
+import { FiDownload, FiRotateCcw } from "react-icons/fi";
 
 type LogLevel = "INFO" | "WARN" | "ERROR";
 
@@ -246,17 +247,34 @@ function SystemLogPage() {
               aria-label="日志时间范围筛选"
               size="sm"
               variant="bordered"
-              className="w-60 text-xs"
+              className="w-60"
+              classNames={{
+                inputWrapper: [
+                  "h-8",
+                  "bg-transparent",
+                  "border border-[var(--border-color)]",
+                  "dark:border-white/20",
+                  "hover:border-[var(--primary-color)]/80!",
+                  "group-data-[focus=true]:border-[var(--primary-color)]!",
+                  "transition-colors",
+                  "shadow-none"
+                ].join(" "),
+                input: "text-xs",
+                selectorButton: "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors"
+              }}
             />
 
-            <Button
-              size="sm"
-              variant="light"
-              className="h-8 text-xs"
-              onPress={handleResetFilter}
-            >
-              重置筛选
-            </Button>
+            <Tooltip content="重置筛选">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                onPress={handleResetFilter}
+              >
+                <FiRotateCcw className="text-sm" />
+              </Button>
+            </Tooltip>
           </div>
 
           {/* 第二层：状态/级别筛选 */}

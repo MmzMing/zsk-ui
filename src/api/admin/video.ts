@@ -127,6 +127,7 @@ export type VideoItem = {
   cover?: string;
   tags?: string[];
   videoUrl?: string;
+  description?: string;
   pinned?: boolean;
   recommended?: boolean;
 };

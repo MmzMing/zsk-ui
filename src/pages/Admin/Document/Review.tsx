@@ -17,7 +17,8 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-  Textarea
+  Textarea,
+  Tooltip
 } from "@heroui/react";
 import {
   FiAlertCircle,
@@ -26,6 +27,7 @@ import {
   FiFlag,
   FiMessageSquare,
   FiSearch,
+  FiRotateCcw,
   FiX,
   FiFileText
 } from "react-icons/fi";
@@ -532,15 +534,32 @@ function DocumentReviewPage() {
                       size="sm"
                       variant="bordered"
                       className="w-56 text-xs"
+                      classNames={{
+                        inputWrapper: [
+                          "h-8",
+                          "bg-transparent",
+                          "border border-[var(--border-color)]",
+                          "dark:border-white/20",
+                          "hover:border-[var(--primary-color)]/80!",
+                          "group-data-[focus=true]:border-[var(--primary-color)]!",
+                          "transition-colors",
+                          "shadow-none"
+                        ].join(" "),
+                        input: "text-xs",
+                        selectorButton: "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors"
+                      }}
                     />
-                    <Button
-                      size="sm"
-                      variant="light"
-                      className="h-8 text-xs"
-                      onPress={handleResetFilter}
-                    >
-                      重置筛选
-                    </Button>
+                    <Tooltip content="重置筛选">
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                        onPress={handleResetFilter}
+                      >
+                        <FiRotateCcw className="text-sm" />
+                      </Button>
+                    </Tooltip>
                   </div>
 
                   {/* 第二层：状态 */}
@@ -1277,6 +1296,19 @@ function DocumentReviewPage() {
                             variant="bordered"
                             size="md"
                             className="w-full"
+                            classNames={{
+                              label: "text-xs font-medium text-[var(--text-color)] mb-1",
+                              trigger: [
+                                "h-10",
+                                "bg-transparent",
+                                "border border-[var(--border-color)]",
+                                "dark:border-white/20",
+                                "hover:border-[var(--primary-color)]/80!",
+                                "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                "transition-colors",
+                                "shadow-none"
+                              ].join(" ")
+                            }}
                           >
                             <SelectItem key="content_violation">内容包含违规词汇</SelectItem>
                             <SelectItem key="copyright">涉及版权纠纷</SelectItem>
@@ -1291,8 +1323,17 @@ function DocumentReviewPage() {
                             variant="bordered"
                             minRows={6}
                             classNames={{
-                              label: "text-sm font-medium text-[var(--text-color)] mb-1",
-                              input: "text-sm"
+                              label: "text-xs font-medium text-[var(--text-color)] mb-1",
+                              inputWrapper: [
+                                "bg-transparent",
+                                "border border-[var(--border-color)]",
+                                "dark:border-white/20",
+                                "hover:border-[var(--primary-color)]/80!",
+                                "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                "transition-colors",
+                                "shadow-none"
+                              ].join(" "),
+                              input: "text-xs"
                             }}
                           />
                         </div>

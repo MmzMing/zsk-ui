@@ -1,7 +1,9 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import SliderCaptcha, { VerifyParam } from "rc-slider-captcha";
 import { FaEye, FaEyeSlash } from "react-icons/fa6";
+import { RiHome4Line } from "react-icons/ri";
 import {
   Button,
   Checkbox,
@@ -15,11 +17,24 @@ import {
 } from "@heroui/react";
 import { routes } from "../../../router/routes";
 import InteractiveHoverButton from "../../../components/Motion/InteractiveHoverButton";
+import { Shuffle } from "../../../components/Motion/Shuffle";
+import { TextType } from "../../../components/Motion/TextType";
 import { UserAgreementModal, PrivacyPolicyModal } from "../../../components/AgreementModals";
 import { fetchSliderCaptcha, verifySliderCaptcha } from "../../../api/auth";
 
+const bgImages = ["/auth/auth-Polling-1.png", "/auth/auth-Polling-2.png" , "/auth/auth-Polling-3.png"];
+
 function RegisterPage() {
   const navigate = useNavigate();
+  const [currentBgIndex, setCurrentBgIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentBgIndex(prev => (prev + 1) % bgImages.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   const [email, setEmail] = React.useState("");
   const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -278,10 +293,22 @@ function RegisterPage() {
 
   return (
     <div className="min-h-screen flex bg-[var(--bg-color)] text-[var(--text-color)]">
-      <div className="hidden lg:flex lg:basis-2/3 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-950 to-black" />
-        <div className="absolute inset-0 opacity-80 bg-[radial-gradient(circle_at_0%_0%,rgba(244,114,182,0.35),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(52,211,153,0.35),transparent_55%)]" />
-        <div className="relative z-10 flex flex-col justify-between p-10 xl:p-14 w-full">
+      <div className="hidden lg:flex lg:basis-2/3 relative overflow-hidden bg-slate-950">
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={currentBgIndex}
+            src={bgImages[currentBgIndex]}
+            alt="Background"
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.5 }}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </AnimatePresence>
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/30 via-slate-950/40 to-black/50" />
+        <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_0%_0%,rgba(244,114,182,0.2),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.2),transparent_60%)]" />
+        <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-14 w-full">
           <div className="flex items-center justify-between text-xs text-slate-200/80">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-xl bg-[var(--primary-color)] flex items-center justify-center text-[var(--bg-elevated)] text-sm font-semibold">
@@ -295,22 +322,34 @@ function RegisterPage() {
               </div>
             </div>
             <Button
-              size="sm"
-              radius="full"
-              variant="bordered"
-              className="inline-flex items-center gap-1 bg-black/30 border-white/20 px-3 py-1 text-[10px] text-slate-100 hover:bg-black/50"
+              isIconOnly
+              variant="light"
+              className="group text-white/70 transition-all hover:bg-transparent data-[hover=true]:bg-transparent"
+              aria-label="返回前台"
               onPress={() => navigate(routes.home)}
             >
-              返回前台
+              <RiHome4Line className="h-6 w-6 transition-all duration-500 group-hover:rotate-[360deg] group-hover:text-[var(--primary-color)]" />
             </Button>
           </div>
-          <div className="space-y-5 text-slate-100">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              为你的创作与学习准备一份「长期有效」的空间
-            </h2>
-            <p className="text-xs text-slate-200/80 leading-relaxed max-w-md">
-              注册账号后，你可以集中管理文档、视频与各种灵感碎片，让知识沉淀下来，而不是沉在聊天记录里。
-            </p>
+          <div className="mt-auto space-y-5 text-slate-100">
+            <Shuffle
+              text="为你的创作与学习准备一份「长期有效」的空间"
+              tag="h2"
+              className="text-2xl font-semibold tracking-tight"
+              triggerOnHover={false}
+              loop={true}
+              loopDelay={5000}
+            />
+            <TextType
+              text="注册账号后，你可以集中管理文档、视频与各种灵感碎片，让知识沉淀下来，而不是沉在聊天记录里。"
+              asElement="p"
+              className="text-xs text-slate-200/80 leading-relaxed max-w-md"
+              typingSpeed={50}
+              showCursor={true}
+              loop={false}
+              hideCursorOnComplete={true}
+              initialDelay={500}
+            />
           </div>
           <div className="text-[11px] text-slate-400/80">
             注册即表示你同意本站的使用约定与隐私说明。

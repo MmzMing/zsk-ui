@@ -12,9 +12,10 @@ import {
   TableColumn,
   TableBody,
   TableRow,
-  TableCell
+  TableCell,
+  addToast
 } from "@heroui/react";
-import { FiCopy, FiEdit2, FiKey, FiLayers, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiCopy, FiEdit2, FiKey, FiLayers, FiPlus, FiTrash2, FiX } from "react-icons/fi";
 
 type RoleItem = {
   id: string;
@@ -114,7 +115,6 @@ function createEmptyRoleForm(): RoleFormState {
 function RolePage() {
   const [roles, setRoles] = useState<RoleItem[]>(() => initialRoles);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [message, setMessage] = useState("");
 
   const [roleForm, setRoleForm] = useState<RoleFormState | null>(null);
   const [roleFormMode, setRoleFormMode] = useState<"create" | "edit">("create");
@@ -212,7 +212,11 @@ function RolePage() {
         permissions: []
       };
       setRoles(previous => [next, ...previous]);
-      setMessage(`已新增角色「${next.name}」，实际保存逻辑待接入角色接口。`);
+      addToast({
+        title: "角色新增成功",
+        description: `已新增角色「${next.name}」，实际保存逻辑待接入角色接口。`,
+        color: "success"
+      });
     } else {
       setRoles(previous =>
         previous.map(item =>
@@ -221,7 +225,11 @@ function RolePage() {
             : item
         )
       );
-      setMessage(`已更新角色「${trimmedName}」的信息，实际保存逻辑待接入角色接口。`);
+      addToast({
+        title: "角色更新成功",
+        description: `已更新角色「${trimmedName}」的信息，实际保存逻辑待接入角色接口。`,
+        color: "success"
+      });
     }
     setRoleForm(null);
     setRoleFormError("");
@@ -239,10 +247,13 @@ function RolePage() {
     }
     setRoles(previous => previous.filter(item => !selectedIds.includes(item.id)));
     setPage(1);
+    const count = selectedIds.length;
     setSelectedIds([]);
-    setMessage(
-      `已从当前配置中删除 ${selectedIds.length} 个角色，实际删除逻辑待接入角色接口。`
-    );
+    addToast({
+      title: "批量删除成功",
+      description: `已从当前配置中删除 ${count} 个角色，实际删除逻辑待接入角色接口。`,
+      color: "success"
+    });
   };
 
   const handleDeleteSingleRole = (role: RoleItem) => {
@@ -254,9 +265,11 @@ function RolePage() {
     }
     setRoles(previous => previous.filter(item => item.id !== role.id));
     setSelectedIds(previous => previous.filter(id => id !== role.id));
-    setMessage(
-      `已删除角色「${role.name}」，实际删除逻辑待接入角色接口。`
-    );
+    addToast({
+      title: "角色删除成功",
+      description: `已删除角色「${role.name}」，实际删除逻辑待接入角色接口。`,
+      color: "success"
+    });
   };
 
   const handleOpenAssignPermission = (role: RoleItem) => {
@@ -278,9 +291,11 @@ function RolePage() {
           : item
       )
     );
-    setMessage(
-      `已更新角色「${permissionAssign.name}」的权限配置，实际保存逻辑待接入权限分配接口。`
-    );
+    addToast({
+      title: "权限更新成功",
+      description: `已更新角色「${permissionAssign.name}」的权限配置，实际保存逻辑待接入权限分配接口。`,
+      color: "success"
+    });
     setPermissionAssign(null);
   };
 
@@ -311,9 +326,11 @@ function RolePage() {
       permissions: [...role.permissions]
     };
     setRoles(previous => [copy, ...previous]);
-    setMessage(
-      `已基于角色「${role.name}」复制生成新角色「${name}」，并继承原有权限。`
-    );
+    addToast({
+      title: "角色复制成功",
+      description: `已基于角色「${role.name}」复制生成新角色「${name}」，并继承原有权限。`,
+      color: "success"
+    });
   };
 
   const handleBatchCopy = () => {
@@ -394,19 +411,6 @@ function RolePage() {
               <span>当前权限示例按模块进行分组，实际项目可与后端权限表结构对接。</span>
             </div>
           </div>
-          {message && (
-            <div className="mt-1 flex items-center justify-between text-xs text-[var(--text-color-secondary)]">
-              <span>{message}</span>
-              <Button
-                size="sm"
-                variant="light"
-                className="h-7 text-xs"
-                onPress={() => setMessage("")}
-              >
-                知道了
-              </Button>
-            </div>
-          )}
         </div>
 
         <div className="p-3 space-y-3 text-xs">
@@ -542,13 +546,15 @@ function RolePage() {
               <div className="text-sm font-medium">
                 {roleFormMode === "create" ? "新增角色" : "编辑角色信息"}
               </div>
-              <button
-                type="button"
-                className="text-xs text-[var(--text-color-secondary)]"
-                onClick={handleCloseRoleForm}
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="h-8 w-8 text-[var(--text-color-secondary)]"
+                onPress={handleCloseRoleForm}
               >
-                关闭
-              </button>
+                <FiX className="text-base" />
+              </Button>
             </div>
             <div className="px-4 py-3 space-y-3 text-xs">
               {roleFormError && (
@@ -564,7 +570,16 @@ function RolePage() {
                   value={roleForm.name}
                   onValueChange={value => handleRoleFormChange({ name: value })}
                   classNames={{
-                    inputWrapper: "h-8 text-xs",
+                    inputWrapper: [
+                      "h-8",
+                      "bg-transparent",
+                      "border border-[var(--border-color)]",
+                      "dark:border-white/20",
+                      "hover:border-[var(--primary-color)]/80!",
+                      "group-data-[focus=true]:border-[var(--primary-color)]!",
+                      "transition-colors",
+                      "shadow-none"
+                    ].join(" "),
                     input: "text-xs"
                   }}
                 />
@@ -582,7 +597,15 @@ function RolePage() {
                   value={roleForm.description}
                   onValueChange={value => handleRoleFormChange({ description: value })}
                   classNames={{
-                    inputWrapper: "text-xs",
+                    inputWrapper: [
+                      "bg-transparent",
+                      "border border-[var(--border-color)]",
+                      "dark:border-white/20",
+                      "hover:border-[var(--primary-color)]/80!",
+                      "group-data-[focus=true]:border-[var(--primary-color)]!",
+                      "transition-colors",
+                      "shadow-none"
+                    ].join(" "),
                     input: "text-xs"
                   }}
                 />
@@ -619,13 +642,15 @@ function RolePage() {
               <div className="text-sm font-medium">
                 分配权限 · {permissionAssign.name}
               </div>
-              <button
-                type="button"
-                className="text-xs text-[var(--text-color-secondary)]"
-                onClick={() => setPermissionAssign(null)}
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="h-8 w-8 text-[var(--text-color-secondary)]"
+                onPress={() => setPermissionAssign(null)}
               >
-                关闭
-              </button>
+                <FiX className="text-base" />
+              </Button>
             </div>
             <div className="px-4 py-3 space-y-3 text-xs max-h-[460px] overflow-auto">
               <div className="flex items-center justify-between">

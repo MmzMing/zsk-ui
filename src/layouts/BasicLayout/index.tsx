@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import type { IconType } from "react-icons";
 import {
   Avatar,
@@ -31,7 +31,8 @@ import {
   FiBookOpen,
   FiUser,
   FiLogOut,
-  FiGlobe
+  FiGlobe,
+  FiArrowUp
 } from "react-icons/fi";
 
 const launchedAt = new Date("2026-01-01T00:00:00Z").getTime();
@@ -94,16 +95,27 @@ function BasicLayout() {
   ]);
 
   const [hideHeader, setHideHeader] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const lastScrollYRef = useRef(0);
   useEffect(() => {
     const handleScroll = () => {
       const current = window.scrollY;
       const last = lastScrollYRef.current;
+      
+      // Header visibility
       if (current > last + 4 && current > 40) {
         setHideHeader(true);
       } else if (current < last - 4) {
         setHideHeader(false);
       }
+      
+      // Back to top visibility (Bilibili style: show when scrolled down)
+      if (current > 400) {
+        setShowBackToTop(true);
+      } else {
+        setShowBackToTop(false);
+      }
+      
       lastScrollYRef.current = current;
     };
     window.addEventListener("scroll", handleScroll);
@@ -111,6 +123,10 @@ function BasicLayout() {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const activePath = location.pathname;
   const isAdmin = activePath.startsWith(routes.admin);
@@ -635,6 +651,29 @@ function BasicLayout() {
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
       />
+
+      <AnimatePresence>
+        {showBackToTop && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="fixed bottom-20 right-6 z-50"
+          >
+            <button
+              type="button"
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-[var(--bg-elevated)] border border-[var(--border-color)] text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] hover:border-[var(--primary-color)] transition-all shadow-sm hover:shadow-md"
+              onClick={(e) => {
+                e.stopPropagation();
+                scrollToTop();
+              }}
+              aria-label="回到顶部"
+            >
+              <FiArrowUp className="w-6 h-6" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

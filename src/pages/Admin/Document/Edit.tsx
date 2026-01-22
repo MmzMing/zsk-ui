@@ -86,6 +86,20 @@ const SEOPanel = ({ data, onChange }: { data: NonNullable<DocumentDetail['seo']>
             onChange={(e) => onChange({ ...data, title: e.target.value })}
             description={scores.title < 60 ? "建议增加标题长度" : "标题长度适中"}
             color={scores.title < 60 ? "danger" : "success"}
+            variant="bordered"
+            classNames={{
+                inputWrapper: [
+                    "bg-transparent",
+                    "border border-[var(--border-color)]",
+                    "dark:border-white/20",
+                    "hover:border-[var(--primary-color)]/80!",
+                    "group-data-[focus=true]:border-[var(--primary-color)]!",
+                    "transition-colors",
+                    "shadow-none"
+                ].join(" "),
+                input: "text-xs",
+                label: "text-xs font-medium"
+            }}
         />
         
         <Textarea 
@@ -94,12 +108,40 @@ const SEOPanel = ({ data, onChange }: { data: NonNullable<DocumentDetail['seo']>
             onChange={(e) => onChange({ ...data, description: e.target.value })}
              description={scores.description < 60 ? "描述过短，建议补充" : "描述完善"}
              color={scores.description < 60 ? "danger" : "success"}
+             variant="bordered"
+             classNames={{
+                 inputWrapper: [
+                     "bg-transparent",
+                     "border border-[var(--border-color)]",
+                     "dark:border-white/20",
+                     "hover:border-[var(--primary-color)]/80!",
+                     "group-data-[focus=true]:border-[var(--primary-color)]!",
+                     "transition-colors",
+                     "shadow-none"
+                 ].join(" "),
+                 input: "text-xs",
+                 label: "text-xs font-medium"
+             }}
         />
         
         <Input 
             label="关键词 (逗号分隔)" 
             value={data.keywords.join(",")} 
             onChange={(e) => onChange({ ...data, keywords: e.target.value.split(",") })}
+            variant="bordered"
+            classNames={{
+                inputWrapper: [
+                    "bg-transparent",
+                    "border border-[var(--border-color)]",
+                    "dark:border-white/20",
+                    "hover:border-[var(--primary-color)]/80!",
+                    "group-data-[focus=true]:border-[var(--primary-color)]!",
+                    "transition-colors",
+                    "shadow-none"
+                ].join(" "),
+                input: "text-xs",
+                label: "text-xs font-medium"
+            }}
         />
       </CardBody>
     </Card>

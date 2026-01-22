@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import {
   Button,
   Card,
@@ -16,7 +16,14 @@ import {
   ModalContent,
   ModalHeader,
   ModalBody,
-  useDisclosure
+  ModalFooter,
+  Input,
+  Textarea,
+  Switch,
+  Select,
+  Tooltip,
+  useDisclosure,
+  addToast
 } from "@heroui/react";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
@@ -28,7 +35,12 @@ import {
   FiEye,
   FiSlash,
   FiUpload,
-  FiPlayCircle
+  FiPlayCircle,
+  FiRotateCcw,
+  FiX,
+  FiCamera,
+  FiPlus,
+  FiTrash2
 } from "react-icons/fi";
 import ReactPlayer from "react-player";
 import { useAppStore } from "../../../store";
@@ -43,6 +55,7 @@ const initialVideos: VideoItem[] = [
     id: "v_001",
     title: "从 0 搭建个人知识库前端",
     category: "工程实践",
+    description: "本课程详细讲解如何从零开始搭建一个属于自己的个人知识库前端系统，涵盖技术选型、架构设计及核心功能实现。",
     status: "published",
     duration: "18:24",
     plays: 3289,
@@ -60,6 +73,7 @@ const initialVideos: VideoItem[] = [
     id: "v_002",
     title: "如何把零散笔记整理成知识库",
     category: "效率方法",
+    description: "分享高效的笔记整理方法论，教你如何将碎片化的信息构建成体系化的知识网络，提升学习与工作效率。",
     status: "published",
     duration: "23:10",
     plays: 2410,
@@ -76,6 +90,7 @@ const initialVideos: VideoItem[] = [
     id: "v_003",
     title: "React 19 下的前端工程化实践",
     category: "前端基础",
+    description: "深入探讨 React 19 新特性在实际工程中的应用，分析其对前端构建工具链及开发模式的影响。",
     status: "draft",
     duration: "31:42",
     plays: 0,
@@ -91,6 +106,7 @@ const initialVideos: VideoItem[] = [
     id: "v_004",
     title: "用知识库管理你的职业成长",
     category: "个人成长",
+    description: "职业发展需要规划与记录，本视频介绍如何利用知识库工具追踪个人成长轨迹，辅助职业决策。",
     status: "offline",
     duration: "19:56",
     plays: 980,
@@ -106,6 +122,7 @@ const initialVideos: VideoItem[] = [
     id: "v_005",
     title: "系统设计入门：从单机到集群",
     category: "系统设计",
+    description: "系统设计经典入门教程，通过案例演示如何将一个单机应用逐步演进为高可用、高性能的分布式集群架构。",
     status: "published",
     duration: "45:12",
     plays: 1520,
@@ -151,6 +168,21 @@ function getStatusColor(status: VideoStatus) {
   return "warning";
 }
 
+type VideoFormState = {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  cover: string;
+  videoUrl: string;
+  tags: string;
+  status: VideoStatus;
+  duration: string;
+  pinned: boolean;
+  recommended: boolean;
+  relatedVideos: VideoItem[];
+};
+
 function VideoListPage() {
   const [videos, setVideos] = useState<VideoItem[]>(() => initialVideos);
   const [keyword, setKeyword] = useState("");
@@ -162,6 +194,127 @@ function VideoListPage() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
+  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
+  const [editingVideo, setEditingVideo] = useState<VideoFormState | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleEditClick = (item: VideoItem) => {
+    setEditingVideo({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      description: item.description || "",
+      cover: item.cover || "",
+      videoUrl: item.videoUrl || "",
+      tags: item.tags?.join(", ") || "",
+      status: item.status,
+      duration: item.duration,
+      pinned: !!item.pinned,
+      recommended: !!item.recommended,
+      relatedVideos: [] // 初始化为空，实际应从接口获取
+    });
+    onEditOpen();
+  };
+
+  const handleAddRelatedVideo = () => {
+    if (!editingVideo) return;
+    // 模拟添加逻辑：从现有视频列表中随机选择一个非当前且未添加的视频
+    const candidates = videos.filter(v => 
+      v.id !== editingVideo.id && 
+      !editingVideo.relatedVideos.find(rv => rv.id === v.id)
+    );
+    
+    if (candidates.length === 0) {
+      addToast({ 
+        title: "提示", 
+        description: "暂无可添加的视频", 
+        color: "warning" 
+      });
+      return;
+    }
+    
+    const randomVideo = candidates[Math.floor(Math.random() * candidates.length)];
+    setEditingVideo({
+      ...editingVideo,
+      relatedVideos: [...editingVideo.relatedVideos, randomVideo]
+    });
+  };
+
+  const handleRemoveRelatedVideo = (id: string) => {
+    if (!editingVideo) return;
+    setEditingVideo({
+      ...editingVideo,
+      relatedVideos: editingVideo.relatedVideos.filter(v => v.id !== id)
+    });
+  };
+
+  const handleUpdateVideo = () => {
+    if (!editingVideo) return;
+
+    if (!editingVideo.title.trim()) {
+      addToast({
+        title: "表单错误",
+        description: "视频标题不能为空",
+        color: "danger"
+      });
+      return;
+    }
+
+    setVideos(prev =>
+      prev.map(v =>
+        v.id === editingVideo.id
+          ? {
+              ...v,
+              ...editingVideo,
+              tags: editingVideo.tags
+                .split(/[,，]/)
+                .map(t => t.trim())
+                .filter(Boolean),
+              updatedAt: "刚刚"
+            }
+          : v
+      )
+    );
+
+    addToast({
+      title: "更新成功",
+      description: `视频「${editingVideo.title}」已更新`,
+      color: "success"
+    });
+    onEditClose();
+  };
+
+  const handleCaptureFrame = () => {
+    if (!videoRef.current || !editingVideo) return;
+    
+    try {
+      const video = videoRef.current;
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        // 注意：跨域视频可能导致 tainted canvas，无法导出 dataURL
+        // 实际项目中需要配置 CORS 或使用代理
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/png");
+        setEditingVideo({ ...editingVideo, cover: dataUrl });
+        addToast({
+          title: "截图成功",
+          description: "已将当前视频帧设为封面",
+          color: "success"
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      addToast({
+        title: "截图失败",
+        description: "视频源可能存在跨域限制，无法截取",
+        color: "warning"
+      });
+    }
+  };
 
   const { themeMode } = useAppStore();
 
@@ -254,27 +407,41 @@ function VideoListPage() {
 
   const handleTogglePinned = (id: string) => {
     setVideos(previous =>
-      previous.map(item =>
-        item.id === id
-          ? {
-              ...item,
-              pinned: !item.pinned
-            }
-          : item
-      )
+      previous.map(item => {
+        if (item.id === id) {
+          const nextPinned = !item.pinned;
+          addToast({
+            title: nextPinned ? "已设为置顶" : "已取消置顶",
+            description: `视频「${item.title}」${nextPinned ? "已设为置顶" : "已取消置顶"}，实际逻辑待接入接口。`,
+            color: "success"
+          });
+          return {
+            ...item,
+            pinned: nextPinned
+          };
+        }
+        return item;
+      })
     );
   };
 
   const handleToggleRecommended = (id: string) => {
     setVideos(previous =>
-      previous.map(item =>
-        item.id === id
-          ? {
-              ...item,
-              recommended: !item.recommended
-            }
-          : item
-      )
+      previous.map(item => {
+        if (item.id === id) {
+          const nextRecommended = !item.recommended;
+          addToast({
+            title: nextRecommended ? "已设为推荐" : "已取消推荐",
+            description: `视频「${item.title}」${nextRecommended ? "已设为推荐" : "已取消推荐"}，实际逻辑待接入接口。`,
+            color: "success"
+          });
+          return {
+            ...item,
+            recommended: nextRecommended
+          };
+        }
+        return item;
+      })
     );
   };
 
@@ -293,6 +460,11 @@ function VideoListPage() {
         };
       })
     );
+    addToast({
+      title: "批量发布成功",
+      description: `已成功发布 ${selectedIds.length} 个视频，实际逻辑待接入接口。`,
+      color: "success"
+    });
     setSelectedIds([]);
   };
 
@@ -311,6 +483,11 @@ function VideoListPage() {
         };
       })
     );
+    addToast({
+      title: "批量下线成功",
+      description: `已下线 ${selectedIds.length} 个视频，实际逻辑待接入接口。`,
+      color: "success"
+    });
     setSelectedIds([]);
   };
 
@@ -515,14 +692,17 @@ function VideoListPage() {
                 </SelectItem>
               )}
             </AdminSelect>
-            <Button
-              size="sm"
-              variant="light"
-              className="h-8 text-[0.6875rem]"
-              onPress={handleResetFilter}
-            >
-              重置筛选
-            </Button>
+            <Tooltip content="重置筛选">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                onPress={handleResetFilter}
+              >
+                <FiRotateCcw className="text-sm" />
+              </Button>
+            </Tooltip>
           </div>
 
           {/* 第二层：状态筛选 */}
@@ -744,8 +924,9 @@ function VideoListPage() {
                           variant="light"
                           className="h-7 text-[0.625rem]"
                           startContent={<FiEdit2 className="text-[0.6875rem]" />}
+                          onPress={() => handleEditClick(item)}
                         >
-                          编辑占位
+                          编辑
                         </Button>
                         <Button
                           size="sm"
@@ -840,6 +1021,226 @@ function VideoListPage() {
         </ModalContent>
       </Modal>
 
+      {/* 编辑视频弹窗 */}
+      <Modal 
+        isOpen={isEditOpen} 
+        onClose={onEditClose}
+        size="5xl"
+        scrollBehavior="inside"
+        classNames={{
+          base: "bg-[var(--bg-elevated)] border border-[var(--border-color)]",
+          header: "border-b border-[var(--border-color)]",
+          footer: "border-t border-[var(--border-color)]",
+        }}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                编辑视频
+                <span className="text-xs font-normal text-[var(--text-color-secondary)]">
+                  编辑视频基础信息与状态设置
+                </span>
+              </ModalHeader>
+              <ModalBody className="flex flex-col md:flex-row gap-6 py-6">
+                {editingVideo && (
+                  <>
+                    {/* 左侧：表单信息 */}
+                    <div className="flex-1 space-y-4">
+                        <Input
+                          label="视频标题"
+                          placeholder="请输入视频标题"
+                          value={editingVideo.title}
+                          onValueChange={(val) => setEditingVideo({ ...editingVideo, title: val })}
+                          variant="bordered"
+                          classNames={{ inputWrapper: "bg-[var(--bg-content)]" }}
+                        />
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <Input
+                            label="分类"
+                            placeholder="视频分类"
+                            value={editingVideo.category}
+                            onValueChange={(val) => setEditingVideo({ ...editingVideo, category: val })}
+                            variant="bordered"
+                            classNames={{ inputWrapper: "bg-[var(--bg-content)]" }}
+                          />
+                          <Input
+                            label="时长"
+                            placeholder="00:00"
+                            value={editingVideo.duration}
+                            onValueChange={(val) => setEditingVideo({ ...editingVideo, duration: val })}
+                            variant="bordered"
+                            classNames={{ inputWrapper: "bg-[var(--bg-content)]" }}
+                          />
+                        </div>
+
+                        <Textarea
+                          label="视频描述"
+                          placeholder="请输入视频详细描述"
+                          value={editingVideo.description}
+                          onValueChange={(val) => setEditingVideo({ ...editingVideo, description: val })}
+                          variant="bordered"
+                          classNames={{ inputWrapper: "bg-[var(--bg-content)]" }}
+                        />
+
+                        <Input
+                          label="标签"
+                          placeholder="使用逗号分隔多个标签"
+                          value={editingVideo.tags}
+                          onValueChange={(val) => setEditingVideo({ ...editingVideo, tags: val })}
+                          variant="bordered"
+                          description="示例：React, 教程, 前端"
+                          classNames={{ inputWrapper: "bg-[var(--bg-content)]" }}
+                        />
+
+                        <div className="flex flex-col gap-2 p-3 rounded-medium border border-[var(--border-color)] bg-[var(--bg-content)]">
+                            <span className="text-sm text-[var(--text-color-secondary)]">状态设置</span>
+                            <div className="flex flex-wrap items-center gap-6">
+                                <Select
+                                    aria-label="发布状态"
+                                    selectedKeys={[editingVideo.status]}
+                                    onChange={(e) => setEditingVideo({ ...editingVideo, status: e.target.value as VideoStatus })}
+                                    variant="bordered"
+                                    disallowEmptySelection
+                                    size="sm"
+                                    className="w-32"
+                                    classNames={{ trigger: "bg-[var(--bg-elevated)]" }}
+                                >
+                                    <SelectItem key="draft">草稿</SelectItem>
+                                    <SelectItem key="published">已发布</SelectItem>
+                                    <SelectItem key="offline">已下架</SelectItem>
+                                </Select>
+
+                                <Switch 
+                                    size="sm"
+                                    isSelected={editingVideo.pinned}
+                                    onValueChange={(val) => setEditingVideo({ ...editingVideo, pinned: val })}
+                                >
+                                    置顶
+                                </Switch>
+
+                                <Switch 
+                                    size="sm"
+                                    isSelected={editingVideo.recommended}
+                                    onValueChange={(val) => setEditingVideo({ ...editingVideo, recommended: val })}
+                                >
+                                    推荐
+                                </Switch>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 右侧：预览与截图 */}
+                    <div className="w-full md:w-[320px] flex flex-col gap-4">
+                      {/* 上层：封面预览 */}
+                      <div className="space-y-2">
+                        <span className="text-xs text-[var(--text-color-secondary)]">封面预览</span>
+                        <div className="aspect-video rounded-lg overflow-hidden border border-[var(--border-color)] bg-black/5 relative group">
+                            {editingVideo.cover ? (
+                                <img 
+                                    src={editingVideo.cover} 
+                                    alt="Cover Preview" 
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[var(--text-color-secondary)]">
+                                    暂无封面
+                                </div>
+                            )}
+                        </div>
+                      </div>
+
+                      {/* 下层：视频预览与截图 */}
+                      <div className="space-y-2">
+                         <span className="text-xs text-[var(--text-color-secondary)]">视频源与截图</span>
+                         <div className="aspect-video rounded-lg overflow-hidden bg-black border border-[var(--border-color)]">
+                            <video 
+                                ref={videoRef}
+                                src={editingVideo.videoUrl}
+                                className="w-full h-full"
+                                controls
+                                crossOrigin="anonymous"
+                            />
+                         </div>
+                         <Button 
+                            size="sm" 
+                            variant="flat" 
+                            startContent={<FiCamera />}
+                            onPress={handleCaptureFrame}
+                            className="w-full"
+                         >
+                            截取当前帧为封面
+                         </Button>
+                      </div>
+
+                      {/* 下层：相关视频 */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs text-[var(--text-color-secondary)]">相关视频</span>
+                            <Button
+                                size="sm"
+                                variant="light"
+                                isIconOnly
+                                className="h-6 w-6 text-[var(--text-color-secondary)]"
+                                onPress={handleAddRelatedVideo}
+                            >
+                                <FiPlus />
+                            </Button>
+                        </div>
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                            {editingVideo.relatedVideos && editingVideo.relatedVideos.length > 0 ? (
+                                editingVideo.relatedVideos.map((video) => (
+                                    <div key={video.id} className="flex items-center gap-2 p-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-content)]">
+                                        <div className="w-12 h-8 rounded overflow-hidden bg-black/5 flex-shrink-0 relative">
+                                            {video.cover ? (
+                                                <img src={video.cover} alt={video.title} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-[8px] text-[var(--text-color-secondary)] bg-[var(--bg-elevated)]">
+                                                    无封面
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-xs truncate" title={video.title}>{video.title}</div>
+                                            <div className="text-[10px] text-[var(--text-color-secondary)]">{video.id}</div>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="light"
+                                            isIconOnly
+                                            color="danger"
+                                            className="h-6 w-6"
+                                            onPress={() => handleRemoveRelatedVideo(video.id)}
+                                        >
+                                            <FiTrash2 className="text-xs" />
+                                        </Button>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-xs text-[var(--text-color-secondary)] text-center py-4 border border-dashed border-[var(--border-color)] rounded-lg">
+                                    暂无相关视频
+                                </div>
+                            )}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="flat" onPress={onClose}>
+                  取消
+                </Button>
+                <Button color="primary" onPress={handleUpdateVideo}>
+                  保存修改
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
       {sidebarVisible && activeVideo && (
         <div className="fixed inset-0 z-40 flex items-end md:items-stretch justify-end bg-black/40">
           <div className="w-full md:max-w-md h-[70vh] md:h-full bg-[var(--bg-elevated)] border-l border-[var(--border-color)] shadow-xl flex flex-col">
@@ -854,12 +1255,13 @@ function VideoListPage() {
                 </div>
               </div>
               <Button
+                isIconOnly
                 size="sm"
                 variant="light"
-                className="h-8 text-[0.6875rem]"
+                className="h-8 w-8 text-[var(--text-color-secondary)]"
                 onPress={handleCloseSidebar}
               >
-                关闭
+                <FiX className="text-sm" />
               </Button>
             </div>
 

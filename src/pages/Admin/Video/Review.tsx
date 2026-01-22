@@ -17,7 +17,8 @@ import {
   TableHeader,
   TableRow,
     Tab,
-    Textarea
+    Textarea,
+    Tooltip
   } from "@heroui/react";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
@@ -29,6 +30,7 @@ import {
   FiFlag,
   FiMessageSquare,
   FiPlayCircle,
+  FiRotateCcw,
   FiX
 } from "react-icons/fi";
 
@@ -620,15 +622,32 @@ function VideoReviewPage() {
                       size="sm"
                       variant="bordered"
                       className="w-56 text-xs"
+                      classNames={{
+                        inputWrapper: [
+                          "h-8",
+                          "bg-transparent",
+                          "border border-[var(--border-color)]",
+                          "dark:border-white/20",
+                          "hover:border-[var(--primary-color)]/80!",
+                          "group-data-[focus=true]:border-[var(--primary-color)]!",
+                          "transition-colors",
+                          "shadow-none"
+                        ].join(" "),
+                        input: "text-xs",
+                        selectorButton: "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors"
+                      }}
                     />
-                    <Button
-                      size="sm"
-                      variant="light"
-                      className="h-8 text-xs"
-                      onPress={handleResetFilter}
-                    >
-                      重置筛选
-                    </Button>
+                    <Tooltip content="重置筛选">
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                        onPress={handleResetFilter}
+                      >
+                        <FiRotateCcw className="text-sm" />
+                      </Button>
+                    </Tooltip>
                   </div>
 
                   {/* 第二层：状态 */}
@@ -910,6 +929,20 @@ function VideoReviewPage() {
                           size="sm"
                           variant="bordered"
                           className="w-56 text-[11px]"
+                          classNames={{
+                            inputWrapper: [
+                              "h-8",
+                              "bg-transparent",
+                              "border border-[var(--border-color)]",
+                              "dark:border-white/20",
+                              "hover:border-[var(--primary-color)]/80!",
+                              "group-data-[focus=true]:border-[var(--primary-color)]!",
+                              "transition-colors",
+                              "shadow-none"
+                            ].join(" "),
+                            input: "text-xs",
+                            selectorButton: "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors"
+                          }}
                         />
                       </div>
                     </div>
@@ -1021,6 +1054,20 @@ function VideoReviewPage() {
                       size="sm"
                       variant="bordered"
                       className="w-56 text-[11px]"
+                      classNames={{
+                        inputWrapper: [
+                          "h-8",
+                          "bg-transparent",
+                          "border border-[var(--border-color)]",
+                          "dark:border-white/20",
+                          "hover:border-[var(--primary-color)]/80!",
+                          "group-data-[focus=true]:border-[var(--primary-color)]!",
+                          "transition-colors",
+                          "shadow-none"
+                        ].join(" "),
+                        input: "text-xs",
+                        selectorButton: "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors"
+                      }}
                     />
                   </div>
                   <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
@@ -1404,7 +1451,16 @@ function VideoReviewPage() {
                               variant="bordered"
                               classNames={{
                                 label: "text-xs font-medium text-[var(--text-color)] mb-1",
-                                trigger: "h-10"
+                                trigger: [
+                                  "h-10",
+                                  "bg-transparent",
+                                  "border border-[var(--border-color)]",
+                                  "dark:border-white/20",
+                                  "hover:border-[var(--primary-color)]/80!",
+                                  "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                  "transition-colors",
+                                  "shadow-none"
+                                ].join(" ")
                               }}
                             >
                               <SelectItem key="content">画面包含违规内容</SelectItem>
@@ -1422,6 +1478,15 @@ function VideoReviewPage() {
                               minRows={6}
                               classNames={{
                                 label: "text-xs font-medium text-[var(--text-color)] mb-1",
+                                inputWrapper: [
+                                  "bg-transparent",
+                                  "border border-[var(--border-color)]",
+                                  "dark:border-white/20",
+                                  "hover:border-[var(--primary-color)]/80!",
+                                  "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                  "transition-colors",
+                                  "shadow-none"
+                                ].join(" "),
                                 input: "text-xs"
                               }}
                             />

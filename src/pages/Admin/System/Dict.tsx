@@ -4,20 +4,22 @@ import {
   Button,
   Card,
   Chip,
-  Input,
   Pagination,
   Switch,
-  Textarea,
   Table,
   TableHeader,
   TableColumn,
   TableBody,
   TableRow,
-  TableCell
+  TableCell,
+  Tooltip,
+  addToast
 } from "@heroui/react";
-import { FiEdit2, FiPlus } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiRotateCcw, FiX } from "react-icons/fi";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
+import { AdminInput } from "@/components/Admin/AdminInput";
+import { AdminTextarea } from "@/components/Admin/AdminTextarea";
 
 type DictStatus = "enabled" | "disabled";
 
@@ -224,6 +226,11 @@ function DictPage() {
             : item
         )
       );
+      addToast({
+        title: "字典更新成功",
+        description: `已更新字典「${trimmedName}」的信息，实际保存逻辑待接入接口。`,
+        color: "success"
+      });
     } else {
       const id = `dict_${Date.now()}`;
       const newItem: DictItem = {
@@ -238,6 +245,11 @@ function DictPage() {
       };
       setItems(previous => [newItem, ...previous]);
       setPage(1);
+      addToast({
+        title: "字典新增成功",
+        description: `已成功新增字典「${trimmedName}」，实际保存逻辑待接入接口。`,
+        color: "success"
+      });
     }
     setFormVisible(false);
   };
@@ -256,6 +268,11 @@ function DictPage() {
           : row
       )
     );
+    addToast({
+      title: nextStatus === "enabled" ? "字典已启用" : "字典已停用",
+      description: `字典「${item.name}」的状态已切换为 ${nextStatus === "enabled" ? "启用" : "停用"}。`,
+      color: nextStatus === "enabled" ? "success" : "default"
+    });
   };
 
   return (
@@ -308,14 +325,17 @@ function DictPage() {
                   </SelectItem>
                 )}
               </AdminSelect>
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-xs"
-                onPress={handleResetFilter}
-              >
-                重置筛选
-              </Button>
+              <Tooltip content="重置筛选">
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                  onPress={handleResetFilter}
+                >
+                  <FiRotateCcw className="text-sm" />
+                </Button>
+              </Tooltip>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -456,13 +476,15 @@ function DictPage() {
               <div className="text-sm font-medium">
                 {formState.id ? "编辑字典" : "新建字典"}
               </div>
-              <button
-                type="button"
-                className="text-xs text-[var(--text-color-secondary)]"
-                onClick={handleCloseForm}
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="h-8 w-8 text-[var(--text-color-secondary)]"
+                onPress={handleCloseForm}
               >
-                关闭
-              </button>
+                <FiX className="text-base" />
+              </Button>
             </div>
             <div className="px-4 py-3 space-y-3 text-xs">
               {formError && (
@@ -472,55 +494,31 @@ function DictPage() {
               )}
               <div className="space-y-1">
                 <div>字典编码（必填）</div>
-                <Input
-                  size="sm"
-                  variant="bordered"
+                <AdminInput
                   value={formState.code}
                   onValueChange={value => handleFormChange({ code: value })}
-                  classNames={{
-                    inputWrapper: "h-8 text-xs",
-                    input: "text-xs"
-                  }}
                 />
               </div>
               <div className="space-y-1">
                 <div>字典名称（必填）</div>
-                <Input
-                  size="sm"
-                  variant="bordered"
+                <AdminInput
                   value={formState.name}
                   onValueChange={value => handleFormChange({ name: value })}
-                  classNames={{
-                    inputWrapper: "h-8 text-xs",
-                    input: "text-xs"
-                  }}
                 />
               </div>
               <div className="space-y-1">
                 <div>所属模块</div>
-                <Input
-                  size="sm"
-                  variant="bordered"
+                <AdminInput
                   value={formState.category}
                   onValueChange={value => handleFormChange({ category: value })}
-                  classNames={{
-                    inputWrapper: "h-8 text-xs",
-                    input: "text-xs"
-                  }}
                 />
               </div>
               <div className="space-y-1">
                 <div>说明</div>
-                <Textarea
-                  size="sm"
-                  variant="bordered"
+                <AdminTextarea
                   minRows={3}
                   value={formState.description}
                   onValueChange={value => handleFormChange({ description: value })}
-                  classNames={{
-                    inputWrapper: "text-xs",
-                    input: "text-xs"
-                  }}
                 />
               </div>
               <div className="flex items-center justify-between pt-1">

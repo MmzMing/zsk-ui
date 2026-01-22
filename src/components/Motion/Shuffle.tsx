@@ -136,4 +136,5 @@ const Shuffle = ({
   );
 };
 
+export { Shuffle };
 export default Shuffle;

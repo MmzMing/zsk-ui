@@ -3,7 +3,6 @@ import {
   Button,
   Card,
   Chip,
-  Input,
   Pagination,
   SelectItem,
   Switch,
@@ -13,11 +12,14 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-  Textarea
+  Tooltip,
+  addToast
 } from "@heroui/react";
-import { FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiRotateCcw, FiTrash2, FiX } from "react-icons/fi";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
+import { AdminInput } from "@/components/Admin/AdminInput";
+import { AdminTextarea } from "@/components/Admin/AdminTextarea";
 
 type ParamScope = "global" | "frontend" | "backend" | "task";
 
@@ -203,6 +205,11 @@ function ParamPage() {
 
   const handleDeleteParam = (item: ParamItem) => {
     setItems(previous => previous.filter(row => row.id !== item.id));
+    addToast({
+      title: "参数删除成功",
+      description: `已成功删除参数「${item.name}」，实际逻辑待接入接口。`,
+      color: "success"
+    });
   };
 
   const handleSubmitForm = () => {
@@ -231,6 +238,11 @@ function ParamPage() {
             : item
         )
       );
+      addToast({
+        title: "参数更新成功",
+        description: `已成功更新参数「${trimmedName}」，实际逻辑待接入接口。`,
+        color: "success"
+      });
     } else {
       const id = `param_${Date.now()}`;
       const newItem: ParamItem = {
@@ -245,6 +257,11 @@ function ParamPage() {
       };
       setItems(previous => [newItem, ...previous]);
       setPage(1);
+      addToast({
+        title: "参数创建成功",
+        description: `已成功创建参数「${trimmedName}」，实际逻辑待接入接口。`,
+        color: "success"
+      });
     }
     setFormVisible(false);
   };
@@ -301,14 +318,17 @@ function ParamPage() {
                   </SelectItem>
                 )}
               </AdminSelect>
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-xs"
-                onPress={handleResetFilter}
-              >
-                重置筛选
-              </Button>
+              <Tooltip content="重置筛选">
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                  onPress={handleResetFilter}
+                >
+                  <FiRotateCcw className="text-sm" />
+                </Button>
+              </Tooltip>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -453,13 +473,15 @@ function ParamPage() {
               <div className="text-sm font-medium">
                 {formState.id ? "编辑参数" : "新增参数"}
               </div>
-              <button
-                type="button"
-                className="text-xs text-[var(--text-color-secondary)]"
-                onClick={handleCloseForm}
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                className="h-6 w-6 text-[var(--text-color-secondary)]"
+                onPress={handleCloseForm}
               >
-                关闭
-              </button>
+                <FiX className="text-sm" />
+              </Button>
             </div>
             <div className="px-4 py-3 space-y-3 text-xs">
               {formError && (
@@ -469,42 +491,24 @@ function ParamPage() {
               )}
               <div className="space-y-1">
                 <div>参数键名（必填）</div>
-                <Input
-                  size="sm"
-                  variant="bordered"
+                <AdminInput
                   value={formState.key}
                   onValueChange={value => handleFormChange({ key: value })}
-                  classNames={{
-                    inputWrapper: "h-8 text-xs",
-                    input: "text-xs"
-                  }}
                 />
               </div>
               <div className="space-y-1">
                 <div>参数名称（必填）</div>
-                <Input
-                  size="sm"
-                  variant="bordered"
+                <AdminInput
                   value={formState.name}
                   onValueChange={value => handleFormChange({ name: value })}
-                  classNames={{
-                    inputWrapper: "h-8 text-xs",
-                    input: "text-xs"
-                  }}
                 />
               </div>
               <div className="space-y-1">
                 <div>参数值</div>
-                <Textarea
-                  size="sm"
-                  variant="bordered"
+                <AdminTextarea
                   minRows={2}
                   value={formState.value}
                   onValueChange={value => handleFormChange({ value })}
-                  classNames={{
-                    inputWrapper: "text-xs",
-                    input: "text-xs"
-                  }}
                 />
               </div>
               <div className="space-y-1">
@@ -534,6 +538,14 @@ function ParamPage() {
                     </SelectItem>
                   )}
                 </AdminSelect>
+              </div>
+              <div className="space-y-1">
+                <div>参数说明</div>
+                <AdminTextarea
+                  minRows={2}
+                  value={formState.description}
+                  onValueChange={value => handleFormChange({ description: value })}
+                />
               </div>
               <div className="flex items-center justify-between pt-1">
                 <div className="text-xs">是否敏感参数</div>

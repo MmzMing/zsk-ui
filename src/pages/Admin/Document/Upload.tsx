@@ -23,6 +23,7 @@ import {
   FiFileText,
   FiInfo,
   FiRefreshCw,
+  FiRotateCcw,
   FiTrash2,
   FiUpload,
   FiUploadCloud,
@@ -409,7 +410,16 @@ function DocumentUploadPage() {
                     isInvalid={isTitleTouched && !title.trim()}
                     errorMessage={isTitleTouched && !title.trim() ? "请输入文档标题" : ""}
                     classNames={{
-                      inputWrapper: "h-10 border-[var(--border-color)] hover:border-[var(--primary-color)] transition-colors bg-[var(--bg-elevated)]/30",
+                      inputWrapper: [
+                        "h-10",
+                        "bg-transparent",
+                        "border border-[var(--border-color)]",
+                        "dark:border-white/20",
+                        "hover:border-[var(--primary-color)]/80!",
+                        "group-data-[focus=true]:border-[var(--primary-color)]!",
+                        "transition-colors",
+                        "shadow-none"
+                      ].join(" "),
                       input: "text-xs"
                     }}
                   />
@@ -511,7 +521,16 @@ function DocumentUploadPage() {
                     onValueChange={setDescription}
                     minRows={4}
                     classNames={{
-                      inputWrapper: "border-[var(--border-color)] hover:border-[var(--primary-color)] transition-colors bg-[var(--bg-elevated)]/30 p-3",
+                      inputWrapper: [
+                        "bg-transparent",
+                        "border border-[var(--border-color)]",
+                        "dark:border-white/20",
+                        "hover:border-[var(--primary-color)]/80!",
+                        "group-data-[focus=true]:border-[var(--primary-color)]!",
+                        "transition-colors",
+                        "shadow-none",
+                        "p-3"
+                      ].join(" "),
                       input: "text-xs leading-relaxed"
                     }}
                   />
@@ -529,7 +548,16 @@ function DocumentUploadPage() {
                     onSelectionChange={(keys) => setSelectedTags(keys as Set<string>)}
                     startContent={<FiTag className="text-[var(--text-color-secondary)] text-xs" />}
                     classNames={{
-                      trigger: "h-10 border-[var(--border-color)] hover:border-[var(--primary-color)] bg-[var(--bg-elevated)]/30",
+                      trigger: [
+                        "h-10",
+                        "bg-transparent",
+                        "border border-[var(--border-color)]",
+                        "dark:border-white/20",
+                        "hover:border-[var(--primary-color)]/80!",
+                        "group-data-[focus=true]:border-[var(--primary-color)]!",
+                        "transition-colors",
+                        "shadow-none"
+                      ].join(" "),
                       value: "text-xs"
                     }}
                   >
@@ -582,7 +610,19 @@ function DocumentUploadPage() {
                             value={visibleUserInput} 
                             onValueChange={setVisibleUserInput}
                             className="max-w-xs"
-                            classNames={{ inputWrapper: "h-8 text-xs" }}
+                            classNames={{
+                              inputWrapper: [
+                                "h-8",
+                                "bg-transparent",
+                                "border border-[var(--border-color)]",
+                                "dark:border-white/20",
+                                "hover:border-[var(--primary-color)]/80!",
+                                "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                "transition-colors",
+                                "shadow-none"
+                              ].join(" "),
+                              input: "text-xs"
+                            }}
                           />
                           <Button 
                             size="sm" 
@@ -627,8 +667,18 @@ function DocumentUploadPage() {
                           onValueChange={setAccessPassword}
                           labelPlacement="outside"
                           classNames={{
-                            label: "text-xs text-[var(--text-color-secondary)] mb-1",
-                            inputWrapper: "h-9"
+                            label: "text-xs font-medium text-[var(--text-color-secondary)] mb-1",
+                            inputWrapper: [
+                              "h-9",
+                              "bg-transparent",
+                              "border border-[var(--border-color)]",
+                              "dark:border-white/20",
+                              "hover:border-[var(--primary-color)]/80!",
+                              "group-data-[focus=true]:border-[var(--primary-color)]!",
+                              "transition-colors",
+                              "shadow-none"
+                            ].join(" "),
+                            input: "text-xs"
                           }}
                         />
                       </div>
@@ -828,9 +878,17 @@ function DocumentUploadPage() {
                  size="sm"
                  classNames={{ inputWrapper: "h-8 w-40" }}
                />
-               <Button isIconOnly size="sm" variant="light" onPress={() => setKeyword("")}>
-                 <FiRefreshCw />
-               </Button>
+               <Tooltip content="重置筛选">
+                 <Button
+                   isIconOnly
+                   size="sm"
+                   variant="light"
+                   className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                   onPress={() => setKeyword("")}
+                 >
+                   <FiRotateCcw className="text-sm" />
+                 </Button>
+               </Tooltip>
             </div>
           </div>
           <div className="flex-1 overflow-auto p-2">

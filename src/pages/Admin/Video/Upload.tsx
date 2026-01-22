@@ -897,7 +897,20 @@ function VideoUploadPage() {
                               placeholder="例如：仅供内部学习"
                               value={watermarkText}
                               onValueChange={setWatermarkText}
-                              classNames={{ label: "text-xs text-[var(--text-color-secondary)]", inputWrapper: "h-8 text-xs" }}
+                              classNames={{
+                                label: "text-xs font-medium text-[var(--text-color-secondary)]",
+                                inputWrapper: [
+                                  "h-8",
+                                  "bg-transparent",
+                                  "border border-[var(--border-color)]",
+                                  "dark:border-white/20",
+                                  "hover:border-[var(--primary-color)]/80!",
+                                  "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                  "transition-colors",
+                                  "shadow-none"
+                                ].join(" "),
+                                input: "text-xs"
+                              }}
                             />
                             <div className="grid grid-cols-2 gap-2">
                                <Input
@@ -908,7 +921,20 @@ function VideoUploadPage() {
                                   type="number"
                                   value={String(watermarkFontSize)}
                                   onValueChange={v => setWatermarkFontSize(Number(v))}
-                                  classNames={{ label: "text-xs text-[var(--text-color-secondary)]", inputWrapper: "h-8 text-xs" }}
+                                  classNames={{
+                                    label: "text-xs font-medium text-[var(--text-color-secondary)]",
+                                    inputWrapper: [
+                                      "h-8",
+                                      "bg-transparent",
+                                      "border border-[var(--border-color)]",
+                                      "dark:border-white/20",
+                                      "hover:border-[var(--primary-color)]/80!",
+                                      "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                      "transition-colors",
+                                      "shadow-none"
+                                    ].join(" "),
+                                    input: "text-xs"
+                                  }}
                                />
                                <div className="space-y-1">
                                   <div className="text-xs text-[var(--text-color-secondary)]">透明度 ({watermarkOpacity}%)</div>
@@ -956,8 +982,48 @@ function VideoUploadPage() {
                       <div className="space-y-3">
                          <div className="text-xs font-medium text-[var(--text-color-secondary)] border-b border-dashed border-[var(--border-color)] pb-1">章节标记</div>
                          <div className="flex gap-2">
-                            <Input size="sm" variant="bordered" placeholder="章节标题" value={chapterTitle} onValueChange={setChapterTitle} classNames={{inputWrapper: "h-8 text-xs"}} className="flex-1" />
-                            <Input size="sm" variant="bordered" placeholder="秒数" value={chapterTime} onValueChange={setChapterTime} classNames={{inputWrapper: "h-8 text-xs"}} className="w-20" />
+                            <Input
+                              size="sm"
+                              variant="bordered"
+                              placeholder="章节标题"
+                              value={chapterTitle}
+                              onValueChange={setChapterTitle}
+                              classNames={{
+                                inputWrapper: [
+                                  "h-8",
+                                  "bg-transparent",
+                                  "border border-[var(--border-color)]",
+                                  "dark:border-white/20",
+                                  "hover:border-[var(--primary-color)]/80!",
+                                  "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                  "transition-colors",
+                                  "shadow-none"
+                                ].join(" "),
+                                input: "text-xs"
+                              }}
+                              className="flex-1"
+                            />
+                            <Input
+                              size="sm"
+                              variant="bordered"
+                              placeholder="秒数"
+                              value={chapterTime}
+                              onValueChange={setChapterTime}
+                              classNames={{
+                                inputWrapper: [
+                                  "h-8",
+                                  "bg-transparent",
+                                  "border border-[var(--border-color)]",
+                                  "dark:border-white/20",
+                                  "hover:border-[var(--primary-color)]/80!",
+                                  "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                  "transition-colors",
+                                  "shadow-none"
+                                ].join(" "),
+                                input: "text-xs"
+                              }}
+                              className="w-20"
+                            />
                             <Button size="sm" className="h-8 min-w-0 px-3" onPress={handleAddChapter}>添加</Button>
                          </div>
                          <div className="border border-[var(--border-color)] rounded-md h-32 overflow-auto">
@@ -993,14 +1059,27 @@ function VideoUploadPage() {
                             <div className="space-y-3">
                                <div className="flex gap-2">
                                   <Input 
-                                    size="sm" 
-                                    variant="bordered" 
-                                    aria-label="用户名"
-                                    placeholder="输入用户名添加可见权限" 
-                                    value={visibleUserInput} 
-                                    onValueChange={setVisibleUserInput} 
-                                    className="max-w-xs" 
-                                  />
+                                 size="sm" 
+                                 variant="bordered" 
+                                 aria-label="用户名"
+                                 placeholder="输入用户名添加可见权限" 
+                                 value={visibleUserInput} 
+                                 onValueChange={setVisibleUserInput} 
+                                 classNames={{
+                                   inputWrapper: [
+                                     "h-8",
+                                     "bg-transparent",
+                                     "border border-[var(--border-color)]",
+                                     "dark:border-white/20",
+                                     "hover:border-[var(--primary-color)]/80!",
+                                     "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                     "transition-colors",
+                                     "shadow-none"
+                                   ].join(" "),
+                                   input: "text-xs"
+                                 }}
+                                 className="max-w-xs" 
+                               />
                                   <Button size="sm" onPress={handleAddVisibleUser}>添加</Button>
                                </div>
                                <div className="flex flex-wrap gap-2">
@@ -1011,8 +1090,54 @@ function VideoUploadPage() {
                          )}
                          {permissionType === "password" && (
                             <div className="grid gap-4 max-w-sm">
-                               <Input type="password" size="sm" variant="bordered" label="设置密码" placeholder="******" value={accessPassword} onValueChange={setAccessPassword} labelPlacement="outside" />
-                               <Input type="password" size="sm" variant="bordered" label="确认密码" placeholder="******" value={accessPasswordConfirm} onValueChange={setAccessPasswordConfirm} labelPlacement="outside" />
+                               <Input
+                                 type="password"
+                                 size="sm"
+                                 variant="bordered"
+                                 label="设置密码"
+                                 placeholder="******"
+                                 value={accessPassword}
+                                 onValueChange={setAccessPassword}
+                                 labelPlacement="outside"
+                                 classNames={{
+                                   label: "text-xs font-medium text-[var(--text-color-secondary)]",
+                                   inputWrapper: [
+                                     "h-8",
+                                     "bg-transparent",
+                                     "border border-[var(--border-color)]",
+                                     "dark:border-white/20",
+                                     "hover:border-[var(--primary-color)]/80!",
+                                     "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                     "transition-colors",
+                                     "shadow-none"
+                                   ].join(" "),
+                                   input: "text-xs"
+                                 }}
+                               />
+                               <Input
+                                 type="password"
+                                 size="sm"
+                                 variant="bordered"
+                                 label="确认密码"
+                                 placeholder="******"
+                                 value={accessPasswordConfirm}
+                                 onValueChange={setAccessPasswordConfirm}
+                                 labelPlacement="outside"
+                                 classNames={{
+                                   label: "text-xs font-medium text-[var(--text-color-secondary)]",
+                                   inputWrapper: [
+                                     "h-8",
+                                     "bg-transparent",
+                                     "border border-[var(--border-color)]",
+                                     "dark:border-white/20",
+                                     "hover:border-[var(--primary-color)]/80!",
+                                     "group-data-[focus=true]:border(--primary-color)]!",
+                                     "transition-colors",
+                                     "shadow-none"
+                                   ].join(" "),
+                                   input: "text-xs"
+                                 }}
+                               />
                                {accessPassword !== accessPasswordConfirm && <span className="text-xs text-red-500">密码不一致</span>}
                             </div>
                          )}

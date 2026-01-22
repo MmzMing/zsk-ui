@@ -63,7 +63,7 @@ const PageTransitionWrapper: React.FC<Props> = ({ className, style, children }) 
       <motion.div
         key={location.pathname}
         className={className}
-        style={{ ...style, width: '100%', height: '100%' }}
+        style={{ ...style, width: '100%', height: '100%', pointerEvents: 'auto' }}
         initial="initial"
         animate="animate"
         exit="exit"
