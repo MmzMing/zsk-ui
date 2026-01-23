@@ -78,7 +78,7 @@ export default function ArticleRecommendSection({
     articles.length >= 2 ? articles.length - 2 : articles.length - 1;
 
   return (
-    <section className="space-y-4 px-[var(--content-padding)]">
+    <section className="space-y-8 px-[var(--content-padding)] pb-12">
       <div 
         ref={containerRef}
         className="max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-6 md:gap-8"

@@ -14,7 +14,7 @@ const HsrIntroAnimation: React.FC<HsrIntroAnimationProps> = ({ onComplete }) => 
     if (typeof window === "undefined") return false;
 
     // 0. If coming from Auth pages, ALWAYS show animation (ignoring other checks)
-    const fromAuth = (location.state as any)?.fromAuth;
+    const fromAuth = (location.state as { fromAuth?: boolean })?.fromAuth;
     if (fromAuth) {
       // Clear the state to prevent loop if user refreshes? 
       // Actually state is preserved on refresh in some browsers, but usually okay.
@@ -30,7 +30,7 @@ const HsrIntroAnimation: React.FC<HsrIntroAnimationProps> = ({ onComplete }) => 
         const { token } = JSON.parse(authSession);
         if (token) return false;
       }
-    } catch (e) {
+    } catch {
       // Ignore parse error
     }
 

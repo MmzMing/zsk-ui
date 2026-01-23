@@ -74,8 +74,8 @@ export default function VideoRecommend({ items }: Props) {
   };
 
   return (
-    <section className="min-h-screen flex flex-col justify-center space-y-4 px-2 md:px-[var(--content-padding)]">
-      <div className="max-w-6xl mx-auto w-full flex flex-col items-center space-y-1">
+    <section className="min-h-screen flex flex-col pt-24 pb-12 space-y-8 px-2 md:px-[var(--content-padding)]">
+      <div className="max-w-6xl mx-auto w-full flex flex-col items-center space-y-2">
         <ScrollFloat
           containerClassName="text-lg md:text-xl font-semibold"
           textClassName="tracking-tight"

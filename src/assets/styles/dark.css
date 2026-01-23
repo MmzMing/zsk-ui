@@ -11,11 +11,11 @@
 
   --primary-color: var(--color-primary);
 
-  --bg-color: #020617;
-  --bg-elevated: #02091b;
+  --bg-color: #000000;
+  --bg-elevated: #131415;
   --text-color: #e5e7eb;
   --text-color-secondary: #9ca3af;
-  --border-color: #1f2937;
+  --border-color: #222427;
   --shadow-color: 0 10px 15px -3px rgba(15, 23, 42, 0.5),
     0 4px 6px -4px rgba(15, 23, 42, 0.4);
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useAppStore } from '../../store';
+// import { useAppStore } from '../../store'; // Removed unused
 import gsap from 'gsap';
 import { particleBannerConfig } from '../../config/particleBanner';
 
@@ -241,34 +241,15 @@ const Particles = ({ color, blending }: { color: string; blending: THREE.Blendin
 };
 
 export default function ParticleBanner() {
-  const { themeMode } = useAppStore();
-  const [resolvedMode, setResolvedMode] = React.useState<'light' | 'dark'>('light');
-
-  // 监听主题变化，解析 system 模式
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-
-    const updateMode = () => {
-      if (themeMode === 'system') {
-        setResolvedMode(media.matches ? 'dark' : 'light');
-      } else {
-        setResolvedMode(themeMode as 'light' | 'dark');
-      }
-    };
-
-    updateMode();
-    
-    if (themeMode === 'system') {
-        media.addEventListener('change', updateMode);
-        return () => media.removeEventListener('change', updateMode);
-    }
-  }, [themeMode]);
+  // Always use dark mode for ParticleBanner (white particles)
+  // const { themeMode } = useAppStore(); // Removed unused
+  // const [resolvedMode, setResolvedMode] = React.useState<'light' | 'dark'>('dark'); // Removed unused state
 
   // 根据主题决定粒子颜色和混合模式
   // 暗色模式：白色粒子，叠加混合（发光感）
   // 亮色模式：黑色粒子，普通混合（实心感，因为黑色无法叠加发光）
-  const particleColor = resolvedMode === 'dark' ? '#ffffff' : '#000000';
-  const blendingMode = resolvedMode === 'dark' ? THREE.AdditiveBlending : THREE.NormalBlending;
+  const particleColor = '#ffffff';
+  const blendingMode = THREE.AdditiveBlending;
 
   return (
     <div className="w-full h-full relative">

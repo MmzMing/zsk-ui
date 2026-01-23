@@ -31,7 +31,8 @@ import {
   FiUser,
   FiLogOut,
   FiGlobe,
-  FiArrowUp
+  FiArrowUp,
+  FiCpu
 } from "react-icons/fi";
 
 const launchedAt = new Date("2026-01-01T00:00:00Z").getTime();
@@ -41,10 +42,10 @@ const initialRunDays = Math.max(
 );
 
 const headerNavButtonClass =
-  "inline-flex items-center gap-1 px-1 h-10 text-sm border-b-2 border-transparent transition-colors duration-150";
+  "inline-flex items-center gap-1 px-1 h-14 text-base border-b-2 border-transparent transition-colors duration-150";
 
 const headerIconButtonClass =
-  "inline-flex items-center justify-center rounded-full w-8 h-8 text-[var(--text-color-secondary)] transition-colors transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-sm hover:bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] hover:text-[var(--primary-color)]";
+  "inline-flex items-center justify-center rounded-full w-10 h-10 text-[var(--text-color-secondary)] transition-colors transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-sm hover:bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] hover:text-[var(--primary-color)]";
 
 type NavItem = {
   path: string;
@@ -82,7 +83,7 @@ function BasicLayout() {
       { path: routes.home, label: "首页", icon: FiHome },
       { path: routes.allSearch, label: "知识库", icon: FiBookOpen },
       { path: routes.resume, label: "制作简历", icon: FiFileText },
-      { path: routes.craziness, label: "发癫区", icon: FiMessageSquare },
+      { path: routes.craziness, label: "AI", icon: FiCpu },
       { path: routes.tools, label: "百宝袋", icon: FiBox },
       { path: routes.about, label: "关于博主", icon: FiUser }
     ],
@@ -193,7 +194,7 @@ function BasicLayout() {
             }
             onClick={() => handleNavClick(item.path)}
           >
-            <item.icon className="w-4 h-4" />
+            <item.icon className="w-5 h-5" />
             <span>{item.label}</span>
           </button>
         );
@@ -246,20 +247,20 @@ function BasicLayout() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-color)] text-[var(--text-color)] icon-rotate-global relative">
+    <div className={`min-h-screen flex flex-col icon-rotate-global relative ${location.pathname === routes.home ? 'bg-transparent text-gray-200' : 'bg-[var(--bg-color)] text-[var(--text-color)]'}`}>
       <motion.header
-        className="h-14 flex flex-col border-b border-[var(--border-color)] bg-[var(--bg-elevated)] sticky top-0 z-30"
-        animate={hideHeader ? { y: -80 } : { y: 0 }}
+        className="h-20 flex flex-col border-b border-[var(--border-color)] bg-[var(--bg-elevated)] sticky top-0 z-30"
+        animate={hideHeader ? { y: -100 } : { y: 0 }}
         transition={{ duration: 0.2 }}
       >
-        <div className="flex items-center h-14 px-6">
+        <div className="flex items-center h-20 px-6">
           <div className="flex items-center gap-4 shrink-0">
             <button
               type="button"
-              className="group flex items-center gap-2 text-base font-bold rounded-full px-3 py-1 transition-all duration-150 hover:-translate-y-0.5"
+              className="group flex items-center gap-2 text-xl font-bold rounded-full px-3 py-1 transition-all duration-150 hover:-translate-y-0.5"
               onClick={() => handleNavClick(routes.home)}
             >
-              <div className="relative w-8 h-8">
+              <div className="relative w-10 h-10">
                 <img
                   src="/logo/MyLogo.png"
                   alt="Logo"
@@ -526,133 +527,133 @@ function BasicLayout() {
           </PageTransitionWrapper>
         </div>
       </main>
-      <footer className="border-t border-[var(--border-color)] bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] text-xs">
-        <div className="max-w-6xl mx-auto py-6 md:py-8 flex flex-col gap-6">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-            <div className="md:basis-3/5 space-y-3">
-              <div className="text-sm">
+      <footer className="relative z-20 text-sm bg-black text-gray-400">
+        <div className="max-w-6xl mx-auto py-12 md:py-20 flex flex-col gap-8">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
+            <div className="md:basis-3/5 space-y-4">
+              <div className="text-xl text-gray-200">
                 <span className="font-semibold">© 2026 知识库小破站</span>
                 <span className="ml-2">
                   一个专注知识整理和成长记录的小站。
                 </span>
               </div>
-              <div className="flex flex-wrap gap-4 text-[11px]">
+              <div className="flex flex-wrap gap-4 text-sm text-gray-400">
                 <div className="flex items-center gap-2">
-                  <FiClock className="text-[var(--primary-color)]" />
+                  <FiClock className="w-4 h-4 text-[var(--primary-color)]" />
                   <span>
                     站点已运行{" "}
                     <span className="font-semibold">{initialRunDays}</span> 天
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <FiHelpCircle className="text-[var(--primary-color)]" />
+                  <FiHelpCircle className="w-4 h-4 text-[var(--primary-color)]" />
                   <span>累计访问人数：开发中</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <FiHelpCircle className="text-[var(--primary-color)]" />
+                  <FiHelpCircle className="w-4 h-4 text-[var(--primary-color)]" />
                   <span>累计访问次数：开发中</span>
                 </div>
               </div>
-              <div className="text-[11px] leading-relaxed">
+              <div className="text-xs leading-relaxed text-gray-500">
                 本站内容仅用于个人学习与作品展示，暂未接入真实备案信息。如需商用或引用，请保留来源标注。
               </div>
             </div>
-            <div className="md:basis-2/5 grid grid-cols-3 gap-4 text-[11px]">
-              <div className="space-y-2">
-                <div className="font-semibold text-[var(--text-color)]">
+            <div className="md:basis-2/5 grid grid-cols-3 gap-8 text-sm">
+              <div className="space-y-3">
+                <div className="font-semibold text-gray-200 text-base">
                   支持
                 </div>
                 <button
                   type="button"
-                  className="flex items-center gap-1 hover:text-[var(--primary-color)]"
+                  className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiHelpCircle />
+                  <FiHelpCircle className="w-4 h-4" />
                   <span>问题解答</span>
                 </button>
                 <button
                   type="button"
-                  className="flex items-center gap-1 hover:text-[var(--primary-color)]"
+                  className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiMail />
+                  <FiMail className="w-4 h-4" />
                   <span>联系方式</span>
                 </button>
                 <button
                   type="button"
-                  className="flex items-center gap-1 hover:text-[var(--primary-color)]"
+                  className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiMessageSquare />
+                  <FiMessageSquare className="w-4 h-4" />
                   <span>反馈</span>
                 </button>
                 <button
                   type="button"
-                  className="flex items-center gap-1 hover:text-[var(--primary-color)]"
+                  className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiFileText />
+                  <FiFileText className="w-4 h-4" />
                   <span>更新日志</span>
                 </button>
               </div>
-              <div className="space-y-2">
-                <div className="font-semibold text-[var(--text-color)]">
+              <div className="space-y-3">
+                <div className="font-semibold text-gray-200 text-base">
                   社交
                 </div>
                 <a
                   href="https://github.com/MmzMing/zsk-ui"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 hover:text-[var(--primary-color)]"
+                  className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiGithub />
+                  <FiGithub className="w-4 h-4" />
                   <span>GitHub</span>
                 </a>
                 <button
                   type="button"
-                  className="flex items-center gap-1 hover:text-[var(--primary-color)]"
+                  className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiMessageSquare />
+                  <FiMessageSquare className="w-4 h-4" />
                   <span>QQ</span>
                 </button>
                 <a
                   href="https://twitter.com"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 hover:text-[var(--primary-color)]"
+                  className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiTwitter />
+                  <FiTwitter className="w-4 h-4" />
                   <span>推特</span>
                 </a>
                 <a
                   href="https://discord.com"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 hover:text-[var(--primary-color)]"
+                  className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiMessageSquare />
+                  <FiMessageSquare className="w-4 h-4" />
                   <span>Discord</span>
                 </a>
               </div>
-              <div className="space-y-2">
-                <div className="font-semibold text-[var(--text-color)]">
+              <div className="space-y-3">
+                <div className="font-semibold text-gray-200 text-base">
                   更多
                 </div>
                 <button
                   type="button"
-                  className="flex items-center gap-1 hover:text-[var(--primary-color)]"
+                  className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiShield />
+                  <FiShield className="w-4 h-4" />
                   <span>隐私政策</span>
                 </button>
                 <button
                   type="button"
-                  className="flex items-center gap-1 hover:text-[var(--primary-color)]"
+                  className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiFileText />
+                  <FiFileText className="w-4 h-4" />
                   <span>用户协议</span>
                 </button>
                 <button
                   type="button"
-                  className="flex items-center gap-1 hover:text-[var(--primary-color)]"
+                  className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiBox />
+                  <FiBox className="w-4 h-4" />
                   <span>扩展</span>
                 </button>
               </div>

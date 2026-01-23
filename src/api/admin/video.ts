@@ -88,6 +88,18 @@ export type UploadTaskItem = {
   aiRiskLevel?: "low" | "medium" | "high";
   coverImage?: string;
   createdAt: string;
+  // Watermark
+  watermarkEnabled?: boolean;
+  watermarkConfig?: {
+    type: "text" | "image";
+    text?: string;
+    fontSize?: number;
+    opacity: number;
+    position: string;
+    imageName?: string;
+    scale?: number;
+    autoFit?: boolean;
+  };
 };
 
 export type UploadTaskListParams = {

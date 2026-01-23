@@ -13,6 +13,7 @@ import { routes } from "../../router/routes";
 import HomeBanner from "./components/HomeBanner";
 import HsrIntroAnimation from "../../components/Motion/HsrIntroAnimation";
 import { LazyLoadWrapper } from "../../components/LazyLoadWrapper";
+import { ParticlesBackground } from "../../components/MagicUI/ParticlesBackground";
 
 const VideoRecommend = React.lazy(() => import("./components/VideoRecommend"));
 const HomeFeatures = React.lazy(() => import("./components/HomeFeatures"));
@@ -281,38 +282,67 @@ function HomePage() {
   );
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      <HsrIntroAnimation />
-      <HomeBanner />
+    <div className="min-h-screen relative bg-black">
+      <ParticlesBackground />
+      <div className="relative z-10">
+        <HsrIntroAnimation />
+        <HomeBanner />
 
-      <LazyLoadWrapper minHeight="400px" rootMargin="800px">
-        <Suspense fallback={<LoadingFallback height="400px" />}>
-          <VideoRecommend items={videos} />
-        </Suspense>
-      </LazyLoadWrapper>
+        {/* Opaque Content Block with Stepped Transitions */}
+        <div 
+          className="relative bg-[var(--bg-elevated)] pt-40 pb-40 mt-12 md:mt-24"
+          style={{
+          clipPath: `polygon(
+            0% 0%,
+            calc(55% - 80px) 0%,
+            calc(55% - 80px) 80px,
+            calc(75% - 40px) 80px,
+            calc(75% - 40px) 120px,
+            75% 120px,
+            75% 160px,
+            100% 160px,
+            100% 100%,
+            calc(45% + 80px) 100%, 
+            calc(45% + 80px) calc(100% - 80px), 
+            calc(25% + 40px) calc(100% - 80px), 
+            calc(25% + 40px) calc(100% - 120px), 
+            25% calc(100% - 120px), 
+            25% calc(100% - 160px), 
+            0% calc(100% - 160px)
+          )`
+        }}
+        >
+          
+          <LazyLoadWrapper minHeight="400px" rootMargin="800px">
+            <Suspense fallback={<LoadingFallback height="400px" />}>
+              <VideoRecommend items={videos} />
+            </Suspense>
+          </LazyLoadWrapper>
 
-      <LazyLoadWrapper minHeight="500px" rootMargin="800px">
-        <Suspense fallback={<LoadingFallback height="500px" />}>
-          <HomeFeatures />
-        </Suspense>
-      </LazyLoadWrapper>
+          <LazyLoadWrapper minHeight="500px" rootMargin="800px">
+            <Suspense fallback={<LoadingFallback height="500px" />}>
+              <HomeFeatures />
+            </Suspense>
+          </LazyLoadWrapper>
 
-      <LazyLoadWrapper minHeight="600px" rootMargin="800px">
-        <Suspense fallback={<LoadingFallback height="600px" />}>
-          <ArticleRecommendSection
-            articles={articles}
-            activeArticle={activeArticle}
-            onArticleChange={handleArticleChange}
-            onArticleNavigate={handleArticleNavigate}
-          />
-        </Suspense>
-      </LazyLoadWrapper>
+          <LazyLoadWrapper minHeight="600px" rootMargin="800px">
+            <Suspense fallback={<LoadingFallback height="600px" />}>
+              <ArticleRecommendSection
+                articles={articles}
+                activeArticle={activeArticle}
+                onArticleChange={handleArticleChange}
+                onArticleNavigate={handleArticleNavigate}
+              />
+            </Suspense>
+          </LazyLoadWrapper>
+        </div>
 
-      <LazyLoadWrapper minHeight="400px" rootMargin="800px">
-        <Suspense fallback={<LoadingFallback height="400px" />}>
-          <ReviewSection reviews={reviews} />
-        </Suspense>
-      </LazyLoadWrapper>
+        <LazyLoadWrapper minHeight="400px" rootMargin="800px">
+          <Suspense fallback={<LoadingFallback height="400px" />}>
+            <ReviewSection reviews={reviews} />
+          </Suspense>
+        </LazyLoadWrapper>
+      </div>
     </div>
   );
 }

@@ -3,8 +3,7 @@ import { motion } from "framer-motion";
 import { Button } from "@heroui/react";
 import { useNavigate } from "react-router-dom";
 import { routes } from "../../../router/routes";
-import { ArrowRight, Sparkles, Box, Layers, Zap } from "lucide-react";
-import TextType from "../../../components/Motion/TextType";
+import { ArrowRight, Box, Layers, Zap } from "lucide-react";
 
 const ParticleBanner = React.lazy(() => import("../../../components/Three/ParticleBanner"));
 
@@ -50,7 +49,7 @@ export default function HomeBanner() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
-                className="block text-foreground"
+                className="block text-white"
               >
                 让知识
               </motion.span>
@@ -68,13 +67,13 @@ export default function HomeBanner() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
-              className="text-base md:text-lg text-default-500 leading-relaxed max-w-xl"
+              className="text-base md:text-lg text-gray-400 leading-relaxed max-w-xl"
             >
               打造属于开发者的轻量化知识库与成长记录空间。
               <span className="block mt-2">
-                无论是<span className="text-foreground font-medium">代码片段</span>、
-                <span className="text-foreground font-medium">学习笔记</span>，
-                还是<span className="text-foreground font-medium">灵感草稿</span>，
+                无论是<span className="text-white font-medium">代码片段</span>、
+                <span className="text-white font-medium">学习笔记</span>，
+                还是<span className="text-white font-medium">灵感草稿</span>，
                 都能在这里被温柔地收纳、组织与回顾。
               </span>
             </motion.p>
