@@ -28,6 +28,16 @@ export type VideoDetail = {
     coverUrl: string;
     duration: string;
     views: string;
+    description?: string;
+    authorName?: string;
+    date?: string;
+  }[];
+  // Add episodes for selection
+  episodes: {
+    id: string;
+    title: string;
+    videoUrl?: string; // Optional if we fetch detail on click, but usually selection has url or we fetch by id
+    duration: string;
   }[];
 };
 
@@ -59,11 +69,15 @@ export type CommentItem = {
   likes: number;
   isLiked: boolean;
   replies?: CommentItem[];
+  replyTo?: {
+    id: string;
+    name: string;
+  };
 };
 
 export async function fetchVideoComments(
   id: string,
-  params: { page: number; pageSize: number }
+  params: { page: number; pageSize: number; sort?: 'hot' | 'new' }
 ) {
   return request.get<{ list: CommentItem[]; total: number }>(
     `/content/video/comments/${id}`,
@@ -75,6 +89,13 @@ export async function postVideoComment(data: {
   videoId: string;
   content: string;
   parentId?: string;
+  replyToId?: string;
 }) {
   return request.post<CommentItem>(`/content/video/comment`, data);
+}
+
+export async function toggleCommentLike(commentId: string) {
+  return request.post<{ isLiked: boolean; likes: number }>(
+    `/content/comment/like/${commentId}`
+  );
 }

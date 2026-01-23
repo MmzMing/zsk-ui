@@ -18,7 +18,7 @@ export interface ParticleBannerConfig {
 }
 
 export const particleBannerConfig: ParticleBannerConfig = {
-  particleCount: 8000,    // 设置粒子总数为 8000 个
+  particleCount: 6000,    // 设置粒子总数为 6000 个 (优化性能，减少 WebGL Context Lost 风险)
   fontSize: 172,          // 文字采样字体大小设为 172px
   particleSize: 0.04,     // 粒子渲染尺寸设为 0.04
   sphereRadius: 3,        // 球体半径设为 3

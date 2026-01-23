@@ -44,7 +44,7 @@ export const LazyLoadWrapper = ({
   return (
     <div 
       ref={ref} 
-      className={className}
+      className={`relative ${className}`}
       style={{ minHeight: isVisible ? undefined : minHeight }}
     >
       {isVisible ? children : null}

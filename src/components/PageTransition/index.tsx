@@ -16,11 +16,11 @@ const PageTransition = () => {
           transition={{ duration: 0.5 }}
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[var(--bg-color)]"
         >
-          <div className="mb-8 text-center">
-             <TrueFocusText text="欢迎回来" className="text-2xl font-bold mb-2 block" />
-             <TrueFocusText text="Loading...." className="text-lg text-[var(--text-color-secondary)] block" delay={0.5} />
+          <div className="mb-12 text-center">
+             <TrueFocusText text="欢迎回来" className="text-5xl font-bold mb-4 block" />
+             <TrueFocusText text="Loading...." className="text-2xl text-[var(--text-color-secondary)] block" delay={0.5} />
           </div>
-          <img src="/loading/Loading.gif" alt="Loading" className="w-16 h-16" />
+          <img src="/loading/Loading.gif" alt="Loading" className="w-40 h-40" />
         </motion.div>
       )}
     </AnimatePresence>

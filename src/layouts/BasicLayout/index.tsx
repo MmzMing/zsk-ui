@@ -22,7 +22,6 @@ import {
   FiMessageSquare,
   FiClock,
   FiGithub,
-  FiTwitter,
   FiShield,
   FiFileText,
   FiBox,
@@ -34,6 +33,13 @@ import {
   FiArrowUp,
   FiCpu
 } from "react-icons/fi";
+import {
+  SiX,
+  SiDiscord
+} from "react-icons/si";
+import {
+  FaQq
+} from "react-icons/fa";
 
 const launchedAt = new Date("2026-01-01T00:00:00Z").getTime();
 const initialRunDays = Math.max(
@@ -502,6 +508,8 @@ function BasicLayout() {
           className={
             location.pathname === routes.home
               ? "w-full flex gap-4"
+              : location.pathname.startsWith("/video/")
+              ? "max-w-[1400px] mx-auto flex gap-4"
               : "max-w-6xl mx-auto flex gap-4"
           }
         >
@@ -609,7 +617,7 @@ function BasicLayout() {
                   type="button"
                   className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiMessageSquare className="w-4 h-4" />
+                  <FaQq className="w-4 h-4" />
                   <span>QQ</span>
                 </button>
                 <a
@@ -618,8 +626,8 @@ function BasicLayout() {
                   rel="noreferrer"
                   className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiTwitter className="w-4 h-4" />
-                  <span>推特</span>
+                  <SiX className="w-4 h-4" />
+                  <span>Twitter</span>
                 </a>
                 <a
                   href="https://discord.com"
@@ -627,7 +635,7 @@ function BasicLayout() {
                   rel="noreferrer"
                   className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiMessageSquare className="w-4 h-4" />
+                  <SiDiscord className="w-4 h-4" />
                   <span>Discord</span>
                 </a>
               </div>

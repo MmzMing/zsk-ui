@@ -141,13 +141,13 @@ export default function HomeFeatures() {
   return (
     <section
       ref={sectionRef}
-      className="relative flex items-stretch"
+      className="relative flex items-stretch overflow-visible"
       style={{ height: `${scrollHeight}vh` }}
     >
-      <div className="sticky top-0 flex h-screen w-full items-center justify-center overflow-hidden">
+      <div className="sticky top-0 flex h-screen w-full items-center justify-center overflow-hidden pointer-events-none">
         <motion.div
           style={{ x: trackX }}
-          className="flex h-[70vh] items-center gap-[24vw]"
+          className="flex h-[70vh] items-center gap-[24vw] pointer-events-auto"
         >
           {slides.map((slide, index) => {
             const mainFeature = slide.features[0];

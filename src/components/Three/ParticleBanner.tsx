@@ -255,8 +255,14 @@ export default function ParticleBanner() {
     <div className="w-full h-full relative">
       <Canvas
         camera={{ position: [0, 0, 12], fov: 50 }}
-        dpr={[1, 2]} // 优化高分屏性能
-        gl={{ antialias: true, alpha: true }}
+        dpr={[1, 1.5]} // 降低 DPR 上限以进一步优化性能
+        gl={{ 
+          antialias: false, 
+          alpha: true, 
+          powerPreference: 'high-performance',
+          stencil: false,
+          depth: false
+        }}
       >
         <Particles color={particleColor} blending={blendingMode} />
       </Canvas>

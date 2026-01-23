@@ -24,10 +24,9 @@ export interface VideoPlayerProps {
   autoPlay?: boolean;
   poster?: string;
   title?: string;
+  thumbnails?: string; // VTT file for timeline thumbnails
   chapters?: Chapter[];
   subtitles?: Subtitle[];
   initialTime?: number; // For playback memory
   onClose?: () => void;
-  // Feature flags
-  enableDanmaku?: boolean;
 }

@@ -13,6 +13,7 @@ export type SearchSortKey =
 
 export type SearchResult = {
   id: string;
+  rank?: number;
   type: "video" | "document" | "tool" | "user";
   title: string;
   description: string;

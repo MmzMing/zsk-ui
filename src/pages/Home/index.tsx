@@ -62,7 +62,7 @@ function HomePage() {
 
   const [articles, setArticles] = useState<HomeArticle[]>(() => [
     {
-      id: "a1",
+      id: "1",
       category: "功能介绍",
       title: "轻量化知识库管理：用一个入口收纳所有碎片内容",
       date: "2026-01-02",
@@ -71,7 +71,7 @@ function HomePage() {
       views: "1.5k"
     },
     {
-      id: "a2",
+      id: "2",
       category: "使用技巧",
       title: "从一篇文档开始，搭建属于自己的知识体系",
       date: "2026-01-06",
@@ -80,7 +80,7 @@ function HomePage() {
       views: "980"
     },
     {
-      id: "a3",
+      id: "3",
       category: "案例",
       title: "如何把视频课程拆解成高效可检索的学习笔记",
       date: "2026-01-09",
@@ -89,7 +89,7 @@ function HomePage() {
       views: "2.3k"
     },
     {
-      id: "a4",
+      id: "4",
       category: "前端工程化",
       title: "在前端项目中集成知识库小破站的最佳实践",
       date: "2026-01-12",
@@ -98,7 +98,7 @@ function HomePage() {
       views: "1.1k"
     },
     {
-      id: "a5",
+      id: "5",
       category: "效率提升",
       title: "标签、搜索与多维过滤：三步提升检索效率",
       date: "2026-01-15",
@@ -107,7 +107,7 @@ function HomePage() {
       views: "1.9k"
     },
     {
-      id: "a6",
+      id: "6",
       category: "成长记录",
       title: "用时间轴视角回顾自己的学习与项目历程",
       date: "2026-01-18",
@@ -116,7 +116,7 @@ function HomePage() {
       views: "1.2k"
     },
     {
-      id: "a7",
+      id: "7",
       category: "简历",
       title: "和在线简历编辑联动，一键生成简历素材库",
       date: "2026-01-20",
@@ -125,7 +125,7 @@ function HomePage() {
       views: "1.4k"
     },
     {
-      id: "a8",
+      id: "8",
       category: "社区",
       title: "和其他开发者一起共建知识库模板与组件",
       date: "2026-01-22",
@@ -134,7 +134,7 @@ function HomePage() {
       views: "860"
     },
     {
-      id: "a9",
+      id: "9",
       category: "进阶玩法",
       title: "结合三方服务实现知识库自动化更新",
       date: "2026-01-24",
@@ -143,7 +143,7 @@ function HomePage() {
       views: "620"
     },
     {
-      id: "a10",
+      id: "10",
       category: "规划",
       title: "未来规划：从个人小站走向协作知识空间",
       date: "2026-01-26",
@@ -313,19 +313,19 @@ function HomePage() {
         }}
         >
           
-          <LazyLoadWrapper minHeight="400px" rootMargin="800px">
+          <LazyLoadWrapper minHeight="400px" rootMargin="800px" className="relative">
             <Suspense fallback={<LoadingFallback height="400px" />}>
               <VideoRecommend items={videos} />
             </Suspense>
           </LazyLoadWrapper>
 
-          <LazyLoadWrapper minHeight="500px" rootMargin="800px">
+          <LazyLoadWrapper minHeight="500px" rootMargin="800px" className="relative">
             <Suspense fallback={<LoadingFallback height="500px" />}>
               <HomeFeatures />
             </Suspense>
           </LazyLoadWrapper>
 
-          <LazyLoadWrapper minHeight="600px" rootMargin="800px">
+          <LazyLoadWrapper minHeight="600px" rootMargin="800px" className="relative">
             <Suspense fallback={<LoadingFallback height="600px" />}>
               <ArticleRecommendSection
                 articles={articles}
@@ -337,7 +337,7 @@ function HomePage() {
           </LazyLoadWrapper>
         </div>
 
-        <LazyLoadWrapper minHeight="400px" rootMargin="800px">
+        <LazyLoadWrapper minHeight="400px" rootMargin="800px" className="relative">
           <Suspense fallback={<LoadingFallback height="400px" />}>
             <ReviewSection reviews={reviews} />
           </Suspense>

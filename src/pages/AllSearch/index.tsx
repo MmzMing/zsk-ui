@@ -97,7 +97,8 @@ const timeRangeOptions = [
 
 const mockResults: SearchResult[] = [
   {
-    id: "v1",
+    id: "1",
+    rank: 1,
     type: "video",
     title: "从 0 搭建个人知识库前端：架构与页面规划",
     description: "完整拆解知识库小破站的前台系统设计，从路由到动效一站式讲解。",
@@ -109,7 +110,8 @@ const mockResults: SearchResult[] = [
     timeRange: "1w"
   },
   {
-    id: "d1",
+    id: "1", // 故意与视频 id 相同，测试区分逻辑
+    rank: 2,
     type: "document",
     title: "知识库小破站 · 需求与设计说明文档",
     description: "详细记录项目背景、功能模块、交互设计与技术栈约定，便于长期维护。",
@@ -120,17 +122,19 @@ const mockResults: SearchResult[] = [
     timeRange: "1m"
   },
   {
-    id: "t1",
+    id: "3",
+    rank: 3,
     type: "tool",
     title: "Markdown 一键排版助手",
-    description: "支持标题规范化、代码块高亮、目录生成的 Markdown 清理与排版小工具。",
+    description: "支持标题规范化、代码块 high-light、目录生成的 Markdown 清理与排版小工具。",
     tags: ["百宝袋", "实用工具"],
     avatar: "",
     usageCount: 2100,
     favoriteCount: 312
   },
   {
-    id: "u1",
+    id: "4",
+    rank: 4,
     type: "user",
     title: "知库小站长",
     description: "个人知识库长期建设实践者，专注前端工程化与知识管理。",
@@ -141,7 +145,8 @@ const mockResults: SearchResult[] = [
     levelTag: "前端架构"
   },
   {
-    id: "v2",
+    id: "5",
+    rank: 5,
     type: "video",
     title: "React Bits 动效组件在知识库项目中的落地实践",
     description: "基于 Scroll Stack、Animated Content 等组件重构首页推荐与搜索体验。",
@@ -645,7 +650,7 @@ function AllSearchPage() {
               const thumbnail = item.thumbnail || VIDEO_DEFAULT;
               return (
                 <motion.article
-                  key={item.id}
+                  key={`${item.type}-${item.id}`}
                   className="group flex flex-col gap-2 cursor-pointer"
                   onClick={() => handleResultClick(item)}
                   whileHover={{ y: -4, scale: 1.02 }}
@@ -700,7 +705,7 @@ function AllSearchPage() {
               const thumbnail = item.thumbnail || DOC_DEFAULT;
               return (
                 <motion.article
-                  key={item.id}
+                  key={`${item.type}-${item.id}`}
                   className="group flex flex-col gap-2 cursor-pointer"
                   onClick={() => handleResultClick(item)}
                   whileHover={{ y: -4, scale: 1.02 }}
@@ -749,7 +754,7 @@ function AllSearchPage() {
             if (isTool) {
               return (
                 <motion.article
-                  key={item.id}
+                  key={`${item.type}-${item.id}`}
                   className="flex items-center gap-3 cursor-pointer"
                   onClick={() => handleResultClick(item)}
                   whileHover={{ y: -3, scale: 1.01 }}
@@ -787,7 +792,7 @@ function AllSearchPage() {
             // user
             return (
               <motion.article
-                key={item.id}
+                key={`${item.type}-${item.id}`}
                 className="flex items-center gap-3 cursor-pointer"
                 onClick={() => handleResultClick(item)}
                 whileHover={{ y: -3, scale: 1.01 }}
