@@ -34,7 +34,9 @@ import {
   FiX
 } from "react-icons/fi";
 
-import { fetchReviewQueue, submitReviewResult } from "../../../api/admin/video";
+import { fetchReviewQueue, submitReviewResult, type ReviewQueueItem, type ReviewLogItem } from "@/api/admin/video";
+import { mockReviewLogs } from "@/api/mock/admin/video";
+import { Loading } from "@/components/Loading";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 
@@ -42,16 +44,7 @@ type FinalReviewStatus = Exclude<ReviewStatus, "pending">;
 
 type RiskLevel = "low" | "medium" | "high";
 
-type ReviewItem = {
-  id: string;
-  title: string;
-  uploader: string;
-  category: string;
-  status: ReviewStatus;
-  riskLevel: RiskLevel;
-  isAiChecked: boolean;
-  createdAt: string;
-};
+type ReviewItem = ReviewQueueItem;
 
 type QueueType = "ai" | "manual";
 
@@ -59,91 +52,7 @@ type StatusFilter = "all" | ReviewStatus;
 
 type AuditModule = "video" | "comment" | "violation" | "rules";
 
-type ReviewLogItem = {
-  id: string;
-  videoId: string;
-  title: string;
-  reviewer: string;
-  reviewedAt: string;
-  result: "approved" | "rejected";
-  remark: string;
-};
-
-const initialAiQueueItems: ReviewItem[] = [
-  {
-    id: "rv_ai_001",
-    title: "敏感词检测示例视频 01",
-    uploader: "editor",
-    category: "内容管理",
-    status: "pending",
-    riskLevel: "high",
-    isAiChecked: true,
-    createdAt: "2026-01-18 10:20:01"
-  },
-  {
-    id: "rv_ai_002",
-    title: "评论区易引发争议的案例",
-    uploader: "editor",
-    category: "运营案例",
-    status: "pending",
-    riskLevel: "medium",
-    isAiChecked: true,
-    createdAt: "2026-01-18 10:18:32"
-  }
-];
-
-const initialManualQueueItems: ReviewItem[] = [
-  {
-    id: "rv_manual_001",
-    title: "从 0 搭建个人知识库前端",
-    uploader: "admin",
-    category: "工程实践",
-    status: "pending",
-    riskLevel: "low",
-    isAiChecked: false,
-    createdAt: "2026-01-18 09:58:42"
-  },
-  {
-    id: "rv_manual_002",
-    title: "如何把零散笔记整理成知识库",
-    uploader: "editor",
-    category: "效率方法",
-    status: "approved",
-    riskLevel: "low",
-    isAiChecked: false,
-    createdAt: "2026-01-17 16:21:07"
-  }
-];
-
-const reviewLogs: ReviewLogItem[] = [
-  {
-    id: "log_001",
-    videoId: "rv_manual_001",
-    title: "从 0 搭建个人知识库前端",
-    reviewer: "auditor",
-    reviewedAt: "2026-01-18 10:30:12",
-    result: "approved",
-    remark: "内容健康，适合公开播放。"
-  },
-  {
-    id: "log_002",
-    videoId: "rv_ai_001",
-    title: "敏感词检测示例视频 01",
-    reviewer: "auditor",
-    reviewedAt: "2026-01-18 10:12:45",
-    result: "rejected",
-    remark: "涉及高风险敏感词，建议重新剪辑后再提交。"
-  },
-  {
-    id: "log_003",
-    videoId: "rv_manual_002",
-    title: "如何把零散笔记整理成知识库",
-    reviewer: "auditor",
-    reviewedAt: "2026-01-17 17:05:21",
-    result: "approved",
-    remark: "审核通过，已进入推荐队列。"
-  }
-];
+const reviewLogs: ReviewLogItem[] = mockReviewLogs;
 
 function getRiskLabel(level: RiskLevel) {
   if (level === "low") {
@@ -194,12 +103,12 @@ function VideoReviewPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [uploaderFilter, setUploaderFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [aiQueue, setAiQueue] = useState<ReviewItem[]>(() => initialAiQueueItems);
-  const [manualQueue, setManualQueue] = useState<ReviewItem[]>(() => initialManualQueueItems);
+  const [aiQueue, setAiQueue] = useState<ReviewItem[]>([]);
+  const [manualQueue, setManualQueue] = useState<ReviewItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeReviewItem, setActiveReviewItem] = useState<ReviewItem | null>(null);
   const [logReviewerFilter, setLogReviewerFilter] = useState("");
-  const [, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasSelection = selectedIds.length > 0;
 
@@ -232,19 +141,15 @@ function VideoReviewPage() {
         if (cancelled) {
           return;
         }
-        if (response && response.list) {
+        if (response && response.code === 200 && !response.msg) {
           if (queueType === "ai") {
-            setAiQueue(response.list);
+            setAiQueue(response.data.list);
           } else {
-            setManualQueue(response.list);
+            setManualQueue(response.data.list);
           }
         } else {
-          // 如果接口返回空或失败，保持原有数据或设置为空数组
-          if (queueType === "ai") {
-            setAiQueue(initialAiQueueItems);
-          } else {
-            setManualQueue(initialManualQueueItems);
-          }
+          // 如果接口返回非200或有错误消息，不更新数据，保持原有或显示空
+          // 这里可以选择是否清空，根据需求。这里暂时不做处理，或者可以提示错误
         }
         setSelectedIds([]);
         setPage(1);
@@ -424,7 +329,7 @@ function VideoReviewPage() {
     }
     const ids = selectedIds;
     try {
-      await Promise.all(
+      const results = await Promise.all(
         ids.map(id =>
           submitReviewResult({
             reviewId: id,
@@ -432,30 +337,38 @@ function VideoReviewPage() {
           })
         )
       );
-      if (queueType === "ai") {
-        setAiQueue(previous =>
-          previous.map(item =>
-            ids.includes(item.id)
-              ? {
-                  ...item,
-                  status: "rejected"
-                }
-              : item
-          )
-        );
-      } else {
-        setManualQueue(previous =>
-          previous.map(item =>
-            ids.includes(item.id)
-              ? {
-                  ...item,
-                  status: "rejected"
-                }
-              : item
-          )
-        );
+      
+      const successIds = ids.filter((_, index) => {
+        const res = results[index];
+        return res && res.code === 200 && !res.msg;
+      });
+
+      if (successIds.length > 0) {
+        if (queueType === "ai") {
+          setAiQueue(previous =>
+            previous.map(item =>
+              successIds.includes(item.id)
+                ? {
+                    ...item,
+                    status: "rejected"
+                  }
+                : item
+            )
+          );
+        } else {
+          setManualQueue(previous =>
+            previous.map(item =>
+              successIds.includes(item.id)
+                ? {
+                    ...item,
+                    status: "rejected"
+                  }
+                : item
+            )
+          );
+        }
+        setSelectedIds(prev => prev.filter(id => !successIds.includes(id)));
       }
-      setSelectedIds([]);
     } catch (error) {
       console.error(error);
     }
@@ -785,8 +698,10 @@ function VideoReviewPage() {
                           </TableColumn>
                         </TableHeader>
                         <TableBody
-                          items={pageItems}
+                          items={loading ? [] : pageItems}
                           emptyContent="当前队列暂无待处理的视频，新的审核任务会自动进入对应队列。"
+                          isLoading={loading}
+                          loadingContent={<Loading height={200} text="加载审核队列中..." />}
                         >
                           {item => (
                             <TableRow key={item.id}>
@@ -969,8 +884,10 @@ function VideoReviewPage() {
                           </TableColumn>
                         </TableHeader>
                         <TableBody
-                          items={filteredReviewLogs}
+                          items={loading ? [] : filteredReviewLogs}
                           emptyContent="暂无审核日志记录。"
+                          isLoading={loading}
+                          loadingContent={<Loading height={200} text="获取审核日志中..." />}
                         >
                           {item => (
                             <TableRow key={item.id}>
@@ -1348,7 +1265,7 @@ function VideoReviewPage() {
                           <div className="space-y-3">
                             <FiPlayCircle className="mx-auto text-5xl text-white/30" />
                             <div className="text-xs text-white/50">
-                              视频流加载中...
+                              视频流正在加载
                             </div>
                           </div>
                         </Card>

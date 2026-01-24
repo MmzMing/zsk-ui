@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Button,
   Card,
@@ -16,25 +16,22 @@ import {
   addToast
 } from "@heroui/react";
 import { FiCopy, FiEdit2, FiKey, FiLayers, FiPlus, FiTrash2, FiX } from "react-icons/fi";
+import { Loading } from "@/components/Loading";
 
-type RoleItem = {
-  id: string;
-  name: string;
-  description: string;
-  createdAt: string;
-  permissions: string[];
-};
+import {
+  type RoleItem,
+  type PermissionGroup,
+  fetchRoleList,
+  createRole,
+  updateRole,
+  deleteRole
+} from "@/api/admin/personnel";
+import { mockPermissionGroups } from "@/api/mock/admin/personnel";
 
 type RoleFormState = {
   id?: string;
   name: string;
   description: string;
-};
-
-type PermissionGroup = {
-  id: string;
-  label: string;
-  items: { id: string; label: string }[];
 };
 
 type PermissionAssignState = {
@@ -43,67 +40,7 @@ type PermissionAssignState = {
   permissions: string[];
 };
 
-const permissionGroups: PermissionGroup[] = [
-  {
-    id: "dashboard",
-    label: "仪表盘",
-    items: [
-      { id: "dashboard:view", label: "查看仪表盘总览" },
-      { id: "dashboard:analysis", label: "查看分析页" }
-    ]
-  },
-  {
-    id: "ops",
-    label: "系统运维",
-    items: [
-      { id: "ops:monitor", label: "查看系统监控" },
-      { id: "ops:cache", label: "查看缓存监控与列表" },
-      { id: "ops:log", label: "查看系统日志" }
-    ]
-  },
-  {
-    id: "personnel",
-    label: "人员管理",
-    items: [
-      { id: "personnel:user", label: "管理用户" },
-      { id: "personnel:menu", label: "管理菜单" },
-      { id: "personnel:role", label: "管理角色与权限" }
-    ]
-  }
-];
-
-const initialRoles: RoleItem[] = [
-  {
-    id: "r_001",
-    name: "系统管理员",
-    description: "拥有后台所有模块的访问与配置权限，用于项目初始配置阶段。",
-    createdAt: "2026-01-10 09:00:00",
-    permissions: [
-      "dashboard:view",
-      "dashboard:analysis",
-      "ops:monitor",
-      "ops:cache",
-      "ops:log",
-      "personnel:user",
-      "personnel:menu",
-      "personnel:role"
-    ]
-  },
-  {
-    id: "r_002",
-    name: "内容运营",
-    description: "负责日常内容上架与调整，可查看核心监控数据，但无法修改系统配置。",
-    createdAt: "2026-01-11 13:20:15",
-    permissions: ["dashboard:view", "dashboard:analysis", "ops:log"]
-  },
-  {
-    id: "r_003",
-    name: "审核员",
-    description: "专注审核内容与处理违规记录，避免误操作系统级配置。",
-    createdAt: "2026-01-12 16:45:30",
-    permissions: ["dashboard:view", "ops:log"]
-  }
-];
+const permissionGroups: PermissionGroup[] = mockPermissionGroups;
 
 function createEmptyRoleForm(): RoleFormState {
   return {
@@ -113,7 +50,9 @@ function createEmptyRoleForm(): RoleFormState {
 }
 
 function RolePage() {
-  const [roles, setRoles] = useState<RoleItem[]>(() => initialRoles);
+  const [roles, setRoles] = useState<RoleItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [roleForm, setRoleForm] = useState<RoleFormState | null>(null);
@@ -129,20 +68,32 @@ function RolePage() {
 
   const hasSelection = selectedIds.length > 0;
 
+  // 获取角色列表
+  const loadRoleList = React.useCallback(async () => {
+    setIsLoading(true);
+    const res = await fetchRoleList({ page, pageSize });
+    if (res.code === 200 && !res.msg) {
+      setRoles(res.data.list);
+      setTotal(res.data.total);
+    }
+    setIsLoading(false);
+  }, [page]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadRoleList();
+  }, [loadRoleList]);
+
   const totalPermissionCount = useMemo(
     () => new Set(permissionGroups.flatMap(group => group.items.map(item => item.id))).size,
     []
   );
 
-  const total = roles.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const pageItems = roles.slice(startIndex, endIndex);
+
   const handleTableSelectionChange = (keys: "all" | Set<React.Key>) => {
     if (keys === "all") {
-      setSelectedIds(pageItems.map(item => item.id));
+      setSelectedIds(roles.map(item => item.id));
       return;
     }
     setSelectedIds(Array.from(keys).map(String));
@@ -178,7 +129,7 @@ function RolePage() {
     setRoleFormError("");
   };
 
-  const handleSubmitRoleForm = () => {
+  const handleSubmitRoleForm = async () => {
     if (!roleForm) {
       return;
     }
@@ -187,55 +138,44 @@ function RolePage() {
       setRoleFormError("角色名称为必填项，请补充后再提交。");
       return;
     }
-    const exists = roles.some(item => item.name === trimmedName && item.id !== roleForm.id);
-    if (exists) {
-      setRoleFormError("角色名称已存在，请保证唯一性。");
-      return;
-    }
+
     if (roleFormMode === "create") {
-      const nextId = `r_${(roles.length + 1).toString().padStart(3, "0")}`;
-      const now = new Date();
-      const createdAt = `${now.getFullYear()}-${(now.getMonth() + 1)
-        .toString()
-        .padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now
-        .getSeconds()
-        .toString()
-        .padStart(2, "0")}`;
-      const next: RoleItem = {
-        id: nextId,
+      const res = await createRole({
         name: trimmedName,
         description: roleForm.description.trim(),
-        createdAt,
         permissions: []
-      };
-      setRoles(previous => [next, ...previous]);
-      addToast({
-        title: "角色新增成功",
-        description: `已新增角色「${next.name}」，实际保存逻辑待接入角色接口。`,
-        color: "success"
       });
-    } else {
-      setRoles(previous =>
-        previous.map(item =>
-          item.id === roleForm.id
-            ? { ...item, name: trimmedName, description: roleForm.description.trim() }
-            : item
-        )
-      );
-      addToast({
-        title: "角色更新成功",
-        description: `已更新角色「${trimmedName}」的信息，实际保存逻辑待接入角色接口。`,
-        color: "success"
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "角色新增成功",
+          description: `已新增角色「${trimmedName}」。`,
+          color: "success"
+        });
+        loadRoleList();
+        setRoleForm(null);
+        setRoleFormError("");
+      }
+    } else if (roleForm.id) {
+      const res = await updateRole({
+        id: roleForm.id,
+        name: trimmedName,
+        description: roleForm.description.trim(),
+        permissions: [] // 编辑时不改变权限，通常由权限分配功能处理
       });
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "角色更新成功",
+          description: `已更新角色「${trimmedName}」的信息。`,
+          color: "success"
+        });
+        loadRoleList();
+        setRoleForm(null);
+        setRoleFormError("");
+      }
     }
-    setRoleForm(null);
-    setRoleFormError("");
   };
 
-  const handleBatchDeleteRoles = () => {
+  const handleBatchDeleteRoles = async () => {
     if (!hasSelection) {
       return;
     }
@@ -245,31 +185,43 @@ function RolePage() {
     if (!confirmed) {
       return;
     }
-    setRoles(previous => previous.filter(item => !selectedIds.includes(item.id)));
-    setPage(1);
-    const count = selectedIds.length;
-    setSelectedIds([]);
-    addToast({
-      title: "批量删除成功",
-      description: `已从当前配置中删除 ${count} 个角色，实际删除逻辑待接入角色接口。`,
-      color: "success"
-    });
+    // 循环删除或调用批量接口（如果API支持）
+    let successCount = 0;
+    for (const id of selectedIds) {
+      const res = await deleteRole(id);
+      if (res.code === 200 && !res.msg) {
+        successCount++;
+      }
+    }
+    
+    if (successCount > 0) {
+      addToast({
+        title: successCount === selectedIds.length ? "批量删除成功" : `部分删除成功 (${successCount}/${selectedIds.length})`,
+        description: `已删除 ${successCount} 个角色。`,
+        color: successCount === selectedIds.length ? "success" : "warning"
+      });
+      setSelectedIds([]);
+      loadRoleList();
+    }
   };
 
-  const handleDeleteSingleRole = (role: RoleItem) => {
+  const handleDeleteSingleRole = async (role: RoleItem) => {
     const confirmed = window.confirm(
       `确定要删除角色「${role.name}」吗？建议在确认无用户绑定该角色后再执行。`
     );
     if (!confirmed) {
       return;
     }
-    setRoles(previous => previous.filter(item => item.id !== role.id));
-    setSelectedIds(previous => previous.filter(id => id !== role.id));
-    addToast({
-      title: "角色删除成功",
-      description: `已删除角色「${role.name}」，实际删除逻辑待接入角色接口。`,
-      color: "success"
-    });
+    const res = await deleteRole(role.id);
+    if (res.code === 200 && !res.msg) {
+      addToast({
+        title: "角色删除成功",
+        description: `已删除角色「${role.name}」。`,
+        color: "success"
+      });
+      loadRoleList();
+      setSelectedIds(previous => previous.filter(id => id !== role.id));
+    }
   };
 
   const handleOpenAssignPermission = (role: RoleItem) => {
@@ -280,26 +232,33 @@ function RolePage() {
     });
   };
 
-  const handleConfirmAssignPermission = () => {
+  const handleConfirmAssignPermission = async () => {
     if (!permissionAssign) {
       return;
     }
-    setRoles(previous =>
-      previous.map(item =>
-        item.id === permissionAssign.roleId
-          ? { ...item, permissions: [...permissionAssign.permissions] }
-          : item
-      )
-    );
-    addToast({
-      title: "权限更新成功",
-      description: `已更新角色「${permissionAssign.name}」的权限配置，实际保存逻辑待接入权限分配接口。`,
-      color: "success"
-    });
-    setPermissionAssign(null);
+    // 对接更新接口
+    try {
+      const res = await updateRole({
+        id: permissionAssign.roleId,
+        name: permissionAssign.name,
+        description: roles.find(r => r.id === permissionAssign.roleId)?.description || "",
+        permissions: [...permissionAssign.permissions]
+      });
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "权限更新成功",
+          description: `已更新角色「${permissionAssign.name}」的权限配置。`,
+          color: "success"
+        });
+        loadRoleList();
+        setPermissionAssign(null);
+      }
+    } catch (error) {
+      console.error("Assign permission failed:", error);
+    }
   };
 
-  const handleCopyRole = (role: RoleItem) => {
+  const handleCopyRole = async (role: RoleItem) => {
     const baseName = `${role.name}（副本）`;
     let name = baseName;
     let index = 1;
@@ -307,30 +266,23 @@ function RolePage() {
       name = `${baseName}${index}`;
       index += 1;
     }
-    const nextId = `r_${(roles.length + 1).toString().padStart(3, "0")}`;
-    const now = new Date();
-    const createdAt = `${now.getFullYear()}-${(now.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now
-      .getHours()
-      .toString()
-      .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now
-      .getSeconds()
-      .toString()
-      .padStart(2, "0")}`;
-    const copy: RoleItem = {
-      id: nextId,
-      name,
-      description: role.description,
-      createdAt,
-      permissions: [...role.permissions]
-    };
-    setRoles(previous => [copy, ...previous]);
-    addToast({
-      title: "角色复制成功",
-      description: `已基于角色「${role.name}」复制生成新角色「${name}」，并继承原有权限。`,
-      color: "success"
-    });
+    try {
+      const res = await createRole({
+        name,
+        description: role.description,
+        permissions: [...role.permissions]
+      });
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "角色复制成功",
+          description: `已成功复制角色「${role.name}」并创建新角色「${name}」。`,
+          color: "success"
+        });
+        loadRoleList();
+      }
+    } catch (error) {
+      console.error("Copy role failed:", error);
+    }
   };
 
   const handleBatchCopy = () => {
@@ -427,107 +379,105 @@ function RolePage() {
                   角色名称
                 </TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">
-                  描述
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  创建时间
+                  角色描述
                 </TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">
                   权限数
+                </TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">
+                  创建时间
                 </TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">
                   操作
                 </TableColumn>
               </TableHeader>
               <TableBody
-                items={pageItems}
-                emptyContent="当前暂无角色配置，可通过上方按钮新增角色。"
+                items={roles}
+                emptyContent={isLoading ? " " : "未找到角色配置，点击「新增角色」开始配置。"}
+                loadingContent={<Loading />}
+                isLoading={isLoading}
               >
-                {role => {
-                  return (
-                    <TableRow
-                      key={role.id}
-                      className="border-t border-[var(--border-color)] hover:bg-[var(--bg-elevated)]/60"
-                    >
-                      <TableCell className="px-3 py-2">
-                        <div className="flex flex-col gap-0.5">
-                          <span>{role.name}</span>
-                          <span className="text-xs text-[var(--text-color-secondary)]">
-                            ID: {role.id}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-3 py-2">
-                        <span className="line-clamp-2">
-                          {role.description || "-"}
+                {role => (
+                  <TableRow
+                    key={role.id}
+                    className="border-t border-[var(--border-color)] hover:bg-[var(--bg-elevated)]/60"
+                  >
+                    <TableCell className="px-3 py-2">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-xs break-all">{role.name}</span>
+                        <span className="text-xs text-[var(--text-color-secondary)]">
+                          ID: {role.id}
                         </span>
-                      </TableCell>
-                      <TableCell className="px-3 py-2">
-                        <span>{role.createdAt}</span>
-                      </TableCell>
-                      <TableCell className="px-3 py-2">
-                        <Chip size="sm" variant="flat" className="text-xs">
-                          {role.permissions.length} / {totalPermissionCount}
-                        </Chip>
-                      </TableCell>
-                      <TableCell className="px-3 py-2">
-                        <div className="flex flex-wrap gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="light"
-                            className="h-7 text-xs"
-                            startContent={<FiEdit2 className="text-xs" />}
-                            onPress={() => handleOpenEdit(role)}
-                          >
-                            编辑
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="light"
-                            className="h-7 text-xs"
-                            startContent={<FiKey className="text-xs" />}
-                            onPress={() => handleOpenAssignPermission(role)}
-                          >
-                            分配权限
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="light"
-                            className="h-7 text-xs"
-                            startContent={<FiCopy className="text-xs" />}
-                            onPress={() => handleCopyRole(role)}
-                          >
-                            复制角色
-                          </Button>
-                          <Button
-                            size="sm"
-                            color="danger"
-                            variant="light"
-                            className="h-7 text-xs"
-                            startContent={<FiTrash2 className="text-xs" />}
-                            onPress={() => handleDeleteSingleRole(role)}
-                          >
-                            删除
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                }}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
+                      <span className="line-clamp-1 max-w-[200px]">{role.description}</span>
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
+                      <Chip size="sm" variant="flat" color="primary" className="text-xs">
+                        {role.permissions.length} / {totalPermissionCount}
+                      </Chip>
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
+                      <span>{role.createdAt}</span>
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="light"
+                          className="h-7 text-xs"
+                          startContent={<FiEdit2 className="text-xs" />}
+                          onPress={() => handleOpenEdit(role)}
+                        >
+                          编辑
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="light"
+                          className="h-7 text-xs"
+                          startContent={<FiLayers className="text-xs" />}
+                          onPress={() => handleOpenAssignPermission(role)}
+                        >
+                          分配权限
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="light"
+                          className="h-7 text-xs"
+                          startContent={<FiCopy className="text-xs" />}
+                          onPress={() => handleCopyRole(role)}
+                        >
+                          复制
+                        </Button>
+                        <Button
+                          size="sm"
+                          color="danger"
+                          variant="light"
+                          className="h-7 text-xs"
+                          startContent={<FiTrash2 className="text-xs" />}
+                          onPress={() => handleDeleteSingleRole(role)}
+                        >
+                          删除
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
           <div className="mt-3 flex flex-col gap-2 text-xs md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <span>
-                共 {total} 个角色，当前第 {currentPage} / {totalPages} 页
+                共 {total} 个角色，当前第 {page} / {totalPages} 页
               </span>
             </div>
             <div className="flex items-center gap-2">
               <Pagination
                 size="sm"
                 total={totalPages}
-                page={currentPage}
+                page={page}
                 onChange={handlePageChange}
                 showControls
               />
@@ -758,7 +708,7 @@ function RolePage() {
                                 }}
                                 className="text-xs"
                               >
-                                {item.label}
+                                {item.name}
                               </Checkbox>
                             );
                           })}

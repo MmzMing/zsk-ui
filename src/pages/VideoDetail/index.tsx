@@ -1,100 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Avatar, Textarea, Accordion, AccordionItem, Spinner, addToast, Tabs, Tab } from "@heroui/react";
-import { FiThumbsUp, FiStar, FiShare2, FiMessageSquare, FiUserPlus, FiCheck, FiX } from "react-icons/fi";
+import { Button, Avatar, Textarea, Accordion, AccordionItem, addToast } from "@heroui/react";
+import { FiThumbsUp, FiStar, FiShare2, FiMessageSquare, FiUserPlus, FiX } from "react-icons/fi";
 import { routes } from "../../router/routes";
 import { useUserStore } from "../../store";
+import { Loading } from "../../components/Loading";
 import { 
   fetchVideoDetail, 
   toggleVideoLike, 
   toggleVideoFavorite, 
-  type VideoDetail,
+  toggleCommentLike,
+  fetchVideoComments,
+  postVideoComment,
+  type VideoDetail, 
   type CommentItem 
 } from "../../api/front/video";
 import { toggleFollowUser } from "../../api/front/user";
 import VideoPlayer from "../../components/VideoPlayer";
-
-// Mock data for DEV environment
-const mockComments: CommentItem[] = [
-  {
-    id: "c1",
-    content: "这个教程太棒了！期待更新！",
-    author: { id: "u1", name: "前端小菜鸡", avatar: "" },
-    createdAt: "2026-01-10 10:00",
-    likes: 12,
-    isLiked: false,
-    replies: [
-      {
-        id: "c1-r1",
-        content: "确实，讲得很清晰",
-        author: { id: "u2", name: "路人甲", avatar: "" },
-        createdAt: "2026-01-10 10:05",
-        likes: 2,
-        isLiked: false
-      }
-    ]
-  },
-  {
-    id: "c2",
-    content: "HeroUI 的组件确实好用，设计感很强。",
-    author: { id: "u3", name: "UI设计师", avatar: "" },
-    createdAt: "2026-01-11 14:20",
-    likes: 8,
-    isLiked: true
-  }
-];
-
-const mockVideoData: VideoDetail = {
-  id: "1",
-  title: "从 0 搭建个人知识库前端",
-  description: "本系列教程将带你从零开始搭建一个现代化的个人知识库前端项目。涵盖技术选型、架构设计、组件开发等全方位内容。\n\n第一集：项目初始化与基础配置\n第二集：路由系统设计与实现\n第三集：布局组件开发与HeroUI集成",
-  videoUrl: "/videoTest/【鸣潮_千咲】_Luna - Unveil feat.ねんね.mp4",
-  coverUrl: "",
-  author: {
-    id: "1",
-    name: "知库小站长",
-    avatar: "",
-    fans: "1.2k",
-    isFollowing: false
-  },
-  stats: {
-    views: "1.2k",
-    likes: 342,
-    favorites: 120,
-    date: "2026-01-05",
-    isLiked: false,
-    isFavorited: false
-  },
-  tags: ["React", "Vite", "HeroUI"],
-  recommendations: [
-    {
-      id: "2",
-      title: "HeroUI 组件库深度解析",
-      description: "深入了解 HeroUI 组件库的核心原理与最佳实践。",
-      authorName: "知库小站长",
-      coverUrl: "",
-      duration: "12:30",
-      views: "800",
-      date: "2026-01-10"
-    },
-    {
-      id: "3",
-      title: "React 性能优化实战",
-      description: "分享 React 项目中常见的性能优化技巧与实战案例。",
-      authorName: "知库小站长",
-      coverUrl: "",
-      duration: "18:45",
-      views: "2.3k",
-      date: "2026-01-15"
-    }
-  ],
-  episodes: [
-    { id: "1", title: "项目初始化", duration: "10:00" },
-    { id: "2", title: "路由配置", duration: "15:00" },
-    { id: "3", title: "布局组件开发", duration: "20:00" },
-    { id: "4", title: "API 封装与拦截器", duration: "12:00" }
-  ]
-};
+import { mockVideoData, mockVideoComments } from "../../api/mock/front/videoDetail";
 
 // --- Sub-components for responsive layout ---
 
@@ -224,16 +147,81 @@ function VideoDetail() {
     if (!checkLogin() || !video) return;
     const newIsLiked = !video.stats.isLiked;
     const newCount = video.stats.likes + (newIsLiked ? 1 : -1);
-    setVideo(prev => prev ? { ...prev, stats: { ...prev.stats, isLiked: newIsLiked, likes: newCount } } : null);
-    try { await toggleVideoLike(video.id); } catch { /* revert */ }
+    
+    try { 
+      await toggleVideoLike(video.id); 
+      // Update UI after success
+      setVideo(prev => prev ? { ...prev, stats: { ...prev.stats, isLiked: newIsLiked, likes: newCount } } : null);
+      if (newIsLiked) {
+        addToast({ title: "点赞成功", color: "success" });
+      } else {
+        addToast({ title: "取消点赞", color: "warning" });
+      }
+    } catch (err) { 
+      console.error(err);
+    }
   };
 
   const handleFavorite = async () => {
     if (!checkLogin() || !video) return;
     const newIsFavorited = !video.stats.isFavorited;
     const newCount = video.stats.favorites + (newIsFavorited ? 1 : -1);
-    setVideo(prev => prev ? { ...prev, stats: { ...prev.stats, isFavorited: newIsFavorited, favorites: newCount } } : null);
-    try { await toggleVideoFavorite(video.id); } catch { /* revert */ }
+    
+    try { 
+      await toggleVideoFavorite(video.id); 
+      // Update UI after success
+      setVideo(prev => prev ? { ...prev, stats: { ...prev.stats, isFavorited: newIsFavorited, favorites: newCount } } : null);
+      if (newIsFavorited) {
+        addToast({ title: "收藏成功", color: "success" });
+      } else {
+        addToast({ title: "取消收藏", color: "warning" });
+      }
+    } catch (err) { 
+      console.error(err);
+    }
+  };
+
+  const handleCommentLike = async (commentId: string, isReply = false, parentId?: string) => {
+    if (!checkLogin()) return;
+
+    let targetComment: CommentItem | undefined;
+    if (isReply && parentId) {
+      const parent = comments.find(c => c.id === parentId);
+      targetComment = parent?.replies?.find(r => r.id === commentId);
+    } else {
+      targetComment = comments.find(c => c.id === commentId);
+    }
+
+    if (!targetComment) return;
+
+    const newIsLiked = !targetComment.isLiked;
+    const newLikes = targetComment.likes + (newIsLiked ? 1 : -1);
+
+    const updateComments = (list: CommentItem[]): CommentItem[] => {
+      return list.map(c => {
+        if (c.id === (isReply ? parentId : commentId)) {
+          if (isReply) {
+            return {
+              ...c,
+              replies: c.replies?.map(r => r.id === commentId ? { ...r, isLiked: newIsLiked, likes: newLikes } : r)
+            };
+          }
+          return { ...c, isLiked: newIsLiked, likes: newLikes };
+        }
+        return c;
+      });
+    };
+
+    try {
+      await toggleCommentLike(commentId);
+      // Update UI after success
+      setComments(prev => updateComments(prev));
+      if (newIsLiked) {
+        addToast({ title: "点赞成功", color: "success" });
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleShare = () => {
@@ -243,94 +231,119 @@ function VideoDetail() {
 
   const handleFollow = async () => {
     if (!checkLogin() || !video) return;
+    
     const newIsFollowing = !video.author.isFollowing;
-    setVideo(prev => prev ? { ...prev, author: { ...prev.author, isFollowing: newIsFollowing } } : null);
-    try { await toggleFollowUser(video.author.id); } catch { /* revert */ }
+    
+    try { 
+      await toggleFollowUser(video.author.id); 
+      // Update UI after success
+      setVideo(prev => prev ? { 
+        ...prev, 
+        author: { ...prev.author, isFollowing: newIsFollowing } 
+      } : null);
+      if (newIsFollowing) {
+        addToast({ title: "关注成功", color: "success" });
+      } else {
+        addToast({ title: "已取消关注", color: "warning" });
+      }
+    } catch (err) { 
+      console.error(err);
+    }
   };
 
-  const handleCommentSubmit = () => {
+  const handleCommentSubmit = async () => {
     if (!checkLogin()) return;
+    
     if (!commentText.trim()) {
       addToast({ title: "评论内容不能为空", color: "warning" });
       return;
     }
-    // Mock submit
-    const newComment: CommentItem = {
-      id: Date.now().toString(),
-      content: commentText,
-      author: { id: "me", name: "我", avatar: "" },
-      createdAt: "刚刚",
-      likes: 0,
-      isLiked: false,
-      replyTo: replyingTo ? { id: replyingTo.id, name: replyingTo.name } : undefined
-    };
 
-    if (replyingTo?.parentId) {
-      // Reply to a reply or comment
-      setComments(comments.map(c => {
-        if (c.id === replyingTo.parentId) {
-          return {
-            ...c,
-            replies: [...(c.replies || []), newComment]
-          };
-        }
-        return c;
-      }));
-    } else if (replyingTo) {
-      // Reply to a top-level comment
-      setComments(comments.map(c => {
-         if (c.id === replyingTo.id) {
-           return {
-             ...c,
-             replies: [...(c.replies || []), newComment]
-           };
-         }
-         return c;
-      }));
-    } else {
-      // Top-level comment
-      setComments([newComment, ...comments]);
+    try {
+      const data = {
+        videoId: id!,
+        content: commentText.trim(),
+        parentId: replyingTo?.parentId || replyingTo?.id,
+        replyToId: replyingTo?.id
+      };
+
+      const newComment = await postVideoComment(data);
+
+      if (replyingTo?.parentId) {
+        // Reply to a reply or comment
+        setComments(comments.map(c => {
+          if (c.id === replyingTo.parentId) {
+            return {
+              ...c,
+              replies: [...(c.replies || []), newComment]
+            };
+          }
+          return c;
+        }));
+      } else if (replyingTo) {
+        // Reply to a top-level comment
+        setComments(comments.map(c => {
+          if (c.id === replyingTo.id) {
+            return {
+              ...c,
+              replies: [...(c.replies || []), newComment]
+            };
+          }
+          return c;
+        }));
+      } else {
+        // Top-level comment
+        setComments([newComment, ...comments]);
+      }
+      
+      setCommentText("");
+      setReplyingTo(null);
+      addToast({ title: "评论发布成功", color: "success" });
+    } catch (err) {
+      console.error(err);
     }
-    
-    setCommentText("");
-    setReplyingTo(null);
-    addToast({ title: "评论发布成功", color: "success" });
   };
 
   useEffect(() => {
-    // In DEV environment, use mock data directly
-    if (import.meta.env.DEV) {
-      // Simulate network delay slightly or just set immediately
-      const timer = setTimeout(() => {
-        setVideo(mockVideoData);
-        setComments(mockComments);
-        setLoading(false);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-
     if (id) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);
       fetchVideoDetail(id)
         .then((res) => {
-          setVideo(res);
+          // 如果返回 200 但数据为空，或者根据用户要求回退到 mock
+          if (!res || !res.id) {
+            setVideo(mockVideoData);
+          } else {
+            setVideo(res);
+          }
+
+          // 获取评论列表
+          fetchVideoComments(id, { page: 1, pageSize: 20, sort: commentSort })
+            .then(commentsRes => {
+              if (!commentsRes || !commentsRes.list || commentsRes.list.length === 0) {
+                setComments(mockVideoComments);
+              } else {
+                setComments(commentsRes.list);
+              }
+            })
+            .catch(err => {
+              console.error("Fetch video comments failed, using mock:", err);
+              setComments(mockVideoComments);
+            });
         })
         .catch((err) => {
-          console.error("Failed to fetch video detail", err);
+          console.error("Failed to fetch video detail, using mock:", err);
+          setVideo(mockVideoData);
+          setComments(mockVideoComments);
         })
         .finally(() => {
           setLoading(false);
         });
     }
-  }, [id]);
+  }, [id, commentSort]);
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-[calc(100vh-200px)]">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <Loading height="calc(100vh - 200px)" />;
   }
 
   if (!video) {
@@ -542,10 +555,7 @@ function VideoDetail() {
                     <div className="flex items-center gap-6 text-xs text-[var(--text-color-secondary)] pt-1">
                       <div 
                         className="flex items-center gap-1.5 cursor-pointer hover:text-[var(--primary-color)] transition-colors"
-                        onClick={() => {
-                          if (!checkLogin()) return;
-                          // Handle comment like logic here if needed
-                        }}
+                        onClick={() => handleCommentLike(comment.id)}
                       >
                         <FiThumbsUp className={comment.isLiked ? "text-[var(--primary-color)] fill-current" : ""} />
                         <span>{comment.likes}</span>
@@ -582,10 +592,7 @@ function VideoDetail() {
                               <div className="flex items-center gap-4 text-xs text-[var(--text-color-secondary)] pt-0.5">
                                 <div 
                                   className="flex items-center gap-1 cursor-pointer hover:text-[var(--primary-color)]"
-                                  onClick={() => {
-                                    if (!checkLogin()) return;
-                                    // Handle reply like logic here if needed
-                                  }}
+                                  onClick={() => handleCommentLike(reply.id, true, comment.id)}
                                 >
                                   <FiThumbsUp className={reply.isLiked ? "text-[var(--primary-color)] fill-current" : ""} />
                                   <span>{reply.likes}</span>

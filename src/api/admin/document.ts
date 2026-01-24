@@ -1,4 +1,13 @@
 import { request } from "../axios";
+import {
+  mockDocumentUploadTasks,
+  mockDocumentCategories,
+  mockTagOptions,
+  mockDraftList,
+  mockDocumentList,
+  mockReviewQueueItems,
+  mockAdminDocument
+} from "../mock/admin/document";
 
 export type DocumentUploadInitRequest = {
   title: string;
@@ -19,10 +28,15 @@ export type DocumentUploadInitResponse = {
 };
 
 export async function initDocumentUpload(data: DocumentUploadInitRequest) {
-  return request.post<DocumentUploadInitResponse>(
-    "/admin/content/doc/upload/init",
-    data
-  );
+  try {
+    return await request.post<DocumentUploadInitResponse>(
+      "/admin/content/doc/upload/init",
+      data
+    );
+  } catch (error) {
+    console.error("initDocumentUpload error:", error);
+    throw error;
+  }
 }
 
 export type DocumentUploadFinishRequest = {
@@ -32,24 +46,39 @@ export type DocumentUploadFinishRequest = {
 };
 
 export async function finishDocumentUpload(data: DocumentUploadFinishRequest) {
-  return request.post<boolean>(
-    "/admin/content/doc/upload/finish",
-    data
-  );
+  try {
+    return await request.post<boolean>(
+      "/admin/content/doc/upload/finish",
+      data
+    );
+  } catch (error) {
+    console.error("finishDocumentUpload error:", error);
+    throw error;
+  }
 }
 
 export async function removeDocumentUploadTask(id: string) {
-  return request.post<boolean>(
-    "/admin/content/doc/upload/remove",
-    { id }
-  );
+  try {
+    return await request.post<boolean>(
+      "/admin/content/doc/upload/remove",
+      { id }
+    );
+  } catch (error) {
+    console.error("removeDocumentUploadTask error:", error);
+    throw error;
+  }
 }
 
 export async function retryDocumentUploadTask(id: string) {
-  return request.post<boolean>(
-    "/admin/content/doc/upload/retry",
-    { id }
-  );
+  try {
+    return await request.post<boolean>(
+      "/admin/content/doc/upload/retry",
+      { id }
+    );
+  } catch (error) {
+    console.error("retryDocumentUploadTask error:", error);
+    throw error;
+  }
 }
 
 export type DocumentUploadTaskItem = {
@@ -72,17 +101,34 @@ export async function fetchDocumentUploadTaskList(params: {
   pageSize: number;
   status?: string;
 }) {
-  return request.get<DocumentUploadTaskListResponse>(
-    "/admin/content/doc/upload/list",
-    { params }
-  );
+  const isDev = import.meta.env.DEV;
+  try {
+    const res = await request.get<DocumentUploadTaskListResponse>(
+      "/admin/content/doc/upload/list",
+      { params }
+    );
+    if (res) return res;
+    throw new Error("Empty response");
+  } catch (error) {
+    console.error("fetchDocumentUploadTaskList error:", error);
+    if (isDev) {
+      return {
+        list: mockDocumentUploadTasks,
+        total: mockDocumentUploadTasks.length
+      };
+    }
+    throw error;
+  }
 }
+
+export type DocumentStatus = "draft" | "pending" | "approved" | "rejected" | "offline" | "scheduled" | "published";
 
 export type DocumentItem = {
   id: string;
   title: string;
   category: string;
-  status: "draft" | "published" | "offline" | "pending" | "approved" | "rejected" | "scheduled";
+  description?: string;
+  status: DocumentStatus;
   readCount: number;
   likeCount: number;
   commentCount: number;
@@ -93,6 +139,65 @@ export type DocumentItem = {
   pinned?: boolean;
   recommended?: boolean;
 };
+
+export type DocCategory = {
+  id: string;
+  name: string;
+  children?: DocCategory[];
+};
+
+export type DocTag = {
+  label: string;
+  value: string;
+};
+
+export async function fetchDocumentCategories() {
+  const isDev = import.meta.env.DEV;
+  try {
+    const res = await request.get<DocCategory[]>("/admin/content/doc/categories");
+    if (res) return res;
+    throw new Error("Empty response");
+  } catch (error) {
+    console.error("fetchDocumentCategories error:", error);
+    if (isDev) {
+      return mockDocumentCategories;
+    }
+    throw error;
+  }
+}
+
+export async function fetchTagOptions() {
+  const isDev = import.meta.env.DEV;
+  try {
+    const res = await request.get<DocTag[]>("/admin/content/doc/tags");
+    if (res) return res;
+    throw new Error("Empty response");
+  } catch (error) {
+    console.error("fetchTagOptions error:", error);
+    if (isDev) {
+      return mockTagOptions;
+    }
+    throw error;
+  }
+}
+
+export async function fetchDraftList(params: { page: number; pageSize: number; search?: string }) {
+  const isDev = import.meta.env.DEV;
+  try {
+    const res = await request.get<DocumentListResponse>("/admin/content/doc/drafts", { params });
+    if (res) return res;
+    throw new Error("Empty response");
+  } catch (error) {
+    console.error("fetchDraftList error:", error);
+    if (isDev) {
+      return {
+        list: mockDraftList,
+        total: mockDraftList.length
+      };
+    }
+    throw error;
+  }
+}
 
 export type DocumentListResponse = {
   list: DocumentItem[];
@@ -106,31 +211,63 @@ export async function fetchDocumentList(params: {
   category?: string;
   keyword?: string;
 }) {
-  return request.get<DocumentListResponse>(
-    "/admin/content/doc/list",
-    { params }
-  );
+  const isDev = import.meta.env.DEV;
+  try {
+    const res = await request.get<DocumentListResponse>(
+      "/admin/content/doc/list",
+      { params }
+    );
+    if (res) return res;
+    throw new Error("Empty response");
+  } catch (error) {
+    console.error("fetchDocumentList error:", error);
+    if (isDev) {
+      return {
+        list: mockDocumentList,
+        total: mockDocumentList.length
+      };
+    }
+    throw error;
+  }
 }
 
 export async function batchUpdateDocumentStatus(data: {
   ids: string[];
   status: "published" | "offline";
 }) {
-  return request.post<boolean>(
-    "/admin/content/doc/status/batch",
-    data
-  );
+  try {
+    return await request.post<boolean>(
+      "/admin/content/doc/status/batch",
+      data
+    );
+  } catch (error) {
+    console.error("batchUpdateDocumentStatus error:", error);
+    throw error;
+  }
 }
+
+export type ReviewStatus = "pending" | "approved" | "rejected";
+export type RiskLevel = "low" | "medium" | "high";
 
 export type DocumentReviewItem = {
   id: string;
   title: string;
   uploader: string;
   category: string;
-  status: "pending" | "approved" | "rejected";
-  riskLevel: "low" | "medium" | "high";
+  status: ReviewStatus;
+  riskLevel: RiskLevel;
   isAiChecked: boolean;
   createdAt: string;
+};
+
+export type DocumentReviewLogItem = {
+  id: string;
+  docId: string;
+  title: string;
+  reviewer: string;
+  reviewedAt: string;
+  result: "approved" | "rejected";
+  remark: string;
 };
 
 export type DocumentReviewQueueResponse = {
@@ -144,10 +281,24 @@ export async function fetchDocumentReviewQueue(params: {
   status?: string;
   keyword?: string;
 }) {
-  return request.get<DocumentReviewQueueResponse>(
-    "/admin/content/doc/review/list",
-    { params }
-  );
+  const isDev = import.meta.env.DEV;
+  try {
+    const res = await request.get<DocumentReviewQueueResponse>(
+      "/admin/content/doc/review/list",
+      { params }
+    );
+    if (res) return res;
+    throw new Error("Empty response");
+  } catch (error) {
+    console.error("fetchDocumentReviewQueue error:", error);
+    if (isDev) {
+      return {
+        list: mockReviewQueueItems,
+        total: mockReviewQueueItems.length
+      };
+    }
+    throw error;
+  }
 }
 
 export async function submitDocumentReview(data: {
@@ -155,10 +306,15 @@ export async function submitDocumentReview(data: {
   status: "approved" | "rejected";
   reason?: string;
 }) {
-  return request.post<boolean>(
-    "/admin/content/doc/review/submit",
-    data
-  );
+  try {
+    return await request.post<boolean>(
+      "/admin/content/doc/review/submit",
+      data
+    );
+  } catch (error) {
+    console.error("submitDocumentReview error:", error);
+    throw error;
+  }
 }
 
 export type DocumentDetail = {
@@ -166,7 +322,7 @@ export type DocumentDetail = {
   title: string;
   content: string;
   category: string;
-  status: "draft" | "published" | "offline" | "pending";
+  status: DocumentStatus;
   tags: string[];
   cover?: string;
   seo?: {
@@ -177,21 +333,52 @@ export type DocumentDetail = {
 };
 
 export async function getDocumentDetail(id: string) {
-  return request.get<DocumentDetail>(`/admin/content/doc/${id}`);
+  const isDev = import.meta.env.DEV;
+  try {
+    const res = await request.get<DocumentDetail>(`/admin/content/doc/${id}`);
+    if (res) return res;
+    throw new Error("Empty response");
+  } catch (error) {
+    console.error("getDocumentDetail error:", error);
+    if (isDev) {
+      return mockAdminDocument;
+    }
+    throw error;
+  }
 }
 
 export async function createDocument(data: Partial<DocumentDetail>) {
-  return request.post<string>("/admin/content/doc/create", data);
+  try {
+    return await request.post<string>("/admin/content/doc/create", data);
+  } catch (error) {
+    console.error("createDocument error:", error);
+    throw error;
+  }
 }
 
 export async function updateDocument(id: string, data: Partial<DocumentDetail>) {
-  return request.put<boolean>(`/admin/content/doc/${id}`, data);
+  try {
+    return await request.put<boolean>(`/admin/content/doc/${id}`, data);
+  } catch (error) {
+    console.error("updateDocument error:", error);
+    throw error;
+  }
 }
 
 export async function deleteDocument(ids: string[]) {
-  return request.delete("/admin/content/doc/batch", { data: { ids } });
+  try {
+    return await request.delete("/admin/content/doc/batch", { data: { ids } });
+  } catch (error) {
+    console.error("deleteDocument error:", error);
+    throw error;
+  }
 }
 
 export async function moveDocumentCategory(ids: string[], category: string) {
-  return request.post("/admin/content/doc/category/batch", { ids, category });
+  try {
+    return await request.post("/admin/content/doc/category/batch", { ids, category });
+  } catch (error) {
+    console.error("moveDocumentCategory error:", error);
+    throw error;
+  }
 }

@@ -4,76 +4,19 @@ import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
   FiBarChart2,
   FiTrendingUp,
-  FiUsers,
-  FiVideo,
-  FiFileText,
   FiRefreshCw
 } from "react-icons/fi";
 import type { ColumnConfig, LineConfig } from "@ant-design/plots";
 import { Column, Line } from "@ant-design/plots";
 import { useAppStore } from "../../store";
 
-const overviewCards = [
-  {
-    key: "content",
-    label: "文档总数",
-    value: "128",
-    delta: "+12",
-    description: "近 7 天新增文档",
-    icon: FiFileText
-  },
-  {
-    key: "video",
-    label: "视频总数",
-    value: "36",
-    delta: "+3",
-    description: "近 7 天新增视频",
-    icon: FiVideo
-  },
-  {
-    key: "user",
-    label: "活跃用户",
-    value: "842",
-    delta: "+18%",
-    description: "近 30 天活跃占比",
-    icon: FiUsers
-  },
-  {
-    key: "trend",
-    label: "内容访问量",
-    value: "12.4k",
-    delta: "+9%",
-    description: "近 7 天整体访问趋势",
-    icon: FiTrendingUp
-  }
-];
+import { mockOverviewCards, mockTrafficData, mockTrendData } from "../../api/mock/admin/dashboard";
 
-const trafficData: ColumnConfig["data"] = [
-  { type: "文档", date: "周一", value: 320 },
-  { type: "视频", date: "周一", value: 210 },
-  { type: "文档", date: "周二", value: 380 },
-  { type: "视频", date: "周二", value: 240 },
-  { type: "文档", date: "周三", value: 420 },
-  { type: "视频", date: "周三", value: 260 },
-  { type: "文档", date: "周四", value: 460 },
-  { type: "视频", date: "周四", value: 310 },
-  { type: "文档", date: "周五", value: 510 },
-  { type: "视频", date: "周五", value: 340 },
-  { type: "文档", date: "周六", value: 610 },
-  { type: "视频", date: "周六", value: 380 },
-  { type: "文档", date: "周日", value: 580 },
-  { type: "视频", date: "周日", value: 360 }
-];
+const overviewCards = mockOverviewCards;
 
-const trendData: LineConfig["data"] = [
-  { date: "01-01", value: 420 },
-  { date: "01-02", value: 460 },
-  { date: "01-03", value: 510 },
-  { date: "01-04", value: 530 },
-  { date: "01-05", value: 560 },
-  { date: "01-06", value: 590 },
-  { date: "01-07", value: 640 }
-];
+const trafficData: ColumnConfig["data"] = mockTrafficData;
+
+const trendData: LineConfig["data"] = mockTrendData;
 
 function AdminPage() {
   const { themeMode } = useAppStore();

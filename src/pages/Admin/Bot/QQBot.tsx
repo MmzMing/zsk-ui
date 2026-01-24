@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Card, Spinner, Button } from "@heroui/react";
+import { Card, Button } from "@heroui/react";
 import { FiExternalLink } from "react-icons/fi";
+import { Loading } from "../../../components/Loading";
 
 function QQBotPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -32,10 +33,9 @@ function QQBotPage() {
       </div>
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[calc(100vh-220px)] relative">
         {isLoading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-[var(--bg-elevated)]/50 backdrop-blur-sm gap-3">
-             <Spinner size="lg" color="primary" />
-             <p className="text-sm text-[var(--text-color-secondary)]">正在连接 QQBot 控制台...</p>
-          </div>
+          <Loading 
+            className="absolute inset-0 z-10 bg-[var(--bg-elevated)]/50 backdrop-blur-sm"
+          />
         )}
         <div className="w-full h-full rounded-[var(--radius-base)] overflow-hidden">
           <iframe

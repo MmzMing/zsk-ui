@@ -1,40 +1,8 @@
-import React, { useMemo, useRef } from "react";
+import React, { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { routes } from "@/router/routes";
-
-const featureCards = [
-  {
-    title: "轻量化知识库管理工具",
-    description:
-      "为开发者打造高效创作、知识沉淀与协作的一站式平台，支持双模式编辑与版本回溯。",
-    tag: "主要用处"
-  },
-  {
-    title: "多形式教程指南",
-    description:
-      "配套视频教程 + 图文文档，从基础操作到高阶定制全覆盖，新手也能快速上手。",
-    tag: "视频文档"
-  },
-  {
-    title: "随时随地高效访问",
-    description:
-      "全终端响应式设计，移动端支持手势滑动和触屏优化，通勤出差也能高效整理内容。",
-    tag: "移动端适配"
-  },
-  {
-    title: "简历在线编写",
-    description:
-      "在线编写与管理简历，支持多套模板随时切换，一键导出，无水印限制。",
-    tag: "简历在线编写"
-  },
-  {
-    title: "共建开源技术社区",
-    description:
-      "欢迎开发者提交功能建议与代码贡献，一起完善工具生态，拓展技术交流圈。",
-    tag: "加入我们"
-  }
-];
+import { mockHomeSlides } from "@/api/mock/front/home";
 
 export default function HomeFeatures() {
   const navigate = useNavigate();
@@ -45,41 +13,7 @@ export default function HomeFeatures() {
     offset: ["start start", "end end"]
   });
 
-  const slides = useMemo(
-    () => [
-      {
-        id: "slide-1",
-        tag: "核心能力",
-        title: "轻量化知识库管理",
-        description:
-          "为开发者打造的一站式知识沉淀平台，支持双模式编辑、版本回溯与多维标签管理。",
-        features: [featureCards[0], featureCards[2]],
-        featureList: featureCards.slice(0, 3),
-        previewType: "kanban"
-      },
-      {
-        id: "slide-2",
-        tag: "学习资源",
-        title: "多形式教程指南",
-        description:
-          "配套视频教程与图文文档，从基础操作到高阶定制全覆盖，新手也能快速上手。",
-        features: [featureCards[1], featureCards[2]],
-        featureList: featureCards.slice(1, 4),
-        previewType: "list"
-      },
-      {
-        id: "slide-3",
-        tag: "成长连接",
-        title: "简历与开源社区",
-        description:
-          "在线编写简历，一键导出无水印。加入开源社区，与开发者共同完善工具生态。",
-        features: [featureCards[3], featureCards[4]],
-        featureList: featureCards.slice(2, 5),
-        previewType: "profile"
-      }
-    ],
-    []
-  );
+  const slides = mockHomeSlides;
 
   const totalSlides = slides.length;
   const scrollHeight = 400; // 400vh

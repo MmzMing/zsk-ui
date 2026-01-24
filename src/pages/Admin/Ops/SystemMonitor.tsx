@@ -1,65 +1,56 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, Chip, Button, DateRangePicker } from "@heroui/react";
+import { Loading } from "@/components/Loading";
 import type { LineConfig } from "@ant-design/plots";
 import { Line } from "@ant-design/plots";
 import { useAppStore } from "../../../store";
-
-type MonitorMetric = "cpu" | "memory" | "disk" | "network";
-
-type MonitorPoint = {
-  time: string;
-  value: number;
-  metric: MonitorMetric;
-};
-
-const monitorData: MonitorPoint[] = [
-  { metric: "cpu", time: "10:00", value: 32 },
-  { metric: "cpu", time: "10:10", value: 45 },
-  { metric: "cpu", time: "10:20", value: 67 },
-  { metric: "cpu", time: "10:30", value: 81 },
-  { metric: "cpu", time: "10:40", value: 76 },
-  { metric: "memory", time: "10:00", value: 58 },
-  { metric: "memory", time: "10:10", value: 61 },
-  { metric: "memory", time: "10:20", value: 63 },
-  { metric: "memory", time: "10:30", value: 69 },
-  { metric: "memory", time: "10:40", value: 72 },
-  { metric: "disk", time: "10:00", value: 71 },
-  { metric: "disk", time: "10:10", value: 74 },
-  { metric: "disk", time: "10:20", value: 78 },
-  { metric: "disk", time: "10:30", value: 83 },
-  { metric: "disk", time: "10:40", value: 88 },
-  { metric: "network", time: "10:00", value: 23 },
-  { metric: "network", time: "10:10", value: 31 },
-  { metric: "network", time: "10:20", value: 29 },
-  { metric: "network", time: "10:30", value: 35 },
-  { metric: "network", time: "10:40", value: 41 }
-];
+import {
+  fetchSystemMonitorData,
+  fetchSystemMonitorOverview,
+  type MonitorPoint,
+  type MonitorOverview,
+  type MonitorMetric
+} from "../../../api/admin/ops";
 
 function SystemMonitorPage() {
+  const [loading, setLoading] = useState(true);
   const [paused, setPaused] = useState(false);
   const { themeMode } = useAppStore();
+  const [monitorData, setMonitorData] = useState<MonitorPoint[]>([]);
+  const [overview, setOverview] = useState<MonitorOverview>({
+    cpu: 0,
+    memory: 0,
+    disk: 0,
+    network: 0
+  });
 
-  const chartTheme =
-    themeMode === "dark"
-      ? "classicDark"
-      : themeMode === "light"
-        ? "classic"
-        : window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "classicDark"
-          : "classic";
+  const chartTheme = useMemo(() => {
+    if (themeMode === "dark") return "classicDark";
+    if (themeMode === "light") return "classic";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "classicDark" : "classic";
+  }, [themeMode]);
 
-  const overview = useMemo(() => {
-    return {
-      cpu: 0.81,
-      memory: 0.72,
-      disk: 0.88,
-      network: 0.41
-    };
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [data, ov] = await Promise.all([
+          fetchSystemMonitorData(),
+          fetchSystemMonitorOverview()
+        ]);
+        if (data && data.length > 0) setMonitorData(data);
+        if (ov) setOverview(ov);
+      } catch (error) {
+        console.error("加载监控数据失败", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
   }, []);
 
   const hasCritical = overview.cpu >= 0.8 || overview.disk >= 0.8;
 
-  const filteredData = useMemo(() => monitorData, []);
+  const filteredData = useMemo(() => monitorData, [monitorData]);
 
   const lineConfig: LineConfig = useMemo(
     () => ({
@@ -161,141 +152,172 @@ function SystemMonitorPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        {renderOverviewCard("CPU 使用率", overview.cpu, "cpu")}
-        {renderOverviewCard("内存使用率", overview.memory, "memory")}
-        {renderOverviewCard("磁盘使用率", overview.disk, "disk")}
-        {renderOverviewCard("网络使用率", overview.network, "network")}
+      <div className="grid gap-4 md:grid-cols-4 min-h-[120px]">
+        {loading ? (
+          <>
+            <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[120px] flex items-center justify-center">
+              <Loading height={60} />
+            </Card>
+            <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[120px] flex items-center justify-center">
+              <Loading height={60} />
+            </Card>
+            <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[120px] flex items-center justify-center">
+              <Loading height={60} />
+            </Card>
+            <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[120px] flex items-center justify-center">
+              <Loading height={60} />
+            </Card>
+          </>
+        ) : (
+          <>
+            {renderOverviewCard("CPU 使用率", overview.cpu, "cpu")}
+            {renderOverviewCard("内存使用率", overview.memory, "memory")}
+            {renderOverviewCard("磁盘使用率", overview.disk, "disk")}
+            {renderOverviewCard("网络使用率", overview.network, "network")}
+          </>
+        )}
       </div>
 
-      <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-        <div className="p-4 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-sm font-medium">
-                资源使用趋势
+      <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 min-h-[300px]">
+        {loading ? (
+          <Loading height={300} />
+        ) : (
+          <div className="p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium">
+                  资源使用趋势
+                </div>
+                <div className="text-xs text-[var(--text-color-secondary)]">
+                  按时间观察 CPU、内存、磁盘与网络的使用变化，用于定位异常时间段。
+                </div>
               </div>
-              <div className="text-xs text-[var(--text-color-secondary)]">
-                按时间观察 CPU、内存、磁盘与网络的使用变化，用于定位异常时间段。
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-xs">
-                <span className="text-[var(--text-color-secondary)]">时间范围：</span>
-                <DateRangePicker
-                  aria-label="资源使用时间范围"
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 text-xs">
+                  <span className="text-[var(--text-color-secondary)]">时间范围：</span>
+                  <DateRangePicker
+                    aria-label="资源使用时间范围"
+                    size="sm"
+                    variant="bordered"
+                    className="w-56 text-xs"
+                    classNames={{
+                      inputWrapper: [
+                        "h-8",
+                        "bg-transparent",
+                        "border border-[var(--border-color)]",
+                        "dark:border-white/20",
+                        "hover:border-[var(--primary-color)]/80!",
+                        "group-data-[focus=true]:border-[var(--primary-color)]!",
+                        "transition-colors",
+                        "shadow-none"
+                      ].join(" "),
+                      input: "text-xs",
+                      selectorButton: "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors"
+                    }}
+                  />
+                </div>
+                <Button
                   size="sm"
                   variant="bordered"
-                  className="w-56 text-xs"
-                  classNames={{
-                    inputWrapper: [
-                      "h-8",
-                      "bg-transparent",
-                      "border border-[var(--border-color)]",
-                      "dark:border-white/20",
-                      "hover:border-[var(--primary-color)]/80!",
-                      "group-data-[focus=true]:border-[var(--primary-color)]!",
-                      "transition-colors",
-                      "shadow-none"
-                    ].join(" "),
-                    input: "text-xs",
-                    selectorButton: "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors"
-                  }}
-                />
+                  className="text-xs h-7"
+                  onPress={() => setPaused(previous => !previous)}
+                >
+                  {paused ? "恢复实时" : "暂停刷新"}
+                </Button>
               </div>
-              <Button
-                size="sm"
-                variant="bordered"
-                className="text-xs h-7"
-                onPress={() => setPaused(previous => !previous)}
-              >
-                {paused ? "恢复实时" : "暂停刷新"}
-              </Button>
+            </div>
+            <div className="h-72">
+              <Line {...lineConfig} />
             </div>
           </div>
-          <div className="h-72">
-            <Line {...lineConfig} />
-          </div>
-        </div>
+        )}
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-          <div className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">异常告警列表（示例）</div>
-              {hasCritical && (
-                <Chip size="sm" color="danger" variant="flat" className="text-xs">
-                  存在高优先级告警
-                </Chip>
-              )}
-            </div>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between px-2 py-1 rounded-md bg-red-500/10 border border-red-500/40">
-                <div className="flex flex-col">
-                  <span className="font-medium text-red-500">
-                    CPU 使用率持续高于 80%
-                  </span>
-                  <span className="text-xs text-[var(--text-color-secondary)]">
-                    近 10 分钟内多次触发高负载告警，建议排查高耗时任务或扩容节点。
-                  </span>
-                </div>
-                <span className="text-xs text-[var(--text-color-secondary)]">
-                  10:40
-                </span>
-              </div>
-              <div className="flex items-center justify-between px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/40">
-                <div className="flex flex-col">
-                  <span className="font-medium text-yellow-500">
-                    磁盘使用率接近 90%
-                  </span>
-                  <span className="text-xs text-[var(--text-color-secondary)]">
-                    建议清理无用日志或扩容磁盘空间，避免写入失败。
-                  </span>
-                </div>
-                <span className="text-xs text-[var(--text-color-secondary)]">
-                  10:35
-                </span>
-              </div>
-            </div>
+      <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] min-h-[200px]">
+        {loading ? (
+          <div className="col-span-2 h-[200px]">
+            <Loading height={200} />
           </div>
-        </Card>
-        <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-          <div className="p-4 space-y-3 text-xs">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">服务器节点状态（示例）</div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-2 py-1 rounded-md bg-emerald-500/5">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <span>node-01</span>
+        ) : (
+          <>
+            <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">异常告警列表（示例）</div>
+                  {hasCritical && (
+                    <Chip size="sm" color="danger" variant="flat" className="text-xs">
+                      存在高优先级告警
+                    </Chip>
+                  )}
                 </div>
-                <span className="text-xs text-[var(--text-color-secondary)]">
-                  在线 · CPU 52% · 内存 61%
-                </span>
-              </div>
-              <div className="flex items-center justify-between px-2 py-1 rounded-md bg-emerald-500/5">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <span>node-02</span>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between px-2 py-1 rounded-md bg-red-500/10 border border-red-500/40">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-red-500">
+                        CPU 使用率持续高于 80%
+                      </span>
+                      <span className="text-xs text-[var(--text-color-secondary)]">
+                        近 10 分钟内多次触发高负载告警，建议排查高耗时任务或扩容节点。
+                      </span>
+                    </div>
+                    <span className="text-xs text-[var(--text-color-secondary)]">
+                      10:40
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/40">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-yellow-500">
+                        磁盘使用率接近 90%
+                      </span>
+                      <span className="text-xs text-[var(--text-color-secondary)]">
+                        建议清理无用日志或扩容磁盘空间，避免写入失败。
+                      </span>
+                    </div>
+                    <span className="text-xs text-[var(--text-color-secondary)]">
+                      10:35
+                    </span>
+                  </div>
                 </div>
-                <span className="text-xs text-[var(--text-color-secondary)]">
-                  在线 · CPU 48% · 内存 55%
-                </span>
               </div>
-              <div className="flex items-center justify-between px-2 py-1 rounded-md bg-yellow-500/10">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                  <span>node-03</span>
+            </Card>
+            <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+              <div className="p-4 space-y-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">服务器节点状态（示例）</div>
                 </div>
-                <span className="text-xs text-[var(--text-color-secondary)]">
-                  异常 · 网络波动 · 正在重试
-                </span>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-2 py-1 rounded-md bg-emerald-500/5">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <span>node-01</span>
+                    </div>
+                    <span className="text-xs text-[var(--text-color-secondary)]">
+                      在线 · CPU 52% · 内存 61%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between px-2 py-1 rounded-md bg-emerald-500/5">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <span>node-02</span>
+                    </div>
+                    <span className="text-xs text-[var(--text-color-secondary)]">
+                      在线 · CPU 48% · 内存 55%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between px-2 py-1 rounded-md bg-yellow-500/10">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                      <span>node-03</span>
+                    </div>
+                    <span className="text-xs text-[var(--text-color-secondary)]">
+                      异常 · 网络波动 · 正在重试
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </Card>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );

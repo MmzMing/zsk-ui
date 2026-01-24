@@ -3,7 +3,6 @@ export const routes = {
   allSearch: "/allSearch",
   resume: "/resume",
   craziness: "/craziness",
-  tools: "/tools",
   about: "/about",
   login: "/login",
   register: "/register",
@@ -12,5 +11,7 @@ export const routes = {
   admin: "/admin",
   videoDetail: "/video/:id",
   docDetail: "/doc/:id",
+  toolboxDetail: "/toolbox/:id",
+  userDetail: "/user/:id",
   notFound: "/404"
 } as const;

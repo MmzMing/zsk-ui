@@ -1,6 +1,6 @@
 import React, { Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Spinner } from "@heroui/react";
+import { Loading } from "../components/Loading";
 import { routes } from "./routes";
 import BasicLayout from "../layouts/BasicLayout";
 import BlankLayout from "../layouts/BlankLayout";
@@ -11,10 +11,11 @@ const HomePage = React.lazy(() => import("../pages/Home"));
 const AllSearchPage = React.lazy(() => import("../pages/AllSearch"));
 const ResumePage = React.lazy(() => import("../pages/Resume"));
 const CrazinessPage = React.lazy(() => import("../pages/Craziness"));
-const ToolsPage = React.lazy(() => import("../pages/Tools"));
 const AboutPage = React.lazy(() => import("../pages/About"));
 const VideoDetail = React.lazy(() => import("../pages/VideoDetail"));
 const DocDetail = React.lazy(() => import("../pages/DocDetail"));
+const ToolboxDetail = React.lazy(() => import("../pages/ToolboxDetail"));
+const UserDetail = React.lazy(() => import("../pages/UserDetail"));
 const LoginPage = React.lazy(() => import("../pages/Auth/Login"));
 const RegisterPage = React.lazy(() => import("../pages/Auth/Register"));
 const ForgotPasswordPage = React.lazy(() => import("../pages/Auth/ForgotPassword"));
@@ -47,27 +48,22 @@ const WeChatBotPage = React.lazy(() => import("../pages/Admin/Bot/WeChatBot"));
 const DingTalkBotPage = React.lazy(() => import("../pages/Admin/Bot/DingTalkBot"));
 const NotFoundPage = React.lazy(() => import("../pages/NotFound"));
 
-const LoadingFallback = () => (
-  <div className="flex w-full h-screen items-center justify-center">
-    <Spinner size="lg" color="primary" label="Loading..." />
-  </div>
-);
-
 function AppRouter() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<LoadingFallback />}>
+      <Suspense fallback={<Loading height="100vh" />}>
         <Routes>
           <Route element={<BasicLayout />}>
             <Route path={routes.home} element={<HomePage />} />
             <Route path={routes.allSearch} element={<AllSearchPage />} />
             <Route path={routes.resume} element={<ResumePage />} />
             <Route path={routes.craziness} element={<CrazinessPage />} />
-            <Route path={routes.tools} element={<ToolsPage />} />
             <Route path={routes.about} element={<AboutPage />} />
             <Route path={routes.profile} element={<ProfilePage />} />
             <Route path={routes.videoDetail} element={<VideoDetail />} />
             <Route path={routes.docDetail} element={<DocDetail />} />
+            <Route path={routes.toolboxDetail} element={<ToolboxDetail />} />
+            <Route path={routes.userDetail} element={<UserDetail />} />
           </Route>
           <Route element={<AdminLayout />}>
             <Route path={routes.admin} element={<AdminPage />} />

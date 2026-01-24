@@ -35,11 +35,14 @@ import {
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
+import { Loading } from "@/components/Loading";
 
 import {
   fetchDocumentReviewQueue,
-  submitDocumentReview
+  submitDocumentReview,
+  type DocumentReviewLogItem as ReviewLogItem
 } from "../../../api/admin/document";
+import { mockReviewQueueItems, mockDocumentReviewLogs } from "../../../api/mock/admin/document";
 
 type ReviewStatus = "pending" | "approved" | "rejected";
 type FinalReviewStatus = Exclude<ReviewStatus, "pending">;
@@ -60,75 +63,9 @@ type StatusFilter = "all" | ReviewStatus;
 
 type AuditModule = "document" | "comment" | "violation" | "rules";
 
-type ReviewLogItem = {
-  id: string;
-  docId: string;
-  title: string;
-  reviewer: string;
-  reviewedAt: string;
-  result: "approved" | "rejected";
-  remark: string;
-};
+const reviewQueueItems: ReviewItem[] = mockReviewQueueItems;
 
-const reviewQueueItems: ReviewItem[] = [
-  {
-    id: "doc_rv_001",
-    title: "如何把视频课程拆解成学习笔记",
-    uploader: "editor",
-    category: "效率方法",
-    status: "pending",
-    riskLevel: "medium",
-    createdAt: "2026-01-18 10:20:01"
-  },
-  {
-    id: "doc_rv_002",
-    title: "知识库信息架构最佳实践",
-    uploader: "admin",
-    category: "系统设计",
-    status: "pending",
-    riskLevel: "high",
-    createdAt: "2026-01-18 10:18:32"
-  },
-  {
-    id: "doc_rv_003",
-    title: "Markdown 使用规范整理",
-    uploader: "editor",
-    category: "前端基础",
-    status: "approved",
-    riskLevel: "low",
-    createdAt: "2026-01-17 16:21:07"
-  }
-];
-
-const reviewLogs: ReviewLogItem[] = [
-  {
-    id: "doc_log_001",
-    docId: "d_001",
-    title: "如何把视频课程拆解成学习笔记",
-    reviewer: "auditor",
-    reviewedAt: "2026-01-18 10:30:12",
-    result: "approved",
-    remark: "内容结构清晰，示例贴近实际使用场景，适合推荐给新用户。"
-  },
-  {
-    id: "doc_log_002",
-    docId: "d_003",
-    title: "知识库信息架构最佳实践",
-    reviewer: "auditor",
-    reviewedAt: "2026-01-18 10:12:45",
-    result: "rejected",
-    remark: "部分章节概念过于抽象，建议补充更具体的案例与图示。"
-  },
-  {
-    id: "doc_log_003",
-    docId: "d_005",
-    title: "用知识库管理你的职业成长",
-    reviewer: "auditor",
-    reviewedAt: "2026-01-17 17:05:21",
-    result: "approved",
-    remark: "审核通过，建议搭配相关视频内容一起推荐，提升整体转化。"
-  }
-];
+const reviewLogs: ReviewLogItem[] = mockDocumentReviewLogs;
 
 function getRiskLabel(level: RiskLevel) {
   if (level === "low") {
@@ -171,6 +108,7 @@ function getStatusColor(status: ReviewStatus) {
 }
 
 function DocumentReviewPage() {
+  const [loading, setLoading] = useState(false);
   const [activeModule, setActiveModule] = useState<AuditModule>("document");
   const [tab, setTab] = useState<"queue" | "logs">("queue");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -178,7 +116,7 @@ function DocumentReviewPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [uploaderFilter, setUploaderFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [queue, setQueue] = useState<ReviewItem[]>(() => reviewQueueItems);
+  const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeReviewItem, setActiveReviewItem] = useState<ReviewItem | null>(null);
   const [logReviewerFilter, setLogReviewerFilter] = useState("");
@@ -189,6 +127,7 @@ function DocumentReviewPage() {
 
   useEffect(() => {
     async function load() {
+      setLoading(true);
       try {
         const data = await fetchDocumentReviewQueue({
           page,
@@ -203,6 +142,8 @@ function DocumentReviewPage() {
         }
       } catch {
         setQueue(reviewQueueItems);
+      } finally {
+        setLoading(false);
       }
     }
     load();
@@ -617,7 +558,7 @@ function DocumentReviewPage() {
                           size="sm"
                           variant="light"
                           className="h-8 text-xs"
-                          isDisabled={!hasSelection}
+                          isDisabled={!hasSelection || loading || isSubmitting}
                           startContent={<FiCheck className="text-xs" />}
                           onPress={handleBatchApprove}
                         >
@@ -628,7 +569,7 @@ function DocumentReviewPage() {
                           variant="light"
                           color="danger"
                           className="h-8 text-xs"
-                          isDisabled={!hasSelection}
+                          isDisabled={!hasSelection || loading || isSubmitting}
                           startContent={<FiX className="text-xs" />}
                           onPress={handleBatchReject}
                         >
@@ -669,8 +610,10 @@ function DocumentReviewPage() {
                           </TableColumn>
                         </TableHeader>
                         <TableBody
-                          items={pageItems}
+                          items={loading ? [] : pageItems}
                           emptyContent="当前队列暂无待处理的文档，新的审核任务会自动进入队列。"
+                          isLoading={loading}
+                          loadingContent={<Loading height={200} text="获取审核队列中..." />}
                         >
                           {item => (
                             <TableRow key={item.id}>
@@ -721,6 +664,7 @@ function DocumentReviewPage() {
                                     color="primary"
                                     className="h-7 text-xs"
                                     onPress={() => setActiveReviewItem(item)}
+                                    isDisabled={loading || isSubmitting}
                                   >
                                     审核
                                   </Button>
@@ -730,6 +674,7 @@ function DocumentReviewPage() {
                                     color="warning"
                                     className="h-7 text-xs"
                                     startContent={<FiFlag className="text-xs" />}
+                                    isDisabled={loading || isSubmitting}
                                   >
                                     标记可疑
                                   </Button>
@@ -738,6 +683,7 @@ function DocumentReviewPage() {
                                     variant="light"
                                     className="h-7 text-xs"
                                     startContent={<FiMessageSquare className="text-xs" />}
+                                    isDisabled={loading || isSubmitting}
                                   >
                                     评论占位
                                   </Button>
@@ -748,6 +694,7 @@ function DocumentReviewPage() {
                                     className="h-7 text-xs"
                                     startContent={<FiCheck className="text-xs" />}
                                     onPress={() => handleUpdateStatus(item.id, "approved")}
+                                    isDisabled={loading || isSubmitting}
                                   >
                                     快速通过
                                   </Button>
@@ -758,6 +705,7 @@ function DocumentReviewPage() {
                                     className="h-7 text-xs"
                                     startContent={<FiX className="text-xs" />}
                                     onPress={() => handleUpdateStatus(item.id, "rejected")}
+                                    isDisabled={loading || isSubmitting}
                                   >
                                     快速驳回
                                   </Button>
@@ -832,8 +780,10 @@ function DocumentReviewPage() {
                           </TableColumn>
                         </TableHeader>
                         <TableBody
-                          items={filteredReviewLogs}
+                          items={loading ? [] : filteredReviewLogs}
                           emptyContent="暂无审核日志记录。"
+                          isLoading={loading}
+                          loadingContent={<Loading height={200} text="获取审核日志中..." />}
                         >
                           {item => (
                             <TableRow key={item.id}>

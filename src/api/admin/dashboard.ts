@@ -1,4 +1,4 @@
-import { request } from "../axios";
+import { userRequest as request } from "../axios";
 
 export type DashboardOverview = {
   docTotal: number;

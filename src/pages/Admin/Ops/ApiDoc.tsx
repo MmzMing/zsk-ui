@@ -91,15 +91,16 @@ const parseParams = (paramsStr: string, typesMap: Record<string, string> = {}) =
 
 // Generate mock data from return type
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const generateMockData = (returnType: string | undefined, typesMap: Record<string, string> = {}): any => {
-  if (!returnType) return {};
+const generateMockData = (returnType: string | undefined, typesMap: Record<string, string> = {}, depth = 0): any => {
+  if (!returnType || depth > 3) return null;
   if (returnType === 'void') return {};
   if (returnType === 'any') return {};
 
   // Array type "Item[]"
   if (returnType.endsWith('[]')) {
     const itemType = returnType.slice(0, -2);
-    return [generateMockData(itemType, typesMap)];
+    const mock = generateMockData(itemType, typesMap, depth + 1);
+    return mock ? [mock] : [];
   }
 
   // Basic types
@@ -122,7 +123,7 @@ const generateMockData = (returnType: string | undefined, typesMap: Record<strin
         const first = p.type.split('|')[0].trim().replace(/['"]/g, '');
         result[p.name] = first;
       } else {
-        result[p.name] = generateMockData(p.type, typesMap);
+        result[p.name] = generateMockData(p.type, typesMap, depth + 1);
       }
     });
     return result;

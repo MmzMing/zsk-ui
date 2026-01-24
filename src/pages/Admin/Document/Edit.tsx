@@ -11,6 +11,7 @@ import {
 } from "@heroui/react";
 import Quill from "quill";
 import "quill/dist/quill.snow.css";
+import { Loading } from "@/components/Loading";
 import {
   FiSave,
   FiSend,
@@ -153,6 +154,7 @@ export default function DocumentEditPage() {
   const navigate = useNavigate();
   const editorRef = useRef<HTMLDivElement | null>(null);
   const quillRef = useRef<Quill | null>(null);
+  const [loading, setLoading] = useState(false);
   const [document, setDocument] = useState<Partial<DocumentDetail>>({
     title: "",
     content: "",
@@ -325,29 +327,22 @@ export default function DocumentEditPage() {
   }, [document.content]);
 
   useEffect(() => {
-    if (id && id !== "new") {
-      getDocumentDetail(id).then((res) => {
-          // Mock data if API fails or returns empty (for demo)
-          if(!res) {
-               setDocument({
-                  title: "示例现有文档",
-                  content: "<h1>Hello World</h1><p>This is a mock document content.</p>",
-                  seo: { title: "示例", description: "这是一个示例", keywords: ["test"] },
-                   category: "前端基础"
-               });
-          } else {
-              setDocument(res);
+    async function loadData() {
+      if (id && id !== "new") {
+        setLoading(true);
+        try {
+          const res = await getDocumentDetail(id);
+          if (res) {
+            setDocument(res);
           }
-      }).catch(() => {
-           // Fallback for demo
-           setDocument({
-              title: "示例现有文档 (Mock)",
-              content: "<h1>Hello World</h1><p>This is a mock document content loaded on error.</p>",
-              seo: { title: "示例", description: "这是一个示例", keywords: ["test"] },
-               category: "前端基础"
-           });
-      });
+        } catch (error) {
+          console.error("Failed to load document:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
     }
+    loadData();
   }, [id]);
 
   const handleSave = async () => {
@@ -395,8 +390,14 @@ export default function DocumentEditPage() {
 
       {/* Main Area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Structure */}
-        <div className="w-64 border-r border-default-200 bg-content2 p-4 hidden md:block overflow-y-auto">
+        {loading ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <Loading />
+          </div>
+        ) : (
+          <>
+            {/* Left: Structure */}
+            <div className="w-64 border-r border-default-200 bg-content2 p-4 hidden md:block overflow-y-auto">
           <h3 className="font-bold mb-4 flex items-center gap-2">
             <FiList /> 文档大纲
           </h3>
@@ -432,6 +433,8 @@ export default function DocumentEditPage() {
             <div className="w-80 border-l border-default-200 bg-content1 p-4 overflow-y-auto transition-all">
                 {document.seo && <SEOPanel data={document.seo} onChange={(seo) => setDocument({...document, seo})} />}
             </div>
+        )}
+          </>
         )}
       </div>
     </div>

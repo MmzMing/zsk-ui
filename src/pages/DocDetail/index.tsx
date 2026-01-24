@@ -1,120 +1,23 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Avatar, Chip, Spinner, Textarea, addToast } from "@heroui/react";
-import { FiThumbsUp, FiStar, FiShare2, FiMessageSquare, FiBookOpen, FiChevronDown, FiUserPlus, FiCheck, FiX } from "react-icons/fi";
+import { Button, Avatar, Chip, Textarea, addToast } from "@heroui/react";
+import { FiThumbsUp, FiStar, FiShare2, FiMessageSquare, FiBookOpen, FiChevronDown, FiUserPlus, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { routes } from "../../router/routes";
 import { useUserStore } from "../../store";
+import { Loading } from "../../components/Loading";
 import { 
   fetchDocDetail, 
   toggleDocLike, 
   toggleDocFavorite,
+  toggleDocCommentLike,
   fetchDocComments,
   postDocComment,
   type DocDetail,
   type CommentItem
 } from "../../api/front/document";
 import { toggleFollowUser } from "../../api/front/user";
-
-// Helper to generate large mock content
-const generateMockContent = () => {
-  let content = `
-    <h1 id="title-0">HeroUI 组件库完全指南</h1>
-    <p>HeroUI 是一个现代化的 React UI 组件库，基于 Tailwind CSS 构建。本文将详细介绍如何使用它。</p>
-    <p>CSDN 风格的目录通常支持多级标题，并且有平滑的滚动定位效果。</p>
-  `;
-
-  const sections = [
-    "快速开始", "基础组件", "布局系统", "主题定制", "高级用法", 
-    "最佳实践", "性能优化", "服务端渲染", "常见问题", "版本日志"
-  ];
-
-  sections.forEach((section, i) => {
-    content += `<h2 id="heading-${i + 1}">${i + 1}. ${section}</h2>`;
-    content += `<p>这是关于 ${section} 的详细介绍。HeroUI 提供了丰富的组件和灵活的 API。</p>`;
-    content += `<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>`;
-    
-    // Level 3
-    for (let j = 1; j <= 3; j++) {
-      content += `<h3 id="heading-${i + 1}-${j}">${i + 1}.${j} 子章节详情</h3>`;
-      content += `<p>深入探讨 ${section} 的第 ${j} 个方面。</p>`;
-      content += `<p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>`;
-      
-      // Level 4
-      if (j === 1) {
-        content += `<h4 id="heading-${i + 1}-${j}-1">${i + 1}.${j}.1 核心概念</h4>`;
-        content += `<p>这里是核心概念的解释。</p>`;
-        
-        // Level 5
-        content += `<h5 id="heading-${i + 1}-${j}-1-1">${i + 1}.${j}.1.1 实现细节</h5>`;
-        content += `<p>非常底层的实现细节，通常只有高级用户需要了解。</p>`;
-        content += `<pre>const hero = "ui";\nconsole.log(hero);</pre>`;
-      }
-    }
-  });
-
-  return content;
-};
-
-const mockComments: CommentItem[] = [
-  {
-    id: "c1",
-    content: "这篇文章写得太好了，受益匪浅！",
-    author: { id: "u1", name: "前端爱好者", avatar: "" },
-    createdAt: "2026-01-24 10:00",
-    likes: 12,
-    isLiked: false,
-    replies: [
-      {
-        id: "c1-r1",
-        content: "同感，尤其是关于组件设计的部分。",
-        author: { id: "u2", name: "路人乙", avatar: "" },
-        createdAt: "2026-01-24 10:05",
-        likes: 2,
-        isLiked: false
-      }
-    ]
-  },
-  {
-    id: "c2",
-    content: "期待下一篇关于性能优化的文章。",
-    author: { id: "u3", name: "架构师老王", avatar: "" },
-    createdAt: "2026-01-24 14:20",
-    likes: 8,
-    isLiked: true
-  }
-];
-
-// Mock data for DEV environment
-const mockDocData: DocDetail = {
-  id: "1",
-  title: "HeroUI 组件库完全指南 - CSDN 风格重构版",
-  content: generateMockContent(),
-  category: "前端开发",
-  date: "2026-01-23",
-  coverUrl: "",
-  author: {
-    id: "1",
-    name: "技术写作专家",
-    avatar: "",
-    fans: "5.6k",
-    isFollowing: true
-  },
-  stats: {
-    views: "10.5k",
-    likes: 520,
-    favorites: 230,
-    date: "2026-01-23",
-    isLiked: true,
-    isFavorited: false
-  },
-  recommendations: [
-    { id: "2", title: "TypeScript 高级进阶", views: "3.2k" },
-    { id: "3", title: "Next.js 实战教程", views: "8.9k" },
-    { id: "4", title: "React 19 新特性解析", views: "5.1k" },
-    { id: "5", title: "Tailwind CSS 最佳实践", views: "4.2k" }
-  ]
-};
+import { mockDocData, mockDocComments } from "../../api/mock/front/docDetail";
 
 interface TocItem {
   id: string;
@@ -249,16 +152,84 @@ function DocDetail() {
     if (!checkLogin() || !doc) return;
     const newIsLiked = !doc.stats.isLiked;
     const newCount = doc.stats.likes + (newIsLiked ? 1 : -1);
-    setDoc(prev => prev ? { ...prev, stats: { ...prev.stats, isLiked: newIsLiked, likes: newCount } } : null);
-    try { await toggleDocLike(doc.id); } catch { /* revert */ }
+    
+    try { 
+      await toggleDocLike(doc.id); 
+      // Update UI after success
+      setDoc(prev => prev ? { ...prev, stats: { ...prev.stats, isLiked: newIsLiked, likes: newCount } } : null);
+      
+      if (newIsLiked) {
+        addToast({ title: "点赞成功", color: "success" });
+      } else {
+        addToast({ title: "取消点赞", color: "warning" });
+      }
+    } catch (err) { 
+      console.error(err);
+    }
   };
 
   const handleFavorite = async () => {
     if (!checkLogin() || !doc) return;
     const newIsFavorited = !doc.stats.isFavorited;
     const newCount = doc.stats.favorites + (newIsFavorited ? 1 : -1);
-    setDoc(prev => prev ? { ...prev, stats: { ...prev.stats, isFavorited: newIsFavorited, favorites: newCount } } : null);
-    try { await toggleDocFavorite(doc.id); } catch { /* revert */ }
+    
+    try { 
+      await toggleDocFavorite(doc.id); 
+      // Update UI after success
+      setDoc(prev => prev ? { ...prev, stats: { ...prev.stats, isFavorited: newIsFavorited, favorites: newCount } } : null);
+      
+      if (newIsFavorited) {
+        addToast({ title: "收藏成功", color: "success" });
+      } else {
+        addToast({ title: "取消收藏", color: "warning" });
+      }
+    } catch (err) { 
+      console.error(err);
+    }
+  };
+
+  const handleCommentLike = async (commentId: string, isReply = false, parentId?: string) => {
+    if (!checkLogin()) return;
+
+    let targetComment: CommentItem | undefined;
+    if (isReply && parentId) {
+      const parent = comments.find(c => c.id === parentId);
+      targetComment = parent?.replies?.find(r => r.id === commentId);
+    } else {
+      targetComment = comments.find(c => c.id === commentId);
+    }
+
+    if (!targetComment) return;
+
+    const newIsLiked = !targetComment.isLiked;
+    const newLikes = targetComment.likes + (newIsLiked ? 1 : -1);
+
+    const updateComments = (list: CommentItem[]): CommentItem[] => {
+      return list.map(c => {
+        if (c.id === (isReply ? parentId : commentId)) {
+          if (isReply) {
+            return {
+              ...c,
+              replies: c.replies?.map(r => r.id === commentId ? { ...r, isLiked: newIsLiked, likes: newLikes } : r)
+            };
+          }
+          return { ...c, isLiked: newIsLiked, likes: newLikes };
+        }
+        return c;
+      });
+    };
+
+    try {
+      await toggleDocCommentLike(commentId);
+      // Update UI after success
+      setComments(prev => updateComments(prev));
+      
+      if (newIsLiked) {
+        addToast({ title: "点赞成功", color: "success" });
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleShare = () => {
@@ -268,82 +239,112 @@ function DocDetail() {
 
   const handleFollow = async () => {
     if (!checkLogin() || !doc) return;
+    
     const newIsFollowing = !doc.author.isFollowing;
-    setDoc(prev => prev ? { ...prev, author: { ...prev.author, isFollowing: newIsFollowing } } : null);
-    try { await toggleFollowUser(doc.author.id); } catch { /* revert */ }
+    
+    try { 
+      await toggleFollowUser(doc.author.id); 
+      // Update UI after success
+      setDoc(prev => prev ? { 
+        ...prev, 
+        author: { ...prev.author, isFollowing: newIsFollowing } 
+      } : null);
+
+      if (newIsFollowing) {
+        addToast({ title: "关注成功", color: "success" });
+      } else {
+        addToast({ title: "已取消关注", color: "warning" });
+      }
+    } catch (err) { 
+      console.error(err);
+    }
   };
 
-  const handleCommentSubmit = () => {
+  const handleCommentSubmit = async () => {
     if (!checkLogin()) return;
+    
     if (!commentText.trim()) {
       addToast({ title: "评论内容不能为空", color: "warning" });
       return;
     }
-    // Mock submit
-    const newComment: CommentItem = {
-      id: Date.now().toString(),
-      content: commentText,
-      author: { id: "me", name: "我", avatar: "" },
-      createdAt: "刚刚",
-      likes: 0,
-      isLiked: false,
-      replyTo: replyingTo ? { id: replyingTo.id, name: replyingTo.name } : undefined
-    };
 
-    if (replyingTo?.parentId) {
-      // Reply to a reply or comment
-      setComments(comments.map(c => {
-        if (c.id === replyingTo.parentId) {
-          return {
-            ...c,
-            replies: [...(c.replies || []), newComment]
-          };
-        }
-        return c;
-      }));
-    } else if (replyingTo) {
-      // Reply to a top-level comment
-      setComments(comments.map(c => {
-        if (c.id === replyingTo.id) {
-          return {
-            ...c,
-            replies: [...(c.replies || []), newComment]
-          };
-        }
-        return c;
-      }));
-    } else {
-      // Top-level comment
-      setComments([newComment, ...comments]);
+    try {
+      const data = {
+        docId: id!,
+        content: commentText.trim(),
+        parentId: replyingTo?.parentId || replyingTo?.id,
+        replyToId: replyingTo?.id
+      };
+
+      const newComment = await postDocComment(data);
+
+      if (replyingTo?.parentId) {
+        // Reply to a reply or comment
+        setComments(comments.map(c => {
+          if (c.id === replyingTo.parentId) {
+            return {
+              ...c,
+              replies: [...(c.replies || []), newComment]
+            };
+          }
+          return c;
+        }));
+      } else if (replyingTo) {
+        // Reply to a top-level comment
+        setComments(comments.map(c => {
+          if (c.id === replyingTo.id) {
+            return {
+              ...c,
+              replies: [...(c.replies || []), newComment]
+            };
+          }
+          return c;
+        }));
+      } else {
+        // Top-level comment
+        setComments([newComment, ...comments]);
+      }
+      
+      setCommentText("");
+      setReplyingTo(null);
+      addToast({ title: "评论发布成功", color: "success" });
+    } catch (err) {
+      console.error(err);
     }
-    
-    setCommentText("");
-    setReplyingTo(null);
-    addToast({ title: "评论发布成功", color: "success" });
   };
 
   useEffect(() => {
-    if (import.meta.env.DEV && id === "1") {
-      const timer = setTimeout(() => {
-        setDoc(mockDocData);
-        setComments(mockComments);
-        setLoading(false);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-
     if (id) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);
-      Promise.all([
-        fetchDocDetail(id),
-        fetchDocComments(id, { page: 1, pageSize: 20 })
-      ])
-        .then(([res, commentsRes]) => {
-          setDoc(res);
-          setComments(commentsRes.list);
+      fetchDocDetail(id)
+        .then((res) => {
+          // 如果返回 200 但数据为空，或者根据用户要求回退到 mock
+          if (!res || !res.id) {
+            setDoc(mockDocData);
+          } else {
+            setDoc(res);
+          }
+
+          // 获取评论列表
+          fetchDocComments(id, { page: 1, pageSize: 20 })
+            .then(commentsRes => {
+              if (!commentsRes || !commentsRes.list || commentsRes.list.length === 0) {
+                setComments(mockDocComments);
+              } else {
+                setComments(commentsRes.list);
+              }
+            })
+            .catch(err => {
+              console.error("Fetch doc comments failed, using mock:", err);
+              setComments(mockDocComments);
+            });
         })
-        .catch((err) => console.error(err))
+        .catch((err) => {
+          console.error("Failed to fetch doc detail, using mock:", err);
+          setDoc(mockDocData);
+          setComments(mockDocComments);
+        })
         .finally(() => setLoading(false));
     }
   }, [id]);
@@ -591,11 +592,7 @@ function DocDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-[calc(100vh-200px)]">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <Loading height="calc(100vh - 200px)" />;
   }
 
   if (!doc) {
@@ -626,21 +623,28 @@ function DocDetail() {
             </h1>
 
             <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center gap-3">
+              <div 
+                className="flex items-center gap-3 cursor-pointer group"
+                onClick={() => navigate(routes.userDetail.replace(":id", doc.author.id))}
+              >
                 <Avatar
                   src={doc.author.avatar}
                   name={doc.author.name.charAt(0)}
+                  className="transition-transform group-hover:scale-105"
                 />
                 <div>
                   <div className="flex items-center gap-2">
-                    <div className="font-semibold text-sm">{doc.author.name}</div>
+                    <div className="font-semibold text-sm group-hover:text-[var(--primary-color)] transition-colors">{doc.author.name}</div>
                     <Button
                       size="sm"
                       variant={doc.author.isFollowing ? "flat" : "solid"}
                       color="primary"
                       className={`h-6 min-w-16 px-2 text-xs ${doc.author.isFollowing ? "bg-[var(--bg-elevated)] text-[var(--text-color-secondary)]" : ""}`}
                       startContent={!doc.author.isFollowing && <FiUserPlus />}
-                      onClick={handleFollow}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleFollow();
+                      }}
                     >
                       {doc.author.isFollowing ? "已关注" : "关注"}
                     </Button>
@@ -769,10 +773,7 @@ function DocDetail() {
                     <div className="flex items-center gap-6 text-xs text-[var(--text-color-secondary)] pt-1">
                       <div 
                         className="flex items-center gap-1.5 cursor-pointer hover:text-[var(--primary-color)] transition-colors"
-                        onClick={() => {
-                          if (!checkLogin()) return;
-                          // Handle comment like logic here if needed
-                        }}
+                        onClick={() => handleCommentLike(comment.id)}
                       >
                         <FiThumbsUp className={comment.isLiked ? "text-[var(--primary-color)] fill-current" : ""} />
                         <span>{comment.likes}</span>
@@ -808,10 +809,7 @@ function DocDetail() {
                               <div className="flex items-center gap-4 text-xs text-[var(--text-color-secondary)] pt-0.5">
                                 <div 
                                   className="flex items-center gap-1 cursor-pointer hover:text-[var(--primary-color)]"
-                                  onClick={() => {
-                                    if (!checkLogin()) return;
-                                    // Handle reply like logic here if needed
-                                  }}
+                                  onClick={() => handleCommentLike(reply.id, true, comment.id)}
                                 >
                                   <FiThumbsUp className={reply.isLiked ? "text-[var(--primary-color)] fill-current" : ""} />
                                   <span>{reply.likes}</span>

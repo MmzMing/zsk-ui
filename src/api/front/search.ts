@@ -49,10 +49,12 @@ export type SearchAllParams = {
   duration?: string | null;
   timeRange?: string | null;
   tag?: string | null;
+  page?: number;
+  pageSize?: number;
 };
 
 export async function searchAll(params: SearchAllParams) {
-  return request.get<SearchAllApiData>("/search/all", {
+  return request.get<SearchAllApiData>("/content/search/all", {
     params: {
       keyword: params.keyword || undefined,
       // 当 category 为 all 或未指定时，后端应默认只搜索视频和文档
@@ -61,7 +63,9 @@ export async function searchAll(params: SearchAllParams) {
       sort: params.sort,
       duration: params.duration || undefined,
       timeRange: params.timeRange || undefined,
-      tag: params.tag || undefined
+      tag: params.tag || undefined,
+      page: params.page || 1,
+      pageSize: params.pageSize || 20
     }
   });
 }

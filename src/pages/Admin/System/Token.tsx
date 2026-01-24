@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Button,
   SelectItem,
@@ -17,74 +17,15 @@ import {
 import { FiCopy, FiRefreshCw, FiRotateCcw, FiTrash2 } from "react-icons/fi";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
-
-type TokenStatus = "active" | "expired" | "revoked";
-
-type TokenItem = {
-  id: string;
-  name: string;
-  token: string;
-  type: "api" | "personal" | "internal";
-  boundUser: string;
-  createdAt: string;
-  expiredAt: string;
-  lastUsedAt: string | null;
-  status: TokenStatus;
-  remark: string;
-};
+import { Loading } from "@/components/Loading";
+import {
+  type TokenItem,
+  type TokenStatus,
+  fetchTokenList,
+  revokeToken
+} from "@/api/admin/system";
 
 type StatusFilter = "all" | "active" | "no_active";
-
-const initialTokens: TokenItem[] = [
-  {
-    id: "t_001",
-    name: "前台 Web 访问令牌",
-    token: "pk_live_web_0a9f2c8e14b942f3",
-    type: "api",
-    boundUser: "system",
-    createdAt: "2026-01-10 09:01:22",
-    expiredAt: "2026-07-10 09:01:22",
-    lastUsedAt: "2026-01-18 10:40:01",
-    status: "active",
-    remark: "供前台 Web 站点调用后台开放接口使用。"
-  },
-  {
-    id: "t_002",
-    name: "内容运营 API 密钥",
-    token: "pk_ops_content_8b21d030a6fb4d51",
-    type: "personal",
-    boundUser: "operator",
-    createdAt: "2026-01-11 11:15:03",
-    expiredAt: "2026-04-11 11:15:03",
-    lastUsedAt: "2026-01-18 10:20:18",
-    status: "active",
-    remark: "用于内容运营工具与后台进行数据同步。"
-  },
-  {
-    id: "t_003",
-    name: "内部监控任务令牌",
-    token: "pk_internal_monitor_52fa0c9e7b984c3d",
-    type: "internal",
-    boundUser: "cron_monitor",
-    createdAt: "2026-01-09 08:30:00",
-    expiredAt: "2026-01-16 08:30:00",
-    lastUsedAt: "2026-01-16 08:29:59",
-    status: "expired",
-    remark: "已过期，将在监控任务迁移后删除。"
-  },
-  {
-    id: "t_004",
-    name: "第三方集成测试令牌",
-    token: "pk_thirdparty_test_a9b8c7d6e5f4",
-    type: "api",
-    boundUser: "tester",
-    createdAt: "2026-01-08 15:12:47",
-    expiredAt: "2026-03-08 15:12:47",
-    lastUsedAt: null,
-    status: "revoked",
-    remark: "测试完成后已主动吊销。"
-  }
-];
 
 function getTokenTypeLabel(type: TokenItem["type"]) {
   if (type === "api") {
@@ -119,7 +60,8 @@ function TokenPage() {
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<TokenItem[]>(() => initialTokens);
+  const [items, setItems] = useState<TokenItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const filteredItems = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
@@ -143,17 +85,25 @@ function TokenPage() {
   const pageSize = 6;
   const total = filteredItems.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const pageItems = filteredItems.slice(startIndex, endIndex);
+  const pageItems = filteredItems.slice((page - 1) * pageSize, page * pageSize);
 
-  const handlePageChange = (next: number) => {
-    if (next < 1 || next > totalPages) {
-      return;
+  const loadTokenList = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetchTokenList();
+      if (res) {
+        setItems(res);
+      }
+    } catch {
+      // 错误已在 API 层级处理并显示
+    } finally {
+      setIsLoading(false);
     }
-    setPage(next);
-  };
+  }, []);
+
+  React.useEffect(() => {
+    loadTokenList();
+  }, [loadTokenList]);
 
   const handleResetFilter = () => {
     setKeyword("");
@@ -162,7 +112,6 @@ function TokenPage() {
   };
 
   const handleCopyToken = (item: TokenItem) => {
-    try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(item.token);
         addToast({
@@ -170,41 +119,19 @@ function TokenPage() {
           description: `已复制令牌 ${item.name} 到剪贴板，请妥善保管。`,
           color: "success"
         });
-      } else {
-        addToast({
-          title: "复制失败",
-          description: "当前环境不支持直接复制令牌，请手动选择复制。",
-          color: "danger"
-        });
-      }
-    } catch {
-      addToast({
-        title: "复制失败",
-        description: "复制令牌失败，请稍后重试。",
-        color: "danger"
-      });
-    }
+      } 
   };
 
-  const handleRevokeToken = (item: TokenItem) => {
+  const handleRevokeToken = async (item: TokenItem) => {
     if (item.status === "revoked") {
       return;
     }
-    setItems(previous =>
-      previous.map(row =>
-        row.id === item.id
-          ? {
-              ...row,
-              status: "revoked"
-            }
-          : row
-      )
-    );
-    addToast({
-      title: "操作成功",
-      description: `已标记令牌 ${item.name} 为已吊销，实际逻辑待接入接口。`,
-      color: "success"
-    });
+      await revokeToken(item.id);
+      addToast({
+        title: "操作成功",
+        color: "success"
+      });
+      loadTokenList();
   };
 
   const handleRefreshToken = (item: TokenItem) => {
@@ -330,6 +257,8 @@ function TokenPage() {
               <TableBody
                 items={pageItems}
                 emptyContent="未找到匹配的令牌记录，可调整筛选条件后重试。"
+                isLoading={isLoading}
+                loadingContent={<Loading height={200} text="获取令牌数据中..." />}
               >
                 {item => {
                   const statusChip = getStatusChipProps(item.status);
@@ -422,15 +351,15 @@ function TokenPage() {
           <div className="mt-3 flex flex-col gap-2 text-[11px] md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <span>
-                共 {total} 条记录，当前第 {currentPage} / {totalPages} 页
+                共 {total} 条记录，当前第 {page} / {totalPages} 页
               </span>
             </div>
             <div className="flex items-center gap-2">
               <Pagination
                 size="sm"
                 total={totalPages}
-                page={currentPage}
-                onChange={handlePageChange}
+                page={page}
+                onChange={setPage}
                 showControls
               />
             </div>

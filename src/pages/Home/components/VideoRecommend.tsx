@@ -6,22 +6,9 @@ import { useNavigate } from "react-router-dom";
 import { routes } from "../../../router/routes";
 import { FiPlay } from "react-icons/fi";
 import VideoPlayer from "../../../components/VideoPlayer";
-import { VideoSource, Subtitle } from "../../../components/VideoPlayer/types";
+import type { HomeVideo as VideoItem, VideoSource } from "../../../api/front/home";
 
 const DEFAULT_COVER = "/DefaultImage/MyDefaultHomeVodie.png";
-
-export type VideoItem = {
-  id: string;
-  title: string;
-  description?: string;
-  views: string;
-  likes?: number;
-  comments?: number;
-  date: string;
-  cover?: string;
-  sources?: string | VideoSource[];
-  subtitles?: Subtitle[];
-};
 
 type Props = {
   items: VideoItem[];
@@ -37,7 +24,6 @@ export default function VideoRecommend({ items }: Props) {
 
   const defaultSources: VideoSource[] = [
     { 
-      //src: "https://v16.toutiao50.com/cb6f9ab562e3a0f382ac50aed1aa67a8/696e0ef1/video/tos/alisg/tos-alisg-v-0051c001-sg/o4BEgE2gNWUEpAhf3raNc4ZHDjjDDBFcQFxBme/",
       src: "/videoTest/【鸣潮_千咲】_Luna - Unveil feat.ねんね.mp4",
       type: "video/mp4"
     }
@@ -179,7 +165,13 @@ export default function VideoRecommend({ items }: Props) {
                 onClose={handleCloseVideo}
                 title={activeItem?.title}
                 poster={activeItem?.cover || DEFAULT_COVER}
-                subtitles={activeItem?.subtitles}
+                subtitles={activeItem?.subtitles?.map(s => ({
+                  src: s.src,
+                  label: s.label,
+                  language: s.lang,
+                  kind: 'subtitles',
+                  default: s.default
+                }))}
                 chapters={[
                   { time: 0, title: "Intro" },
                   { time: 60, title: "Highlight" },

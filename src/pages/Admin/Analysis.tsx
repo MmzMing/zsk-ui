@@ -6,54 +6,11 @@ import {
 import type { ColumnConfig } from "@ant-design/plots";
 import { Column } from "@ant-design/plots";
 import { useAppStore } from "../../store";
+import { mockMetricCards, mockBigScreenData } from "../../api/mock/admin/dashboard";
 
-const metricCards = [
-  {
-    key: "pv-today",
-    label: "今日访问量",
-    value: "3.2k",
-    delta: "+12%",
-    description: "相较昨日整体访问量变化",
-    tone: "up"
-  },
-  {
-    key: "pv-week",
-    label: "近 7 天访问量",
-    value: "21.4k",
-    delta: "+18%",
-    description: "一周内整体流量表现",
-    tone: "up"
-  },
-  {
-    key: "content-total",
-    label: "内容总量",
-    value: "164",
-    delta: "+15",
-    description: "文档 + 视频累积数量",
-    tone: "up"
-  },
-  {
-    key: "health-score",
-    label: "系统健康度",
-    value: "96",
-    delta: "稳定",
-    description: "综合请求成功率与告警情况评分",
-    tone: "stable"
-  }
-];
+const metricCards = mockMetricCards;
 
-const bigScreenData: ColumnConfig["data"] = [
-  { type: "文档", time: "10:00", value: 520 },
-  { type: "视频", time: "10:00", value: 320 },
-  { type: "文档", time: "12:00", value: 680 },
-  { type: "视频", time: "12:00", value: 410 },
-  { type: "文档", time: "14:00", value: 740 },
-  { type: "视频", time: "14:00", value: 460 },
-  { type: "文档", time: "16:00", value: 810 },
-  { type: "视频", time: "16:00", value: 520 },
-  { type: "文档", time: "18:00", value: 900 },
-  { type: "视频", time: "18:00", value: 640 }
-];
+const bigScreenData: ColumnConfig["data"] = mockBigScreenData;
 
 function AnalysisPage() {
   const { themeMode } = useAppStore();

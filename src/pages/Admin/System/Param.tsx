@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   Button,
   Card,
@@ -20,19 +20,14 @@ import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminInput } from "@/components/Admin/AdminInput";
 import { AdminTextarea } from "@/components/Admin/AdminTextarea";
-
-type ParamScope = "global" | "frontend" | "backend" | "task";
-
-type ParamItem = {
-  id: string;
-  key: string;
-  name: string;
-  value: string;
-  scope: ParamScope;
-  description: string;
-  sensitive: boolean;
-  updatedAt: string;
-};
+import { Loading } from "@/components/Loading";
+import {
+  type ParamItem,
+  type ParamScope,
+  fetchParamList,
+  saveParam,
+  deleteParam
+} from "@/api/admin/system";
 
 type ParamFormState = {
   id?: string;
@@ -43,60 +38,6 @@ type ParamFormState = {
   description: string;
   sensitive: boolean;
 };
-
-const initialParams: ParamItem[] = [
-  {
-    id: "p_001",
-    key: "site.title",
-    name: "站点标题",
-    value: "知识库小破站",
-    scope: "frontend",
-    description: "展示在前台站点标题与浏览器标签上的文案。",
-    sensitive: false,
-    updatedAt: "2026-01-15 09:20:11"
-  },
-  {
-    id: "p_002",
-    key: "auth.login.maxRetry",
-    name: "登录最大重试次数",
-    value: "5",
-    scope: "backend",
-    description: "同一账号在指定时间窗口内允许的最大登录失败次数。",
-    sensitive: false,
-    updatedAt: "2026-01-16 10:02:33"
-  },
-  {
-    id: "p_003",
-    key: "task.statistic.cron",
-    name: "统计任务 CRON 表达式",
-    value: "0 0 2 * * ?",
-    scope: "task",
-    description: "每日离线统计任务的调度时间。",
-    sensitive: false,
-    updatedAt: "2026-01-16 02:00:00"
-  },
-  {
-    id: "p_004",
-    key: "security.audit.webhook",
-    name: "安全审计 Webhook 地址",
-    value: "https://api.example.com/audit/webhook",
-    scope: "backend",
-    description: "高风险操作审计记录推送到外部系统的回调地址。",
-    sensitive: true,
-    updatedAt: "2026-01-17 14:21:09"
-  }
-];
-
-function formatNow() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const hour = String(now.getHours()).padStart(2, "0");
-  const minute = String(now.getMinutes()).padStart(2, "0");
-  const second = String(now.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
-}
 
 function getScopeLabel(scope: ParamScope) {
   if (scope === "frontend") {
@@ -115,7 +56,8 @@ function ParamPage() {
   const [keyword, setKeyword] = useState("");
   const [scopeFilter, setScopeFilter] = useState<ParamScope | "all">("all");
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<ParamItem[]>(() => initialParams);
+  const [items, setItems] = useState<ParamItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [formVisible, setFormVisible] = useState(false);
   const [formState, setFormState] = useState<ParamFormState>({
     key: "",
@@ -146,17 +88,25 @@ function ParamPage() {
   const pageSize = 8;
   const total = filteredItems.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const pageItems = filteredItems.slice(startIndex, endIndex);
+  const pageItems = filteredItems.slice((page - 1) * pageSize, page * pageSize);
 
-  const handlePageChange = (next: number) => {
-    if (next < 1 || next > totalPages) {
-      return;
+  const loadParamList = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetchParamList();
+      if (res) {
+        setItems(res);
+      }
+    } catch {
+      // 错误已在 API 层级处理并显示
+    } finally {
+      setIsLoading(false);
     }
-    setPage(next);
-  };
+  }, []);
+
+  React.useEffect(() => {
+    loadParamList();
+  }, [loadParamList]);
 
   const handleResetFilter = () => {
     setKeyword("");
@@ -203,67 +153,48 @@ function ParamPage() {
     }));
   };
 
-  const handleDeleteParam = (item: ParamItem) => {
-    setItems(previous => previous.filter(row => row.id !== item.id));
-    addToast({
-      title: "参数删除成功",
-      description: `已成功删除参数「${item.name}」，实际逻辑待接入接口。`,
-      color: "success"
-    });
+  const handleDeleteParam = async (item: ParamItem) => {
+    try {
+      const res = await deleteParam(item.id);
+      if (res) {
+        addToast({
+          title: "参数删除成功",
+          color: "success"
+        });
+        loadParamList();
+      }
+    } catch {
+      // 错误已在 API 层级处理并显示
+    }
   };
 
-  const handleSubmitForm = () => {
+  const handleSubmitForm = async () => {
     const trimmedKey = formState.key.trim();
     const trimmedName = formState.name.trim();
     if (!trimmedKey || !trimmedName) {
       setFormError("请填写完整的参数键名与参数名称。");
       return;
     }
-    const updatedAt = formatNow();
-    if (formState.id) {
-      const id = formState.id;
-      setItems(previous =>
-        previous.map(item =>
-          item.id === id
-            ? {
-                ...item,
-                key: trimmedKey,
-                name: trimmedName,
-                value: formState.value,
-                scope: formState.scope,
-                description: formState.description.trim(),
-                sensitive: formState.sensitive,
-                updatedAt
-              }
-            : item
-        )
-      );
-      addToast({
-        title: "参数更新成功",
-        description: `已成功更新参数「${trimmedName}」，实际逻辑待接入接口。`,
-        color: "success"
-      });
-    } else {
-      const id = `param_${Date.now()}`;
-      const newItem: ParamItem = {
-        id,
+
+    try {
+      const res = await saveParam({
+        ...formState,
         key: trimmedKey,
         name: trimmedName,
-        value: formState.value,
-        scope: formState.scope,
-        description: formState.description.trim(),
-        sensitive: formState.sensitive,
-        updatedAt
-      };
-      setItems(previous => [newItem, ...previous]);
-      setPage(1);
-      addToast({
-        title: "参数创建成功",
-        description: `已成功创建参数「${trimmedName}」，实际逻辑待接入接口。`,
-        color: "success"
+        description: formState.description.trim()
       });
+
+      if (res) {
+        addToast({
+          title: formState.id ? "参数更新成功" : "参数创建成功",
+          color: "success"
+        });
+        setFormVisible(false);
+        loadParamList();
+      }
+    } catch {
+      // 错误已在 API 层级处理并显示
     }
-    setFormVisible(false);
   };
 
   return (
@@ -378,6 +309,8 @@ function ParamPage() {
               <TableBody
                 items={pageItems}
                 emptyContent="未找到匹配的参数记录，可调整筛选条件后重试。"
+                isLoading={isLoading}
+                loadingContent={<Loading height={200} text="获取参数数据中..." />}
               >
                 {item => (
                   <TableRow
@@ -450,15 +383,15 @@ function ParamPage() {
           <div className="mt-3 flex flex-col gap-2 text-xs md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <span>
-                共 {total} 条记录，当前第 {currentPage} / {totalPages} 页
+                共 {total} 条记录，当前第 {page} / {totalPages} 页
               </span>
             </div>
             <div className="flex items-center gap-2">
               <Pagination
                 size="sm"
                 total={totalPages}
-                page={currentPage}
-                onChange={handlePageChange}
+                page={page}
+                onChange={setPage}
                 showControls
               />
             </div>

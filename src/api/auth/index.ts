@@ -1,4 +1,4 @@
-import { request } from "../axios";
+import { authRequest as request } from "../axios";
 
 export type SliderCaptchaData = {
   uuid: string;

@@ -1,10 +1,13 @@
-import { request } from "../axios";
+import { userRequest as request } from "../axios";
 
 export type UserProfile = {
   id: string;
   username: string;
   name: string;
   avatar: string;
+  banner?: string;
+  level?: number;
+  tags?: string[];
   bio: string;
   location?: string;
   website?: string;
@@ -31,7 +34,7 @@ export async function toggleFollowUser(id: string) {
 
 export type UserWorkItem = {
   id: string;
-  type: "video" | "article";
+  type: "video" | "article" | "document";
   title: string;
   coverUrl: string;
   views: number;
@@ -44,6 +47,16 @@ export async function fetchUserWorks(
 ) {
   return request.get<{ list: UserWorkItem[]; total: number }>(
     `/user/works/${id}`,
+    { params }
+  );
+}
+
+export async function fetchUserFavorites(
+  id: string,
+  params: { page: number; pageSize: number }
+) {
+  return request.get<{ list: UserWorkItem[]; total: number }>(
+    `/user/favorites/${id}`,
     { params }
   );
 }

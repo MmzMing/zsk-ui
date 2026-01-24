@@ -82,3 +82,11 @@ export async function postDocComment(data: {
 }) {
   return request.post<CommentItem>(`/content/doc/comment`, data);
 }
+
+export async function toggleDocCommentLike(commentId: string) {
+  return request.post<{ isLiked: boolean; likes: number }>(
+    `/content/comment/like/${commentId}`,
+    null,
+    { params: { type: "doc" } }
+  );
+}

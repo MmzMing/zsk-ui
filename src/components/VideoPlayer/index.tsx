@@ -18,7 +18,7 @@ import '@vidstack/react/player/styles/default/layouts/video.css';
 import { VideoPlayerProps } from './types';
 import { FaArrowLeft, FaExpand, FaCompress } from 'react-icons/fa';
 import { RiAspectRatioLine } from 'react-icons/ri';
-import { motion } from 'framer-motion';
+// import { motion } from 'framer-motion';
 import type { DefaultLayoutTranslations } from '@vidstack/react/player/layouts/default';
 import { throttle } from 'lodash';
 import { MobileControls } from './MobileControls';
@@ -363,6 +363,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = (props) => {
       <MediaPlayer
           ref={player}
           title={title}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           src={url as any}
           poster={poster}
           crossOrigin

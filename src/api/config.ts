@@ -1,7 +1,11 @@
 // 全局 API 配置
 export const API_CONFIG = {
-  // 基础 URL，优先从环境变量获取，否则使用默认值
-  baseURL: (import.meta.env.VITE_API_BASE_URL as string) || "/api",
+  // 不同服务的端口封装
+  SERVICE_URLS: {
+    CONTENT: "http://localhost:30030", // 视频和文档
+    USER: "http://localhost:30010",    // 用户信息和系统信息
+    AUTH: "http://localhost:20010",    // 登录
+  },
   
   // 默认超时时间 (毫秒)
   timeout: 10000,

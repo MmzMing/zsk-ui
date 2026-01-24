@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SelectItem,
   Button,
@@ -21,6 +21,7 @@ import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { AdminInput } from "@/components/Admin/AdminInput";
+import { Loading } from "@/components/Loading";
 import {
   FiDownload,
   FiEdit2,
@@ -33,17 +34,17 @@ import {
   FiX
 } from "react-icons/fi";
 
-type UserStatus = "enabled" | "disabled";
-
-type UserItem = {
-  id: string;
-  username: string;
-  name: string;
-  phone: string;
-  roles: string[];
-  status: UserStatus;
-  createdAt: string;
-};
+import {
+  type UserItem,
+  fetchUserList,
+  createUser,
+  updateUser,
+  deleteUser,
+  batchDeleteUsers,
+  toggleUserStatus,
+  resetPassword,
+  batchResetPassword
+} from "@/api/admin/personnel";
 
 type UserFormState = {
   id?: string;
@@ -62,45 +63,6 @@ type RoleAssignState = {
 
 const allRoles = ["管理员", "内容运营", "审核员", "访客"];
 
-const initialUsers: UserItem[] = [
-  {
-    id: "u_001",
-    username: "admin",
-    name: "系统管理员",
-    phone: "13800000001",
-    roles: ["管理员"],
-    status: "enabled",
-    createdAt: "2026-01-10 09:20:11"
-  },
-  {
-    id: "u_002",
-    username: "editor",
-    name: "内容编辑",
-    phone: "13800000002",
-    roles: ["内容运营"],
-    status: "enabled",
-    createdAt: "2026-01-11 14:32:45"
-  },
-  {
-    id: "u_003",
-    username: "auditor",
-    name: "审核员",
-    phone: "13800000003",
-    roles: ["审核员"],
-    status: "disabled",
-    createdAt: "2026-01-12 16:05:30"
-  },
-  {
-    id: "u_004",
-    username: "guest001",
-    name: "访客用户",
-    phone: "13800000004",
-    roles: ["访客"],
-    status: "enabled",
-    createdAt: "2026-01-15 10:12:09"
-  }
-];
-
 function createEmptyUserForm(): UserFormState {
   return {
     username: "",
@@ -112,7 +74,9 @@ function createEmptyUserForm(): UserFormState {
 }
 
 function UserPage() {
-  const [users, setUsers] = useState<UserItem[]>(() => initialUsers);
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [phoneKeyword, setPhoneKeyword] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -129,41 +93,38 @@ function UserPage() {
 
   const hasSelection = selectedIds.length > 0;
 
-  const filteredUsers = useMemo(() => {
-    const nameKeyword = keyword.trim().toLowerCase();
-    const phoneValue = phoneKeyword.trim();
-    return users.filter(item => {
-      if (nameKeyword) {
-        const text = `${item.username} ${item.name}`.toLowerCase();
-        if (!text.includes(nameKeyword)) {
-          return false;
-        }
+  // 获取用户列表
+  const loadUserList = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetchUserList({
+        page,
+        pageSize,
+        keyword: keyword.trim() || undefined,
+        phone: phoneKeyword.trim() || undefined,
+        role: roleFilter === "all" ? undefined : roleFilter,
+        status: statusFilter === "all" ? undefined : statusFilter
+      });
+      if (res.code === 200 && !res.msg) {
+        setUsers(res.data.list);
+        setTotal(res.data.total);
       }
-      if (phoneValue && !item.phone.includes(phoneValue)) {
-        return false;
-      }
-      if (roleFilter !== "all" && !item.roles.includes(roleFilter)) {
-        return false;
-      }
-      if (statusFilter === "enabled" && item.status !== "enabled") {
-        return false;
-      }
-      if (statusFilter === "disabled" && item.status !== "disabled") {
-        return false;
-      }
-      return true;
-    });
-  }, [users, keyword, phoneKeyword, roleFilter, statusFilter]);
+    } catch (error) {
+      console.error("Failed to load user list:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, keyword, phoneKeyword, roleFilter, statusFilter]);
 
-  const total = filteredUsers.length;
+  useEffect(() => {
+    loadUserList();
+  }, [loadUserList]);
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const pageItems = filteredUsers.slice(startIndex, endIndex);
+
   const handleTableSelectionChange = (keys: "all" | Set<React.Key>) => {
     if (keys === "all") {
-      setSelectedIds(pageItems.map(item => item.id));
+      setSelectedIds(users.map(item => item.id));
       return;
     }
     setSelectedIds(Array.from(keys).map(String));
@@ -211,7 +172,7 @@ function UserPage() {
     setUserFormError("");
   };
 
-  const handleSubmitUserForm = () => {
+  const handleSubmitUserForm = async () => {
     if (!userForm) {
       return;
     }
@@ -221,75 +182,145 @@ function UserPage() {
       setUserFormError("账号与姓名为必填项，请补充完整后再提交。");
       return;
     }
-    const exists = users.some(item => item.username === trimmedUsername && item.id !== userForm.id);
-    if (exists) {
-      setUserFormError("账号已存在，请更换一个唯一的账号标识。");
-      return;
+
+    try {
+      if (userFormMode === "create") {
+        const res = await createUser({
+          username: trimmedUsername,
+          name: trimmedName,
+          phone: userForm.phone.trim(),
+          roles: userForm.role ? [userForm.role] : [],
+          status: userForm.enabled ? "enabled" : "disabled"
+        });
+        if (res.code === 200 && !res.msg) {
+          addToast({
+            title: "用户新增成功",
+            description: `已新增用户 ${trimmedUsername}。`,
+            color: "success"
+          });
+          loadUserList();
+          setUserForm(null);
+          setUserFormError("");
+        }
+      } else if (userForm.id) {
+        const res = await updateUser({
+          id: userForm.id,
+          username: trimmedUsername,
+          name: trimmedName,
+          phone: userForm.phone.trim(),
+          roles: userForm.role ? [userForm.role] : [],
+          status: userForm.enabled ? "enabled" : "disabled"
+        });
+        if (res.code === 200 && !res.msg) {
+          addToast({
+            title: "用户更新成功",
+            description: `已更新用户 ${trimmedUsername} 的资料。`,
+            color: "success"
+          });
+          loadUserList();
+          setUserForm(null);
+          setUserFormError("");
+        }
+      }
+    } catch (error) {
+      console.error("Submit user form failed:", error);
     }
-    if (userFormMode === "create") {
-      const nextId = `u_${(users.length + 1).toString().padStart(3, "0")}`;
-      const now = new Date();
-      const createdAt = `${now.getFullYear()}-${(now.getMonth() + 1)
-        .toString()
-        .padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")} ${now
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now
-        .getSeconds()
-        .toString()
-        .padStart(2, "0")}`;
-      const nextUser: UserItem = {
-        id: nextId,
-        username: trimmedUsername,
-        name: trimmedName,
-        phone: userForm.phone.trim(),
-        roles: userForm.role ? [userForm.role] : [],
-        status: userForm.enabled ? "enabled" : "disabled",
-        createdAt
-      };
-      setUsers(previous => [nextUser, ...previous]);
-      addToast({
-        title: "用户新增成功",
-        description: `已新增用户 ${nextUser.username}，实际保存逻辑待接入用户接口。`,
-        color: "success"
-      });
-    } else {
-      setUsers(previous =>
-        previous.map(item =>
-          item.id === userForm.id
-            ? {
-                ...item,
-                username: trimmedUsername,
-                name: trimmedName,
-                phone: userForm.phone.trim(),
-                roles: userForm.role ? [userForm.role] : [],
-                status: userForm.enabled ? "enabled" : "disabled"
-              }
-            : item
-        )
-      );
-      addToast({
-        title: "用户更新成功",
-        description: `已更新用户 ${trimmedUsername} 的资料，实际保存逻辑待接入用户接口。`,
-        color: "success"
-      });
-    }
-    setUserForm(null);
-    setUserFormError("");
   };
 
-  const handleDeleteUser = (user: UserItem) => {
+  const handleDeleteUser = async (user: UserItem) => {
     const confirmed = window.confirm(`确定要删除用户 ${user.username} 吗？此操作需谨慎。`);
     if (!confirmed) {
       return;
     }
-    setUsers(previous => previous.filter(item => item.id !== user.id));
-    setSelectedIds(previous => previous.filter(id => id !== user.id));
-    addToast({
-      title: "用户删除成功",
-      description: `已从当前列表中删除用户 ${user.username}，实际删除逻辑待接入用户接口。`,
-      color: "success"
-    });
+    try {
+      const res = await deleteUser(user.id);
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "用户删除成功",
+          description: `已删除用户 ${user.username}。`,
+          color: "success"
+        });
+        loadUserList();
+        setSelectedIds(previous => previous.filter(id => id !== user.id));
+      }
+    } catch (error) {
+      console.error("Delete user failed:", error);
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = window.confirm(`确定要删除选中的 ${selectedIds.length} 个用户吗？`);
+    if (!confirmed) return;
+
+    try {
+      const res = await batchDeleteUsers(selectedIds);
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "批量删除成功",
+          description: `已成功删除 ${selectedIds.length} 个用户。`,
+          color: "success"
+        });
+        setSelectedIds([]);
+        loadUserList();
+      }
+    } catch (error) {
+      console.error("Batch delete users failed:", error);
+    }
+  };
+
+  const handleToggleStatus = async (user: UserItem) => {
+    const nextStatus = user.status === "enabled" ? "disabled" : "enabled";
+    try {
+      const res = await toggleUserStatus(user.id, nextStatus);
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "状态更新成功",
+          description: `用户 ${user.username} 已${nextStatus === "enabled" ? "启用" : "禁用"}。`,
+          color: "success"
+        });
+        loadUserList();
+      }
+    } catch (error) {
+      console.error("Toggle user status failed:", error);
+    }
+  };
+
+  const handleResetPwd = async (user: UserItem) => {
+    const confirmed = window.confirm(`确定要重置用户 ${user.username} 的密码吗？`);
+    if (!confirmed) return;
+
+    try {
+      const res = await resetPassword(user.id);
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "密码重置成功",
+          description: `用户 ${user.username} 的密码已重置为初始密码。`,
+          color: "success"
+        });
+      }
+    } catch (error) {
+      console.error("Reset password failed:", error);
+    }
+  };
+
+  const handleBatchResetPwd = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = window.confirm(`确定要为选中的 ${selectedIds.length} 个用户重置密码吗？`);
+    if (!confirmed) return;
+
+    try {
+      const res = await batchResetPassword(selectedIds);
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "批量重置成功",
+          description: `已成功重置 ${selectedIds.length} 个用户的密码。`,
+          color: "success"
+        });
+      }
+    } catch (error) {
+      console.error("Batch reset password failed:", error);
+    }
   };
 
   const handleOpenAssignRole = (user: UserItem) => {
@@ -300,71 +331,34 @@ function UserPage() {
     });
   };
 
-  const handleConfirmAssignRole = () => {
+  const handleConfirmAssignRole = async () => {
     if (!roleAssign) {
       return;
     }
-    setUsers(previous =>
-      previous.map(item =>
-        item.id === roleAssign.userId ? { ...item, roles: [...roleAssign.roles] } : item
-      )
-    );
-    addToast({
-      title: "角色分配成功",
-      description: `已更新用户 ${roleAssign.name} 的角色配置，实际保存逻辑待接入角色分配接口。`,
-      color: "success"
-    });
-    setRoleAssign(null);
-  };
+    const user = users.find(u => u.id === roleAssign.userId);
+    if (!user) return;
 
-  const handleBatchResetPassword = () => {
-    if (!hasSelection) {
-      return;
+    try {
+      const res = await updateUser({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        phone: user.phone,
+        roles: roleAssign.roles,
+        status: user.status
+      });
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "角色分配成功",
+          description: `已更新用户 ${roleAssign.name} 的角色配置。`,
+          color: "success"
+        });
+        loadUserList();
+        setRoleAssign(null);
+      }
+    } catch (error) {
+      console.error("Assign role failed:", error);
     }
-    const confirmed = window.confirm(
-      `确定要为选中的 ${selectedIds.length} 个用户重置登录密码吗？`
-    );
-    if (!confirmed) {
-      return;
-    }
-    addToast({
-      title: "批量重置密码",
-      description: `已提交批量重置密码任务，共 ${selectedIds.length} 个用户，实际逻辑待接入重置密码接口。`,
-      color: "primary"
-    });
-  };
-
-  const handleSingleResetPassword = (user: UserItem) => {
-    const confirmed = window.confirm(
-      `确定要重置用户 ${user.username} 的登录密码吗？`
-    );
-    if (!confirmed) {
-      return;
-    }
-    addToast({
-      title: "重置密码",
-      description: `已提交用户 ${user.username} 的密码重置任务，实际逻辑待接入重置密码接口。`,
-      color: "primary"
-    });
-  };
-
-  const handleBatchDeleteUsers = () => {
-    if (!hasSelection) {
-      return;
-    }
-    const confirmed = window.confirm(
-      `确定要删除选中的 ${selectedIds.length} 个用户吗？此操作建议仅在测试环境使用。`
-    );
-    if (!confirmed) {
-      return;
-    }
-    setUsers(previous => previous.filter(item => !selectedIds.includes(item.id)));
-    addToast({
-      title: "批量删除成功",
-      description: `已从当前列表中删除 ${selectedIds.length} 个用户，实际删除逻辑待接入用户接口。`,
-      color: "success"
-    });
-    setSelectedIds([]);
   };
 
   const handleBatchImport = () => {
@@ -519,7 +513,7 @@ function UserPage() {
                 className="h-8 text-xs"
                 startContent={<FiKey className="text-xs" />}
                 disabled={!hasSelection}
-                onPress={handleBatchResetPassword}
+                onPress={handleBatchResetPwd}
               >
                 批量重置密码
               </Button>
@@ -530,7 +524,7 @@ function UserPage() {
                 className="h-8 text-xs"
                 startContent={<FiTrash2 className="text-xs" />}
                 disabled={!hasSelection}
-                onPress={handleBatchDeleteUsers}
+                onPress={handleBatchDelete}
               >
                 批量删除
               </Button>
@@ -574,8 +568,10 @@ function UserPage() {
                 </TableColumn>
               </TableHeader>
               <TableBody
-                items={pageItems}
-                emptyContent="未找到匹配的用户账号，可调整筛选条件后重试。"
+                items={users}
+                emptyContent={isLoading ? " " : "未找到匹配的用户账号，可调整筛选条件后重试。"}
+                loadingContent={<Loading />}
+                isLoading={isLoading}
               >
                 {user => {
                   const enabled = user.status === "enabled";
@@ -604,14 +600,22 @@ function UserPage() {
                         <span>{user.roles.join("、") || "-"}</span>
                       </TableCell>
                       <TableCell className="px-3 py-2">
-                        <Chip
-                          size="sm"
-                          variant="flat"
-                          className="text-xs"
-                          color={enabled ? "success" : "danger"}
-                        >
-                          {enabled ? "启用" : "禁用"}
-                        </Chip>
+                        <div className="flex items-center gap-2">
+                          <Chip
+                            size="sm"
+                            variant="flat"
+                            className="text-xs"
+                            color={enabled ? "success" : "danger"}
+                          >
+                            {enabled ? "启用" : "禁用"}
+                          </Chip>
+                          <Switch
+                            size="sm"
+                            isSelected={enabled}
+                            onValueChange={() => handleToggleStatus(user)}
+                            aria-label="切换状态"
+                          />
+                        </div>
                       </TableCell>
                       <TableCell className="px-3 py-2">
                         <span>{user.createdAt}</span>
@@ -641,7 +645,7 @@ function UserPage() {
                             variant="light"
                             className="h-7 text-xs"
                             startContent={<FiKey className="text-xs" />}
-                            onPress={() => handleSingleResetPassword(user)}
+                            onPress={() => handleResetPwd(user)}
                           >
                             重置密码
                           </Button>
@@ -666,14 +670,14 @@ function UserPage() {
           <div className="mt-3 flex flex-col gap-2 text-xs md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <span>
-                共 {total} 个用户，当前第 {currentPage} / {totalPages} 页
+                共 {total} 个用户，当前第 {page} / {totalPages} 页
               </span>
             </div>
             <div className="flex items-center gap-2">
               <Pagination
                 size="sm"
                 total={totalPages}
-                page={currentPage}
+                page={page}
                 onChange={handlePageChange}
                 showControls
               />

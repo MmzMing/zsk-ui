@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
   Button,
   Card,
@@ -19,6 +19,7 @@ import {
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
+import { Loading } from "@/components/Loading";
 import {
   FiFileText,
   FiInfo,
@@ -37,102 +38,19 @@ import { Listbox, ListboxItem, Popover, PopoverContent, PopoverTrigger } from "@
 import {
   removeDocumentUploadTask,
   retryDocumentUploadTask,
-  type DocumentUploadTaskItem
+  fetchDocumentCategories,
+  fetchTagOptions,
+  fetchDocumentUploadTaskList,
+  fetchDraftList,
+  type DocumentUploadTaskItem,
+  type DocCategory,
+  type DocTag,
+  type DocumentItem as DraftItem
 } from "../../../api/admin/document";
 
 type UploadStatus = DocumentUploadTaskItem["status"];
 
-type DraftItem = {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
 type PermissionType = "public" | "private" | "password";
-
-const CATEGORY_DATA = [
-  {
-    id: "tech",
-    name: "技术开发",
-    children: [
-      { id: "frontend", name: "前端开发" },
-      { id: "backend", name: "后端开发" },
-      { id: "mobile", name: "移动端开发" },
-      { id: "devops", name: "运维部署" }
-    ]
-  },
-  {
-    id: "design",
-    name: "设计美工",
-    children: [
-      { id: "ui", name: "UI/UX设计" },
-      { id: "graphic", name: "平面设计" },
-      { id: "motion", name: "动效设计" }
-    ]
-  },
-  {
-    id: "product",
-    name: "产品管理",
-    children: [
-      { id: "research", name: "市场调研" },
-      { id: "planning", name: "产品规划" },
-      { id: "prototype", name: "原型设计" }
-    ]
-  },
-  {
-    id: "operation",
-    name: "运营推广",
-    children: [
-      { id: "content", name: "内容运营" },
-      { id: "user", name: "用户运营" },
-      { id: "growth", name: "增长策略" }
-    ]
-  }
-];
-
-const TAG_OPTIONS = [
-  { label: "React", value: "react" },
-  { label: "Vue", value: "vue" },
-  { label: "TypeScript", value: "typescript" },
-  { label: "Next.js", value: "nextjs" },
-  { label: "Tailwind", value: "tailwind" },
-  { label: "Node.js", value: "nodejs" },
-  { label: "Docker", value: "docker" },
-  { label: "Figma", value: "figma" }
-];
-
-const initialTasks: DocumentUploadTaskItem[] = [
-  {
-    id: "doc_task_001",
-    title: "如何把视频课程拆解成学习笔记",
-    fileName: "course-to-notes.pdf",
-    size: 12 * 1024 * 1024,
-    status: "success",
-    progress: 100,
-    createdAt: "2026-01-18 10:20:00"
-  },
-  {
-    id: "doc_task_002",
-    title: "前端工程化下的内容管理实践",
-    fileName: "content-engineering.docx",
-    size: 8 * 1024 * 1024,
-    status: "uploading",
-    progress: 62,
-    createdAt: "2026-01-18 10:32:15"
-  },
-  {
-    id: "doc_task_003",
-    title: "知识库信息架构最佳实践",
-    fileName: "kb-ia-best-practices.pptx",
-    size: 24 * 1024 * 1024,
-    status: "error",
-    progress: 37,
-    createdAt: "2026-01-18 10:05:42"
-  }
-];
 
 function formatSize(size: number) {
   if (size <= 0) return "-";
@@ -159,29 +77,58 @@ function getStatusColor(status: UploadStatus) {
 }
 
 function DocumentUploadPage() {
+  const [loading, setLoading] = useState(false);
   // 基础信息
   const [title, setTitle] = useState("");
   const [isTitleTouched, setIsTitleTouched] = useState(false);
   const [category, setCategory] = useState<string>("前端开发");
-  const [activeCategoryLevel1, setActiveCategoryLevel1] = useState<string>("tech");
+  const [activeCategoryLevel1, setActiveCategoryLevel1] = useState<string>("1");
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set([]));
   const [description, setDescription] = useState("");
   
+  const [categoryData, setCategoryData] = useState<DocCategory[]>([]);
+  const [tagOptions, setTagOptions] = useState<DocTag[]>([]);
+
+  // 消息提示
+  const [message, setMessage] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+
   // 文件上传
   const [selectedFileName, setSelectedFileName] = useState("");
   const [selectedFileSize, setSelectedFileSize] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // 任务列表
-  const [tasks, setTasks] = useState<DocumentUploadTaskItem[]>(initialTasks);
+  const [tasks, setTasks] = useState<DocumentUploadTaskItem[]>([]);
   const [statusFilter] = useState<"all" | UploadStatus>("all");
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(1);
   
   // 草稿
   const [drafts, setDrafts] = useState<DraftItem[]>([]);
-  const [message, setMessage] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    async function loadInitialData() {
+      setLoading(true);
+      try {
+        const [cats, tags, taskList, draftList] = await Promise.all([
+          fetchDocumentCategories(),
+          fetchTagOptions(),
+          fetchDocumentUploadTaskList({ page: 1, pageSize: 10 }),
+          fetchDraftList({ page: 1, pageSize: 10 })
+        ]);
+        if (cats && cats.length > 0) setCategoryData(cats);
+        if (tags && tags.length > 0) setTagOptions(tags);
+        if (taskList && taskList.list) setTasks(taskList.list);
+        if (draftList && draftList.list) setDrafts(draftList.list);
+      } catch (error) {
+        console.error("加载上传页面初始数据失败", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadInitialData();
+  }, []);
 
   // 权限设置
   const [permissionType, setPermissionType] = useState<PermissionType>("public");
@@ -348,10 +295,14 @@ function DocumentUploadPage() {
     }
     const now = new Date();
     const newDraft: DraftItem = {
-      id: `draft_${now.getTime()}`,
+      id: `${now.getTime()}`,
       title: trimmedTitle || "未命名文档",
       category,
       description,
+      status: "draft",
+      readCount: 0,
+      likeCount: 0,
+      commentCount: 0,
       createdAt: now.toISOString().replace("T", " ").slice(0, 19),
       updatedAt: now.toISOString().replace("T", " ").slice(0, 19)
     };
@@ -362,7 +313,7 @@ function DocumentUploadPage() {
   const handleLoadDraft = (draft: DraftItem) => {
     setTitle(draft.title);
     setCategory(draft.category);
-    setDescription(draft.description);
+    setDescription(draft.description || "");
     setMessage("已加载草稿");
   };
 
@@ -388,194 +339,194 @@ function DocumentUploadPage() {
 
       {/* 核心双栏布局 */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
         {/* 左侧主内容区：信息录入与高级配置 */}
         <div className="lg:col-span-8 space-y-6">
-          
           {/* 1. 基本信息 */}
-          <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-             <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                   <div className="h-6 w-6 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_18%,transparent)] flex items-center justify-center text-[var(--primary-color)]">
-                      <FiFileText className="text-xs" />
-                   </div>
-                   <div className="text-sm font-medium">基本信息</div>
+        <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+           <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                 <div className="h-6 w-6 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_18%,transparent)] flex items-center justify-center text-[var(--primary-color)]">
+                    <FiFileText className="text-xs" />
+                 </div>
+                 <div className="text-sm font-medium">基本信息</div>
+              </div>
+           </div>
+           <div className="p-5 flex flex-col gap-6">
+              {/* 第一层：文档标题 */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-medium text-[var(--text-color-secondary)]">文档标题</label>
+                  <span className={`text-[10px] ${title.length > 100 ? "text-danger" : "text-[var(--text-color-secondary)]"}`}>
+                    {title.length}/100
+                  </span>
                 </div>
-             </div>
-             <div className="p-5 flex flex-col gap-6">
-                {/* 第一层：文档标题 */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-medium text-[var(--text-color-secondary)]">文档标题</label>
-                    <span className={`text-[10px] ${title.length > 100 ? "text-danger" : "text-[var(--text-color-secondary)]"}`}>
-                      {title.length}/100
-                    </span>
-                  </div>
-                  <Input
-                    size="sm"
-                    variant="bordered"
-                    aria-label="文档标题"
-                    placeholder="请输入文档标题"
-                    value={title}
-                    onValueChange={(v) => {
-                      setTitle(v);
-                      if (!isTitleTouched) setIsTitleTouched(true);
-                    }}
-                    isInvalid={isTitleTouched && !title.trim()}
-                    errorMessage={isTitleTouched && !title.trim() ? "请输入文档标题" : ""}
-                    classNames={{
-                      inputWrapper: [
-                        "h-10",
-                        "bg-transparent",
-                        "border border-[var(--border-color)]",
-                        "dark:border-white/20",
-                        "hover:border-[var(--primary-color)]/80!",
-                        "group-data-[focus=true]:border-[var(--primary-color)]!",
-                        "transition-colors",
-                        "shadow-none"
-                      ].join(" "),
-                      input: "text-xs"
-                    }}
-                  />
-                </div>
+                <Input
+                  size="sm"
+                  variant="bordered"
+                  aria-label="文档标题"
+                  placeholder="请输入文档标题"
+                  value={title}
+                  onValueChange={(v) => {
+                    setTitle(v);
+                    if (!isTitleTouched) setIsTitleTouched(true);
+                  }}
+                  isInvalid={isTitleTouched && !title.trim()}
+                  errorMessage={isTitleTouched && !title.trim() ? "请输入文档标题" : ""}
+                  classNames={{
+                    inputWrapper: [
+                      "h-10",
+                      "bg-transparent",
+                      "border border-[var(--border-color)]",
+                      "dark:border-white/20",
+                      "hover:border-[var(--primary-color)]/80!",
+                      "group-data-[focus=true]:border-[var(--primary-color)]!",
+                      "transition-colors",
+                      "shadow-none"
+                    ].join(" "),
+                    input: "text-xs"
+                  }}
+                />
+              </div>
 
-                {/* 第二层：文档分类 */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-[var(--text-color-secondary)]">文档分类</label>
-                  <Popover placement="bottom-start" showArrow offset={10}>
-                    <PopoverTrigger>
-                      <Button 
-                      variant="bordered" 
-                      size="sm" 
-                      aria-label="文档分类"
-                      className="w-full justify-between h-10 border-[var(--border-color)] hover:border-[var(--primary-color)] bg-[var(--bg-elevated)]/30 text-xs font-normal px-3"
-                      endContent={<FiChevronRight className="text-[var(--text-color-secondary)] rotate-90" />}
-                    >
-                      {category && category !== "未分类" ? (
-                        <div className="flex items-center gap-1">
-                          {(() => {
-                            const parent = CATEGORY_DATA.find(c => c.children.some(sub => sub.name === category));
-                            return parent ? (
-                              <>
-                                <span className="text-[var(--text-color-secondary)]">{parent.name}</span>
-                                <span className="text-[var(--text-color-secondary)]/50">/</span>
-                              </>
-                            ) : null;
-                          })()}
-                          <span>{category}</span>
-                        </div>
-                      ) : "选择分类"}
-                    </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0 border border-[var(--border-color)] shadow-xl overflow-hidden bg-[var(--bg-elevated)]">
-                      <div className="flex h-[280px] min-w-[320px]">
-                        {/* 一级分类 */}
-                        <div className="w-1/2 border-r border-[var(--border-color)] bg-[var(--bg-elevated)]/50">
-                          <Listbox
-                            aria-label="一级分类"
-                            variant="flat"
-                            disallowEmptySelection
-                            selectionMode="single"
-                            selectedKeys={[activeCategoryLevel1]}
-                            onSelectionChange={(keys) => setActiveCategoryLevel1(Array.from(keys)[0] as string)}
-                            className="p-1"
-                            itemClasses={{
-                              base: "rounded-md px-3 py-2 gap-3 data-[selected=true]:bg-[var(--primary-color)]/10 data-[selected=true]:text-[var(--primary-color)]",
-                              title: "text-xs font-medium"
-                            }}
-                          >
-                            {CATEGORY_DATA.map(cat => (
-                              <ListboxItem key={cat.id} endContent={<FiChevronRight className="text-[10px] opacity-50" />}>
-                                {cat.name}
-                              </ListboxItem>
-                            ))}
-                          </Listbox>
-                        </div>
-                        {/* 二级分类 */}
-                        <div className="w-1/2 bg-[var(--bg-elevated)]">
-                          <Listbox
-                            aria-label="二级分类"
-                            variant="flat"
-                            disallowEmptySelection
-                            selectionMode="single"
-                            selectedKeys={[category]}
-                            onSelectionChange={(keys) => setCategory(Array.from(keys)[0] as string)}
-                            className="p-1"
-                            itemClasses={{
-                              base: "rounded-md px-3 py-2 data-[selected=true]:bg-[var(--primary-color)]/10 data-[selected=true]:text-[var(--primary-color)]",
-                              title: "text-xs"
-                            }}
-                          >
-                            {(CATEGORY_DATA.find(c => c.id === activeCategoryLevel1)?.children || []).map(sub => (
-                              <ListboxItem key={sub.name}>
-                                {sub.name}
-                              </ListboxItem>
-                            ))}
-                          </Listbox>
-                        </div>
+              {/* 第二层：文档分类 */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[var(--text-color-secondary)]">文档分类</label>
+                <Popover placement="bottom-start" showArrow offset={10}>
+                  <PopoverTrigger>
+                    <Button 
+                    variant="bordered" 
+                    size="sm" 
+                    aria-label="文档分类"
+                    className="w-full justify-between h-10 border-[var(--border-color)] hover:border-[var(--primary-color)] bg-[var(--bg-elevated)]/30 text-xs font-normal px-3"
+                    endContent={<FiChevronRight className="text-[var(--text-color-secondary)] rotate-90" />}
+                    isLoading={loading}
+                  >
+                    {category && category !== "未分类" ? (
+                      <div className="flex items-center gap-1">
+                        {(() => {
+                          const parent = categoryData.find(c => c.children?.some(sub => sub.name === category));
+                          return parent ? (
+                            <>
+                              <span className="text-[var(--text-color-secondary)]">{parent.name}</span>
+                              <span className="text-[var(--text-color-secondary)]/50">/</span>
+                            </>
+                          ) : null;
+                        })()}
+                        <span>{category}</span>
                       </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                    ) : "选择分类"}
+                  </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0 border border-[var(--border-color)] shadow-xl overflow-hidden bg-[var(--bg-elevated)]">
+                    <div className="flex h-[280px] min-w-[320px]">
+                      {/* 一级分类 */}
+                      <div className="w-1/2 border-r border-[var(--border-color)] bg-[var(--bg-elevated)]/50">
+                        <Listbox
+                          aria-label="一级分类"
+                          variant="flat"
+                          disallowEmptySelection
+                          selectionMode="single"
+                          selectedKeys={[activeCategoryLevel1]}
+                          onSelectionChange={(keys) => setActiveCategoryLevel1(Array.from(keys)[0] as string)}
+                          className="p-1"
+                          itemClasses={{
+                            base: "rounded-md px-3 py-2 gap-3 data-[selected=true]:bg-[var(--primary-color)]/10 data-[selected=true]:text-[var(--primary-color)]",
+                            title: "text-xs font-medium"
+                          }}
+                        >
+                          {categoryData.map(cat => (
+                            <ListboxItem key={cat.id} endContent={<FiChevronRight className="text-[10px] opacity-50" />}>
+                              {cat.name}
+                            </ListboxItem>
+                          ))}
+                        </Listbox>
+                      </div>
+                      {/* 二级分类 */}
+                      <div className="w-1/2 bg-[var(--bg-elevated)]">
+                        <Listbox
+                          aria-label="二级分类"
+                          variant="flat"
+                          disallowEmptySelection
+                          selectionMode="single"
+                          selectedKeys={[category]}
+                          onSelectionChange={(keys) => setCategory(Array.from(keys)[0] as string)}
+                          className="p-1"
+                          itemClasses={{
+                            base: "rounded-md px-3 py-2 data-[selected=true]:bg-[var(--primary-color)]/10 data-[selected=true]:text-[var(--primary-color)]",
+                            title: "text-xs"
+                          }}
+                        >
+                          {(categoryData.find(c => c.id === activeCategoryLevel1)?.children || []).map(sub => (
+                            <ListboxItem key={sub.name}>
+                              {sub.name}
+                            </ListboxItem>
+                          ))}
+                        </Listbox>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-                {/* 第三层：文档简介 */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-medium text-[var(--text-color-secondary)]">文档简介</label>
-                    <span className={`text-[10px] ${description.length > 500 ? "text-danger" : "text-[var(--text-color-secondary)]"}`}>
-                      {description.length}/500
-                    </span>
-                  </div>
-                  <Textarea
-                    size="sm"
-                    variant="bordered"
-                    aria-label="文档简介"
-                    placeholder="简要描述文档内容，帮助他人快速了解文档核心价值..."
-                    value={description}
-                    onValueChange={setDescription}
-                    minRows={4}
-                    classNames={{
-                      inputWrapper: [
-                        "bg-transparent",
-                        "border border-[var(--border-color)]",
-                        "dark:border-white/20",
-                        "hover:border-[var(--primary-color)]/80!",
-                        "group-data-[focus=true]:border-[var(--primary-color)]!",
-                        "transition-colors",
-                        "shadow-none",
-                        "p-3"
-                      ].join(" "),
-                      input: "text-xs leading-relaxed"
-                    }}
-                  />
+              {/* 第三层：文档简介 */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-medium text-[var(--text-color-secondary)]">文档简介</label>
+                  <span className={`text-[10px] ${description.length > 500 ? "text-danger" : "text-[var(--text-color-secondary)]"}`}>
+                    {description.length}/500
+                  </span>
                 </div>
+                <Textarea
+                  size="sm"
+                  variant="bordered"
+                  aria-label="文档简介"
+                  placeholder="简要描述文档内容，帮助他人快速了解文档核心价值..."
+                  value={description}
+                  onValueChange={setDescription}
+                  minRows={4}
+                  classNames={{
+                    inputWrapper: [
+                      "bg-transparent",
+                      "border border-[var(--border-color)]",
+                      "dark:border-white/20",
+                      "hover:border-[var(--primary-color)]/80!",
+                      "group-data-[focus=true]:border-[var(--primary-color)]!",
+                      "transition-colors",
+                      "shadow-none",
+                      "p-3"
+                    ].join(" "),
+                    input: "text-xs leading-relaxed"
+                  }}
+                />
+              </div>
 
-                {/* 第四层：标签设置 */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-[var(--text-color-secondary)]">标签设置</label>
-                  <AdminSelect
-                    aria-label="标签设置"
-                    placeholder="为文档添加标签 (多选)"
-                    selectionMode="multiple"
-                    size="sm"
-                    selectedKeys={selectedTags}
-                    onSelectionChange={(keys) => setSelectedTags(keys as Set<string>)}
-                    startContent={<FiTag className="text-[var(--text-color-secondary)] text-xs" />}
-                    classNames={{
-                      trigger: [
-                        "h-10",
-                        "bg-transparent",
-                        "border border-[var(--border-color)]",
-                        "dark:border-white/20",
-                        "hover:border-[var(--primary-color)]/80!",
-                        "group-data-[focus=true]:border-[var(--primary-color)]!",
-                        "transition-colors",
-                        "shadow-none"
+              {/* 第四层：标签设置 */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[var(--text-color-secondary)]">标签设置</label>
+                <AdminSelect
+                  aria-label="标签设置"
+                  placeholder="为文档添加标签 (多选)"
+                  selectionMode="multiple"
+                  size="sm"
+                  selectedKeys={selectedTags}
+                  onSelectionChange={(keys) => setSelectedTags(keys as Set<string>)}
+                  startContent={<FiTag className="text-[var(--text-color-secondary)] text-xs" />}
+                  isLoading={loading}
+                  classNames={{
+                    trigger: [
+                      "h-10",
+                      "bg-transparent",
+                      "border border-[var(--border-color)]",
+                      "dark:border-white/20",
+                      "hover:border-[var(--primary-color)]/80!",
+                      "group-data-[focus=true]:border-[var(--primary-color)]!",
+                      "transition-colors",
+                      "shadow-none"
                       ].join(" "),
                       value: "text-xs"
                     }}
                   >
-                    {TAG_OPTIONS.map(tag => (
+                    {tagOptions.map(tag => (
                       <SelectItem key={tag.value} textValue={tag.label}>
                         {tag.label}
                       </SelectItem>
@@ -781,7 +732,7 @@ function DocumentUploadPage() {
                 />
                 {!selectedFileName ? (
                   <div 
-                    className="border-2 border-dashed border-[var(--border-color)] rounded-xl p-6 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-[var(--primary-color)] transition-colors"
+                    className={`border-2 border-dashed border-[var(--border-color)] rounded-xl h-48 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-[var(--primary-color)] hover:bg-[var(--bg-elevated)]/50 transition-colors ${loading ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={handleSelectFile}
                   >
                     <div className="h-10 w-10 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center text-[var(--text-color-secondary)]">
@@ -837,8 +788,8 @@ function DocumentUploadPage() {
                    className="font-medium"
                    startContent={<FiUploadCloud className="text-lg" />}
                    onPress={handleCreateTask}
-                   isLoading={isUploading}
-                   isDisabled={!isFormValid || isUploading}
+                   isLoading={isUploading || loading}
+                   isDisabled={!isFormValid || isUploading || loading}
                  >
                    开始上传并发布
                  </Button>
@@ -848,6 +799,7 @@ function DocumentUploadPage() {
                       variant="flat"
                       className="text-xs"
                       onPress={handleSaveDraft}
+                      isDisabled={loading}
                     >
                       保存草稿
                     </Button>
@@ -855,6 +807,7 @@ function DocumentUploadPage() {
                       fullWidth
                       variant="light"
                       className="text-xs"
+                      isDisabled={loading}
                       onPress={() => {
                         setTitle("");
                         setCategory("未分类");
@@ -915,8 +868,12 @@ function DocumentUploadPage() {
                  <TableColumn width={100}>状态</TableColumn>
                  <TableColumn width={100} align="end">操作</TableColumn>
                </TableHeader>
-               <TableBody emptyContent="暂无上传任务">
-                 {pageItems.map(item => (
+               <TableBody 
+                 emptyContent="暂无上传任务"
+                 isLoading={loading}
+                 loadingContent={<Loading height={200} text="获取上传任务中..." />}
+               >
+                 {(loading ? [] : pageItems).map(item => (
                    <TableRow key={item.id}>
                      <TableCell>
                        <div className="flex flex-col">
@@ -985,8 +942,12 @@ function DocumentUploadPage() {
                  <TableColumn width={120}>时间</TableColumn>
                  <TableColumn width={100} align="end">操作</TableColumn>
                </TableHeader>
-               <TableBody emptyContent="暂无草稿">
-                 {drafts.map(draft => (
+               <TableBody 
+                  emptyContent="暂无草稿"
+                  isLoading={loading}
+                  loadingContent={<Loading height={200} text="获取草稿中..." />}
+                >
+                  {(loading ? [] : drafts).map(draft => (
                    <TableRow key={draft.id}>
                      <TableCell>
                        <div className="flex flex-col">

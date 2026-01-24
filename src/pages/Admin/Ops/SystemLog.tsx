@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Button,
   Card,
@@ -18,94 +18,9 @@ import {
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
+import { Loading } from "@/components/Loading";
 import { FiDownload, FiRotateCcw } from "react-icons/fi";
-
-type LogLevel = "INFO" | "WARN" | "ERROR";
-
-type SystemLogItem = {
-  id: string;
-  time: string;
-  level: LogLevel;
-  module: string;
-  message: string;
-  detail: string;
-  traceId: string;
-};
-
-const systemLogs: SystemLogItem[] = [
-  {
-    id: "log_001",
-    time: "2026-01-18 10:40:21",
-    level: "ERROR",
-    module: "缓存服务",
-    message: "批量删除缓存键失败",
-    detail: "实例 redis-main，前缀 session:* 删除过程中部分键不存在，已记录失败列表。",
-    traceId: "trace-ops-1001"
-  },
-  {
-    id: "log_002",
-    time: "2026-01-18 10:38:03",
-    level: "WARN",
-    module: "系统监控",
-    message: "磁盘使用率接近阈值",
-    detail: "节点 node-01 /data 分区使用率达到 82%，已触发告警。",
-    traceId: "trace-monitor-2033"
-  },
-  {
-    id: "log_003",
-    time: "2026-01-18 10:32:10",
-    level: "INFO",
-    module: "认证中心",
-    message: "后台登录成功",
-    detail: "用户 admin 登录成功，来源 IP 192.168.0.10。",
-    traceId: "trace-auth-7780"
-  },
-  {
-    id: "log_004",
-    time: "2026-01-18 10:28:44",
-    level: "INFO",
-    module: "接口网关",
-    message: "接口响应时间统计",
-    detail: "过去 5 分钟内 /api/admin/dashboard/overview P95 耗时 280ms。",
-    traceId: "trace-gw-4432"
-  },
-  {
-    id: "log_005",
-    time: "2026-01-18 10:21:07",
-    level: "WARN",
-    module: "审核中心",
-    message: "审核接口调用频率异常",
-    detail: "用户 auditor 在 1 分钟内连续触发 20 次审核操作，已记录行为日志。",
-    traceId: "trace-audit-9920"
-  },
-  {
-    id: "log_006",
-    time: "2026-01-18 10:12:33",
-    level: "ERROR",
-    module: "内容管理",
-    message: "视频转码失败",
-    detail: "任务 job_20260118_1001 转码异常，中途网络断开，已进入重试队列。",
-    traceId: "trace-video-5501"
-  },
-  {
-    id: "log_007",
-    time: "2026-01-18 10:05:59",
-    level: "INFO",
-    module: "系统配置",
-    message: "更新站点配置",
-    detail: "管理员 admin 更新了站点标题与 Logo 配置。",
-    traceId: "trace-config-3302"
-  },
-  {
-    id: "log_008",
-    time: "2026-01-18 09:58:42",
-    level: "INFO",
-    module: "认证中心",
-    message: "后台登录成功",
-    detail: "用户 editor 使用邮箱验证码登录成功。",
-    traceId: "trace-auth-7779"
-  }
-];
+import { SystemLogItem, LogLevel, fetchSystemLogs } from "../../../api/admin/ops";
 
 const logModules = ["全部模块", "接口网关", "认证中心", "系统监控", "缓存服务", "内容管理", "审核中心", "系统配置"];
 
@@ -132,38 +47,43 @@ function getLevelChipProps(level: LogLevel) {
 }
 
 function SystemLogPage() {
+  const [loading, setLoading] = useState(false);
   const [activeLevel, setActiveLevel] = useState<LogLevel | "all">("all");
   const [activeModule, setActiveModule] = useState("全部模块");
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(1);
+  const [logs, setLogs] = useState<SystemLogItem[]>([]);
+  const [total, setTotal] = useState(0);
   const [message, setMessage] = useState("");
 
-  const filteredLogs = useMemo(() => {
-    const trimmed = keyword.trim().toLowerCase();
-    return systemLogs.filter(item => {
-      if (activeLevel !== "all" && item.level !== activeLevel) {
-        return false;
-      }
-      if (activeModule !== "全部模块" && item.module !== activeModule) {
-        return false;
-      }
-      if (trimmed) {
-        const content = `${item.message} ${item.detail} ${item.traceId}`.toLowerCase();
-        if (!content.includes(trimmed)) {
-          return false;
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const res = await fetchSystemLogs({
+          page,
+          pageSize: 6,
+          keyword,
+          module: activeModule === "全部模块" ? undefined : activeModule,
+          level: activeLevel === "all" ? undefined : activeLevel
+        });
+        if (res) {
+          setLogs(res.list);
+          setTotal(res.total);
         }
+      } catch (error) {
+        console.error("Failed to load logs:", error);
+      } finally {
+        setLoading(false);
       }
-      return true;
-    });
-  }, [activeLevel, activeModule, keyword]);
+    }
+    loadData();
+  }, [activeLevel, activeModule, keyword, page]);
 
   const pageSize = 6;
-  const total = filteredLogs.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const pageItems = filteredLogs.slice(startIndex, endIndex);
+  const pageItems = logs;
 
   const handleResetFilter = () => {
     setActiveLevel("all");
@@ -175,7 +95,7 @@ function SystemLogPage() {
 
   const handleExportCurrent = () => {
     setMessage(
-      `已提交导出当前筛选结果的日志文件，共 ${filteredLogs.length} 条记录。实际导出逻辑待接入 /api/admin/ops/logs/export 接口。`
+      `已提交导出当前筛选结果的日志文件，共 ${logs.length} 条记录。实际导出逻辑待接入 /api/admin/ops/logs/export 接口。`
     );
   };
 
@@ -361,8 +281,10 @@ function SystemLogPage() {
                 </TableColumn>
               </TableHeader>
               <TableBody
-                items={pageItems}
+                items={loading ? [] : pageItems}
                 emptyContent="未找到匹配的日志记录，可调整筛选条件或关键字后重试。"
+                isLoading={loading}
+                loadingContent={<Loading height={200} text="获取系统日志数据中..." />}
               >
                 {item => {
                   const levelProps = getLevelChipProps(item.level);

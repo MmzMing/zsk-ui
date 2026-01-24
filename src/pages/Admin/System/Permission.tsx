@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   SelectItem,
   Button,
@@ -13,174 +13,14 @@ import {
   TableCell
 } from "@heroui/react";
 import { FiKey } from "react-icons/fi";
-
-type PermissionItem = {
-  id: string;
-  key: string;
-  name: string;
-  module: string;
-  description: string;
-  type: "menu" | "action" | "data";
-  createdAt: string;
-};
-
-type PermissionGroup = {
-  id: string;
-  label: string;
-  items: PermissionItem[];
-};
+import { Loading } from "@/components/Loading";
+import {
+  type PermissionItem,
+  type PermissionGroup,
+  fetchPermissionList
+} from "@/api/admin/system";
 
 type ModuleFilter = "all" | "dashboard" | "ops" | "personnel" | "system" | "content";
-
-const permissionGroups: PermissionGroup[] = [
-  {
-    id: "dashboard",
-    label: "仪表盘",
-    items: [
-      {
-        id: "perm_dashboard_view",
-        key: "dashboard:view",
-        name: "查看仪表盘总览",
-        module: "仪表盘",
-        description: "访问后台仪表盘首页，查看整体运行情况。",
-        type: "menu",
-        createdAt: "2026-01-10 09:00:00"
-      },
-      {
-        id: "perm_dashboard_analysis",
-        key: "dashboard:analysis",
-        name: "查看分析页",
-        module: "仪表盘",
-        description: "访问分析页，查看详细流量趋势与指标。",
-        type: "menu",
-        createdAt: "2026-01-10 09:05:00"
-      }
-    ]
-  },
-  {
-    id: "ops",
-    label: "系统运维",
-    items: [
-      {
-        id: "perm_ops_monitor",
-        key: "ops:monitor",
-        name: "查看系统监控",
-        module: "系统运维",
-        description: "访问系统监控页面，查看各类资源监控数据。",
-        type: "menu",
-        createdAt: "2026-01-11 10:00:00"
-      },
-      {
-        id: "perm_ops_cache",
-        key: "ops:cache",
-        name: "查看缓存监控与列表",
-        module: "系统运维",
-        description: "查看缓存监控面板与缓存键列表。",
-        type: "menu",
-        createdAt: "2026-01-11 10:10:00"
-      },
-      {
-        id: "perm_ops_log",
-        key: "ops:log",
-        name: "查看系统日志",
-        module: "系统运维",
-        description: "查看系统运行日志与导出日志文件。",
-        type: "menu",
-        createdAt: "2026-01-11 10:20:00"
-      }
-    ]
-  },
-  {
-    id: "personnel",
-    label: "人员管理",
-    items: [
-      {
-        id: "perm_personnel_user",
-        key: "personnel:user",
-        name: "管理用户",
-        module: "人员管理",
-        description: "管理后台用户账号、基础信息与状态。",
-        type: "menu",
-        createdAt: "2026-01-12 09:00:00"
-      },
-      {
-        id: "perm_personnel_menu",
-        key: "personnel:menu",
-        name: "管理菜单",
-        module: "人员管理",
-        description: "配置后台菜单结构与路由映射关系。",
-        type: "menu",
-        createdAt: "2026-01-12 09:10:00"
-      },
-      {
-        id: "perm_personnel_role",
-        key: "personnel:role",
-        name: "管理角色与权限",
-        module: "人员管理",
-        description: "管理角色信息并分配角色权限。",
-        type: "menu",
-        createdAt: "2026-01-12 09:20:00"
-      }
-    ]
-  },
-  {
-    id: "system",
-    label: "系统管理",
-    items: [
-      {
-        id: "perm_system_dict",
-        key: "system:dict",
-        name: "管理字典配置",
-        module: "系统管理",
-        description: "增删改查系统字典配置与字典项。",
-        type: "menu",
-        createdAt: "2026-01-13 09:00:00"
-      },
-      {
-        id: "perm_system_token",
-        key: "system:token",
-        name: "管理访问令牌",
-        module: "系统管理",
-        description: "管理后台访问令牌与密钥，支持吊销与续期。",
-        type: "menu",
-        createdAt: "2026-01-13 09:10:00"
-      },
-      {
-        id: "perm_system_param",
-        key: "system:param",
-        name: "管理系统参数",
-        module: "系统管理",
-        description: "管理系统运行参数与配置项。",
-        type: "menu",
-        createdAt: "2026-01-13 09:20:00"
-      }
-    ]
-  },
-  {
-    id: "content",
-    label: "内容管理",
-    items: [
-      {
-        id: "perm_content_video_upload",
-        key: "content:video:upload",
-        name: "上传视频",
-        module: "内容管理",
-        description: "向后台上传新的视频内容。",
-        type: "action",
-        createdAt: "2026-01-14 10:00:00"
-      },
-      {
-        id: "perm_content_doc_publish",
-        key: "content:doc:publish",
-        name: "发布文档",
-        module: "内容管理",
-        description: "将文档从草稿箱发布到线上。",
-        type: "action",
-        createdAt: "2026-01-14 10:10:00"
-      }
-    ]
-  }
-];
 
 function getTypeLabel(type: PermissionItem["type"]) {
   if (type === "menu") {
@@ -199,10 +39,30 @@ function PermissionPage() {
   const [keyword, setKeyword] = useState("");
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
   const [page, setPage] = useState(1);
+  const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const loadPermissions = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetchPermissionList();
+      if (res) {
+        setPermissionGroups(res);
+      }
+    } catch {
+      // 错误已在 API 层级处理并显示
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadPermissions();
+  }, [loadPermissions]);
 
   const flatPermissions = useMemo(() => {
-    return permissionGroups.flatMap(group => group.items);
-  }, []);
+    return (permissionGroups || []).flatMap(group => group.items);
+  }, [permissionGroups]);
 
   const filteredItems = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
@@ -344,6 +204,8 @@ function PermissionPage() {
               <TableBody
                 items={pageItems}
                 emptyContent="未找到匹配的权限记录，可调整筛选条件后重试。"
+                isLoading={isLoading}
+                loadingContent={<Loading height={200} text="获取权限数据中..." />}
               >
                 {item => (
                   <TableRow

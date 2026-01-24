@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import {
   Button,
   Card,
@@ -44,99 +44,12 @@ import {
 } from "react-icons/fi";
 import ReactPlayer from "react-player";
 import { useAppStore } from "../../../store";
-import type { VideoItem, VideoStatus } from "@/api/admin/video";
+import { fetchVideoList, type VideoItem, type VideoStatus } from "@/api/admin/video";
+import { Loading } from "@/components/Loading";
 
 type StatusFilter = "all" | VideoStatus;
 
 const videoCategories = ["前端基础", "工程实践", "效率方法", "个人成长", "系统设计"];
-
-const initialVideos: VideoItem[] = [
-  {
-    id: "v_001",
-    title: "从 0 搭建个人知识库前端",
-    category: "工程实践",
-    description: "本课程详细讲解如何从零开始搭建一个属于自己的个人知识库前端系统，涵盖技术选型、架构设计及核心功能实现。",
-    status: "published",
-    duration: "18:24",
-    plays: 3289,
-    likes: 421,
-    comments: 63,
-    createdAt: "2026-01-10 09:20:11",
-    updatedAt: "2026-01-12 14:32:45",
-    pinned: true,
-    recommended: true,
-    cover: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=60",
-    tags: ["React", "工程化"],
-    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4"
-  },
-  {
-    id: "v_002",
-    title: "如何把零散笔记整理成知识库",
-    category: "效率方法",
-    description: "分享高效的笔记整理方法论，教你如何将碎片化的信息构建成体系化的知识网络，提升学习与工作效率。",
-    status: "published",
-    duration: "23:10",
-    plays: 2410,
-    likes: 356,
-    comments: 48,
-    createdAt: "2026-01-11 10:05:00",
-    updatedAt: "2026-01-13 10:18:22",
-    recommended: true,
-    cover: "https://images.unsplash.com/photo-1456324504439-367cee13d652?w=800&auto=format&fit=crop&q=60",
-    tags: ["笔记", "效率"],
-    videoUrl: "https://www.w3schools.com/html/movie.mp4"
-  },
-  {
-    id: "v_003",
-    title: "React 19 下的前端工程化实践",
-    category: "前端基础",
-    description: "深入探讨 React 19 新特性在实际工程中的应用，分析其对前端构建工具链及开发模式的影响。",
-    status: "draft",
-    duration: "31:42",
-    plays: 0,
-    likes: 0,
-    comments: 0,
-    createdAt: "2026-01-12 16:08:33",
-    updatedAt: "2026-01-12 16:08:33",
-    cover: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
-    tags: ["React 19", "前端"],
-    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4"
-  },
-  {
-    id: "v_004",
-    title: "用知识库管理你的职业成长",
-    category: "个人成长",
-    description: "职业发展需要规划与记录，本视频介绍如何利用知识库工具追踪个人成长轨迹，辅助职业决策。",
-    status: "offline",
-    duration: "19:56",
-    plays: 980,
-    likes: 112,
-    comments: 15,
-    createdAt: "2026-01-08 11:22:11",
-    updatedAt: "2026-01-15 09:02:47",
-    cover: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=60",
-    tags: ["职业成长", "规划"],
-    videoUrl: "https://www.w3schools.com/html/movie.mp4"
-  },
-  {
-    id: "v_005",
-    title: "系统设计入门：从单机到集群",
-    category: "系统设计",
-    description: "系统设计经典入门教程，通过案例演示如何将一个单机应用逐步演进为高可用、高性能的分布式集群架构。",
-    status: "published",
-    duration: "45:12",
-    plays: 1520,
-    likes: 210,
-    comments: 32,
-    createdAt: "2026-01-15 14:20:00",
-    updatedAt: "2026-01-16 10:00:00",
-    recommended: true,
-    pinned: true,
-    cover: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop&q=60",
-    tags: ["系统设计", "架构"],
-    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4"
-  }
-];
 
 const chartData = [
   { date: "01-12", plays: 120 },
@@ -184,7 +97,8 @@ type VideoFormState = {
 };
 
 function VideoListPage() {
-  const [videos, setVideos] = useState<VideoItem[]>(() => initialVideos);
+  const [videos, setVideos] = useState<VideoItem[]>([]);
+  const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -197,6 +111,31 @@ function VideoListPage() {
   const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
   const [editingVideo, setEditingVideo] = useState<VideoFormState | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadVideos() {
+      setLoading(true);
+      try {
+        const res = await fetchVideoList({
+          page: 1,
+          pageSize: 1000
+        });
+        if (cancelled) return;
+        if (res && res.code === 200 && !res.msg) {
+          setVideos(res.data.list);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadVideos();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleEditClick = (item: VideoItem) => {
     setEditingVideo({
@@ -802,8 +741,10 @@ function VideoListPage() {
                 </TableColumn>
               </TableHeader>
               <TableBody
-                items={pageItems}
+                items={loading ? [] : pageItems}
                 emptyContent="暂未找到视频记录，可先在视频上传页面创建新内容。"
+                isLoading={loading}
+                loadingContent={<Loading height={200} text="获取视频列表数据中..." />}
               >
                 {item => (
                   <TableRow key={item.id}>

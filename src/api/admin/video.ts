@@ -1,4 +1,64 @@
 import { request } from "../axios";
+import type { ApiResponse } from "../types";
+import { 
+  mockVideos, 
+  mockInitialAiQueueItems, 
+  mockInitialManualQueueItems, 
+  mockVideoUploadTasks,
+  mockVideoCategories,
+  mockTagOptions,
+  mockVideoDrafts
+} from "../mock/admin/video";
+
+export type VideoCategory = {
+  id: string;
+  name: string;
+  children: { id: string; name: string }[];
+};
+
+export type VideoTag = {
+  id: string;
+  name: string;
+};
+
+export async function fetchVideoCategories() {
+  try {
+    return await request.get<VideoCategory[]>("/admin/content/video/categories");
+  } catch (error) {
+    console.error("fetchVideoCategories API Error:", error);
+    if (import.meta.env.DEV) {
+      return mockVideoCategories;
+    }
+    throw error;
+  }
+}
+
+export async function fetchTagOptions() {
+  try {
+    return await request.get<VideoTag[]>("/admin/content/video/tags");
+  } catch (error) {
+    console.error("fetchTagOptions API Error:", error);
+    if (import.meta.env.DEV) {
+      return mockTagOptions;
+    }
+    throw error;
+  }
+}
+
+export async function fetchDraftList(params: { page: number; pageSize: number }) {
+  try {
+    return await request.get<{ list: DraftItem[]; total: number }>("/admin/content/video/draft/list", { params });
+  } catch (error) {
+    console.error("fetchDraftList API Error:", error);
+    if (import.meta.env.DEV) {
+      return {
+        list: mockVideoDrafts,
+        total: mockVideoDrafts.length
+      };
+    }
+    throw error;
+  }
+}
 
 export type UploadInitRequest = {
   title: string;
@@ -17,10 +77,15 @@ export type UploadInitResponse = {
 };
 
 export async function initVideoUpload(data: UploadInitRequest) {
-  return request.post<UploadInitResponse>(
-    "/admin/content/video/upload/init",
-    data
-  );
+  try {
+    return await request.post<UploadInitResponse>(
+      "/admin/content/video/upload/init",
+      data
+    );
+  } catch (error) {
+    console.error("initVideoUpload API Error:", error);
+    throw error;
+  }
 }
 
 export type UploadChunkRequest = {
@@ -45,15 +110,20 @@ export async function uploadVideoChunk(requestParams: UploadChunkRequest) {
   formData.append("chunkSize", String(requestParams.chunkSize));
   formData.append("content", requestParams.file);
 
-  return request.post<UploadChunkResponse>(
-    "/admin/content/video/upload/chunk",
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data"
+  try {
+    return await request.post<UploadChunkResponse>(
+      "/admin/content/video/upload/chunk",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
       }
-    }
-  );
+    );
+  } catch (error) {
+    console.error("uploadVideoChunk API Error:", error);
+    throw error;
+  }
 }
 
 export type UploadMergeRequest = {
@@ -67,10 +137,15 @@ export type UploadMergeResponse = {
 };
 
 export async function mergeVideoUpload(data: UploadMergeRequest) {
-  return request.post<UploadMergeResponse>(
-    "/admin/content/video/upload/merge",
-    data
-  );
+  try {
+    return await request.post<UploadMergeResponse>(
+      "/admin/content/video/upload/merge",
+      data
+    );
+  } catch (error) {
+    console.error("mergeVideoUpload API Error:", error);
+    throw error;
+  }
 }
 
 export type UploadTaskStatus = "waiting" | "uploading" | "success" | "error";
@@ -115,12 +190,24 @@ export type UploadTaskListResponse = {
 };
 
 export async function fetchUploadTaskList(params: UploadTaskListParams) {
-  return request.get<UploadTaskListResponse>(
-    "/admin/content/video/upload/list",
-    {
-      params
+  try {
+    return await request.get<UploadTaskListResponse>(
+      "/admin/content/video/upload/list",
+      {
+        params
+      }
+    );
+  } catch (error) {
+    console.error("fetchUploadTaskList API Error:", error);
+    if (import.meta.env.DEV) {
+      console.warn("Using mock data for fetchUploadTaskList");
+      return {
+        list: mockVideoUploadTasks,
+        total: mockVideoUploadTasks.length
+      };
     }
-  );
+    throw error;
+  }
 }
 
 export type VideoStatus = "draft" | "published" | "offline" | "pending" | "approved" | "rejected" | "scheduled";
@@ -157,10 +244,27 @@ export type VideoListResponse = {
   total: number;
 };
 
-export async function fetchVideoList(params: VideoListParams) {
-  return request.get<VideoListResponse>("/admin/content/video/list", {
-    params
-  });
+export async function fetchVideoList(params: VideoListParams): Promise<ApiResponse<VideoListResponse>> {
+  try {
+    const response = await request.instance.get<ApiResponse<VideoListResponse>>("/admin/content/video/list", {
+      params
+    });
+    return response.data;
+  } catch (error) {
+    console.error("fetchVideoList API Error:", error);
+    if (import.meta.env.DEV) {
+      console.warn("Using mock data for fetchVideoList");
+      return {
+        code: 200,
+        msg: "",
+        data: {
+          list: mockVideos,
+          total: mockVideos.length
+        }
+      };
+    }
+    throw error;
+  }
 }
 
 export type BatchUpdateVideoStatusRequest = {
@@ -169,12 +273,19 @@ export type BatchUpdateVideoStatusRequest = {
 };
 
 export async function batchUpdateVideoStatus(data: BatchUpdateVideoStatusRequest) {
-  return request.post<boolean>("/admin/content/video/status/batch", data);
+  try {
+    return await request.post<boolean>("/admin/content/video/status/batch", data);
+  } catch (error) {
+    console.error("batchUpdateVideoStatus API Error:", error);
+    throw error;
+  }
 }
 
 export type ReviewQueueType = "ai" | "manual";
 
 export type ReviewStatus = "pending" | "approved" | "rejected";
+
+export type RiskLevel = "low" | "medium" | "high";
 
 export type ReviewQueueItem = {
   id: string;
@@ -182,10 +293,57 @@ export type ReviewQueueItem = {
   uploader: string;
   category: string;
   status: ReviewStatus;
-  riskLevel: "low" | "medium" | "high";
+  riskLevel: RiskLevel;
   isAiChecked: boolean;
   createdAt: string;
 };
+
+export type ReviewLogItem = {
+  id: string;
+  videoId: string;
+  title: string;
+  reviewer: string;
+  reviewedAt: string;
+  result: "approved" | "rejected";
+  remark: string;
+};
+
+export type ChapterItem = {
+  id: string;
+  title: string;
+  timeInSeconds: number;
+};
+
+export type SubtitleTrack = {
+  id: string;
+  language: string;
+  fileName: string;
+};
+
+export type DraftItem = {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  coverImage?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PermissionType = "public" | "private" | "password";
+
+export type WatermarkType = "text" | "image";
+
+export type WatermarkPosition =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "center-left"
+  | "center"
+  | "center-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
 
 export type ReviewQueueParams = {
   queueType: ReviewQueueType;
@@ -200,13 +358,30 @@ export type ReviewQueueResponse = {
   total: number;
 };
 
-export async function fetchReviewQueue(params: ReviewQueueParams) {
-  return request.get<ReviewQueueResponse>(
-    "/admin/content/video/review/list",
-    {
-      params
+export async function fetchReviewQueue(params: ReviewQueueParams): Promise<ApiResponse<ReviewQueueResponse>> {
+  try {
+    const response = await request.instance.get<ApiResponse<ReviewQueueResponse>>(
+      "/admin/content/video/review/list",
+      {
+        params
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("fetchReviewQueue API Error:", error);
+    if (import.meta.env.DEV) {
+      console.warn("Using mock data for fetchReviewQueue");
+      return {
+        code: 200,
+        msg: "",
+        data: {
+          list: params.queueType === "ai" ? mockInitialAiQueueItems : mockInitialManualQueueItems,
+          total: 100
+        }
+      };
     }
-  );
+    throw error;
+  }
 }
 
 export type SubmitReviewRequest = {
@@ -215,6 +390,12 @@ export type SubmitReviewRequest = {
   reason?: string;
 };
 
-export async function submitReviewResult(data: SubmitReviewRequest) {
-  return request.post<boolean>("/admin/content/video/review/submit", data);
+export async function submitReviewResult(data: SubmitReviewRequest): Promise<ApiResponse<boolean>> {
+  try {
+    const response = await request.instance.post<ApiResponse<boolean>>("/admin/content/video/review/submit", data);
+    return response.data;
+  } catch (error) {
+    console.error("submitReviewResult API Error:", error);
+    throw error;
+  }
 }

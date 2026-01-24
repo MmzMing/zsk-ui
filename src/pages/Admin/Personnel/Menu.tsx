@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Button, Card, Chip, Input, NumberInput, Switch, Checkbox } from "@heroui/react";
+import React, { useMemo, useState, useEffect } from "react";
+import { Button, Card, Chip, Input, NumberInput, Switch, Checkbox, addToast } from "@heroui/react";
 import * as Icons from "react-icons/fi";
 import {
   FiBell,
@@ -19,8 +19,15 @@ import {
 } from "react-icons/fi";
 import Tree from "rc-tree";
 import "rc-tree/assets/index.css";
-import { adminMenuTree } from "../../../config/adminMenu";
-import { MenuNode, updateMenuTree } from "../../../api/admin/menu";
+import {
+  type MenuNode,
+  fetchAdminMenuTree,
+  updateMenuTree,
+  createMenu,
+  updateMenu,
+  deleteMenu
+} from "@/api/admin/menu";
+import { Loading } from "@/components/Loading";
 
 type IconOption = {
   id: string;
@@ -48,9 +55,6 @@ const iconOptions: IconOption[] = [
   { id: "FiBell", name: "通知", icon: <FiBell className="w-4 h-4" /> }
 ];
 
-// 使用配置作为初始数据
-const initialMenuTree: MenuNode[] = JSON.parse(JSON.stringify(adminMenuTree));
-
 
 function flattenMenu(nodes: MenuNode[], depth = 0): Array<MenuNode & { depth: number }> {
   const result: Array<MenuNode & { depth: number }> = [];
@@ -64,41 +68,6 @@ function flattenMenu(nodes: MenuNode[], depth = 0): Array<MenuNode & { depth: nu
       }
     });
   return result;
-}
-
-function updateNode(
-  nodes: MenuNode[],
-  id: string,
-  updater: (node: MenuNode) => MenuNode
-): MenuNode[] {
-  return nodes.map(node => {
-    if (node.id === id) {
-      const next = updater(node);
-      if (node.children && node.children.length) {
-        return { ...next, children: node.children };
-      }
-      return next;
-    }
-    if (node.children && node.children.length) {
-      return {
-        ...node,
-        children: updateNode(node.children, id, updater)
-      };
-    }
-    return node;
-  });
-}
-
-function deleteNodes(nodes: MenuNode[], ids: string[]): MenuNode[] {
-  return nodes
-    .filter(node => !ids.includes(node.id))
-    .map(node => {
-      if (!node.children || !node.children.length) {
-        return node;
-      }
-      const children = deleteNodes(node.children, ids);
-      return { ...node, children };
-    });
 }
 
 function findNode(nodes: MenuNode[], id: string): MenuNode | null {
@@ -278,10 +247,9 @@ function getIconLabel(iconName: string) {
 }
 
 function MenuPage() {
-  const [menuTree, setMenuTree] = useState<MenuNode[]>(() => initialMenuTree);
-  const [activeId, setActiveId] = useState<string | null>(
-    () => initialMenuTree[0]?.id ?? null
-  );
+  const [menuTree, setMenuTree] = useState<MenuNode[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [message, setMessage] = useState("");
 
@@ -294,8 +262,28 @@ function MenuPage() {
     [activeId, menuTree]
   );
 
-  const handleAddRootMenu = () => {
-    const nextId = `m_${(flatMenu.length + 1).toString().padStart(3, "0")}`;
+  const loadMenuTree = React.useCallback(async () => {
+    setIsLoading(true);
+    const res = await fetchAdminMenuTree();
+    if (res.code === 200 && !res.msg) {
+      setMenuTree(res.data);
+      setActiveId(prev => {
+        if (res.data.length > 0 && !prev) {
+          return res.data[0].id;
+        }
+        return prev;
+      });
+    }
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadMenuTree();
+  }, [loadMenuTree]);
+
+  const handleAddRootMenu = async () => {
+    const nextId = String(Date.now()); // 简单生成纯数字 ID 字符串
     const next: MenuNode = {
       id: nextId,
       name: "新建菜单",
@@ -307,13 +295,18 @@ function MenuPage() {
       parentId: null,
       children: []
     };
-    setMenuTree(previous => [...previous, next]);
-    setActiveId(next.id);
-    setSelectedIds([]);
-    setMessage("已新增一级菜单，实际保存逻辑待接入菜单配置接口。");
+    const res = await createMenu(next);
+    if (res.code === 200 && !res.msg) {
+      addToast({
+        title: "新增菜单成功",
+        color: "success"
+      });
+      loadMenuTree();
+      setActiveId(nextId);
+    }
   };
 
-  const handleAddChildMenu = () => {
+  const handleAddChildMenu = async () => {
     if (!activeId) {
       return;
     }
@@ -321,9 +314,7 @@ function MenuPage() {
     if (!parent) {
       return;
     }
-    const nextId = `${parent.id}_${(parent.children?.length ?? 0) + 1}`
-      .replace(/__+/g, "_")
-      .replace(/_+$/, "");
+    const nextId = String(Date.now());
     const next: MenuNode = {
       id: nextId,
       name: "新建子菜单",
@@ -335,18 +326,18 @@ function MenuPage() {
       parentId: parent.id,
       children: []
     };
-    setMenuTree(previous =>
-      updateNode(previous, parent.id, node => ({
-        ...node,
-        children: [...(node.children ?? []), next]
-      }))
-    );
-    setActiveId(next.id);
-    setSelectedIds([]);
-    setMessage("已在当前菜单下新增子菜单，实际保存逻辑待接入菜单配置接口。");
+    const res = await createMenu(next);
+    if (res.code === 200 && !res.msg) {
+      addToast({
+        title: "新增子菜单成功",
+        color: "success"
+      });
+      loadMenuTree();
+      setActiveId(nextId);
+    }
   };
 
-  const handleBatchDelete = () => {
+  const handleBatchDelete = async () => {
     if (!selectedIds.length) {
       return;
     }
@@ -356,14 +347,25 @@ function MenuPage() {
     if (!confirmed) {
       return;
     }
-    setMenuTree(previous => deleteNodes(previous, selectedIds));
-    setMessage(
-      `已从当前配置中删除 ${selectedIds.length} 个菜单项，实际删除逻辑待接入菜单配置接口。`
-    );
-    if (activeId && selectedIds.includes(activeId)) {
-      setActiveId(null);
+    let successCount = 0;
+    for (const id of selectedIds) {
+      const res = await deleteMenu(id);
+      if (res.code === 200 && !res.msg) {
+        successCount++;
+      }
     }
-    setSelectedIds([]);
+    
+    if (successCount > 0) {
+      addToast({
+        title: successCount === selectedIds.length ? "批量删除成功" : `部分删除成功 (${successCount}/${selectedIds.length})`,
+        color: successCount === selectedIds.length ? "success" : "warning"
+      });
+      setSelectedIds([]);
+      loadMenuTree();
+      if (activeId && selectedIds.includes(activeId)) {
+        setActiveId(null);
+      }
+    }
   };
 
   const handleTreeSelect = (keys: React.Key[]) => {
@@ -392,7 +394,7 @@ function MenuPage() {
     });
   };
 
-  const handleTreeDrop = (info: {
+  const handleTreeDrop = async (info: {
     dragNode: { key: React.Key };
     node: { key: React.Key };
     dropToGap?: boolean;
@@ -426,21 +428,35 @@ function MenuPage() {
     }
 
     const nextTree = recalcOrder(insertNodeAt(withoutDrag, parentId, index, removed));
-    setMenuTree(nextTree);
-    setMessage("已通过拖拽调整菜单层级与排序，仅更新前端示例数据。");
+    try {
+      const res = await updateMenuTree(nextTree);
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "层级调整成功",
+          color: "success"
+        });
+        loadMenuTree();
+      }
+    } catch (error) {
+      console.error("Update menu tree failed:", error);
+    }
   };
 
-  const handleFieldChange = (patch: Partial<MenuNode>) => {
-    if (!activeId) {
+  const handleFieldChange = async (patch: Partial<MenuNode>) => {
+    if (!activeId || !activeNode) {
       return;
     }
-    setMenuTree(previous =>
-      updateNode(previous, activeId, node => ({
-        ...node,
+    try {
+      const res = await updateMenu({
+        ...activeNode,
         ...patch
-      }))
-    );
-    setMessage("已更新菜单配置，实际保存逻辑待接入菜单配置接口。");
+      });
+      if (res.code === 200 && !res.msg) {
+        loadMenuTree();
+      }
+    } catch (error) {
+      console.error("Update menu failed:", error);
+    }
   };
 
   const handleOpenIconPicker = () => {
@@ -450,27 +466,39 @@ function MenuPage() {
     setIconPickerTargetId(activeId);
   };
 
-  const handleSelectIcon = (iconId: string) => {
-    if (!iconPickerTargetId) {
+  const handleSelectIcon = async (iconId: string) => {
+    if (!iconPickerTargetId || !activeNode) {
       return;
     }
-    setMenuTree(previous =>
-      updateNode(previous, iconPickerTargetId, node => ({
-        ...node,
+    try {
+      const res = await updateMenu({
+        ...activeNode,
         iconName: iconId
-      }))
-    );
-    setMessage("已更新菜单图标配置，实际保存逻辑待接入菜单配置接口。");
-    setIconPickerTargetId(null);
+      });
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "图标更新成功",
+          color: "success"
+        });
+        loadMenuTree();
+        setIconPickerTargetId(null);
+      }
+    } catch (error) {
+      console.error("Select icon failed:", error);
+    }
   };
 
   const handleSave = async () => {
     try {
-      await updateMenuTree(menuTree);
-      setMessage("菜单配置已成功保存到服务器。");
+      const res = await updateMenuTree(menuTree);
+      if (res.code === 200 && !res.msg) {
+        addToast({
+          title: "配置已保存",
+          color: "success"
+        });
+      }
     } catch (error) {
-      console.error(error);
-      setMessage("保存失败，请检查网络或联系管理员。");
+      console.error("Save menu tree failed:", error);
     }
   };
 
@@ -590,8 +618,12 @@ function MenuPage() {
                   共 {flatMenu.length} 个菜单项
                 </Chip>
               </div>
-              <div className="menu-tree-custom mt-1 max-h-[420px] overflow-auto rounded-md border border-[var(--border-color)] bg-[var(--bg-elevated)]/40">
-                {flatMenu.length === 0 ? (
+              <div className="menu-tree-custom mt-1 max-h-[420px] overflow-auto rounded-md border border-[var(--border-color)] bg-[var(--bg-elevated)]/40 min-h-[100px] flex flex-col">
+                {isLoading ? (
+                  <div className="flex-1 flex items-center justify-center p-8">
+                    <Loading spinnerSize="sm" />
+                  </div>
+                ) : flatMenu.length === 0 ? (
                   <div className="px-3 py-4 text-center text-[11px] text-[var(--text-color-secondary)]">
                     当前暂无菜单项，可通过上方按钮新增一级菜单。
                   </div>

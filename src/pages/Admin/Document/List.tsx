@@ -40,100 +40,15 @@ import {
   fetchDocumentList,
   batchUpdateDocumentStatus,
   deleteDocument,
-  moveDocumentCategory
+  moveDocumentCategory,
+  type DocumentItem,
+  type DocumentStatus
 } from "../../../api/admin/document";
 import { useAppStore } from "../../../store";
-
-type DocumentStatus = "draft" | "pending" | "approved" | "rejected" | "offline" | "scheduled" | "published";
-
-type DocumentItem = {
-  id: string;
-  title: string;
-  category: string;
-  status: DocumentStatus;
-  reads: number;
-  likes: number;
-  comments: number;
-  createdAt: string;
-  updatedAt: string;
-  pinned?: boolean;
-  recommended?: boolean;
-  cover?: string;
-  tags?: string[];
-};
 
 type StatusFilter = "all" | DocumentStatus;
 
 const documentCategories = ["前端基础", "工程实践", "效率方法", "个人成长", "系统设计"];
-
-const initialDocuments: DocumentItem[] = [
-  {
-    id: "d_001",
-    title: "如何把视频课程拆解成学习笔记",
-    category: "效率方法",
-    status: "approved",
-    reads: 4210,
-    likes: 532,
-    comments: 84,
-    createdAt: "2026-01-10 09:20:11",
-    updatedAt: "2026-01-12 14:32:45",
-    pinned: true,
-    recommended: true,
-    cover: "https://images.unsplash.com/photo-1456324504439-367cee13d652?w=800&auto=format&fit=crop&q=60",
-    tags: ["学习方法", "笔记技巧"]
-  },
-  {
-    id: "d_002",
-    title: "从 0 搭建个人知识库前端",
-    category: "工程实践",
-    status: "approved",
-    reads: 3289,
-    likes: 421,
-    comments: 63,
-    createdAt: "2026-01-11 10:05:00",
-    updatedAt: "2026-01-13 10:18:22",
-    recommended: true,
-    cover: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=60",
-    tags: ["React", "知识库", "前端架构"]
-  },
-  {
-    id: "d_003",
-    title: "知识库信息架构最佳实践",
-    category: "系统设计",
-    status: "pending",
-    reads: 0,
-    likes: 0,
-    comments: 0,
-    createdAt: "2026-01-12 16:08:33",
-    updatedAt: "2026-01-12 16:08:33",
-    tags: ["信息架构", "系统设计"]
-  },
-  {
-    id: "d_004",
-    title: "Markdown 使用规范整理",
-    category: "前端基础",
-    status: "draft",
-    reads: 0,
-    likes: 0,
-    comments: 0,
-    createdAt: "2026-01-08 11:22:11",
-    updatedAt: "2026-01-15 09:02:47",
-    tags: ["Markdown", "规范"]
-  },
-  {
-    id: "d_005",
-    title: "用知识库管理你的职业成长",
-    category: "个人成长",
-    status: "offline",
-    reads: 980,
-    likes: 112,
-    comments: 15,
-    createdAt: "2026-01-09 11:22:11",
-    updatedAt: "2026-01-15 09:02:47",
-    cover: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&auto=format&fit=crop&q=60",
-    tags: ["职业规划", "个人成长"]
-  }
-];
 
 const chartData = [
   { date: "01-12", reads: 120 },
@@ -183,8 +98,11 @@ function getStatusColor(status: DocumentStatus) {
   return "primary";
 }
 
+import { Loading } from "@/components/Loading";
+
 function DocumentListPage() {
-  const [documents, setDocuments] = useState<DocumentItem[]>(() => initialDocuments);
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -210,6 +128,7 @@ function DocumentListPage() {
 
   useEffect(() => {
     async function load() {
+      setLoading(true);
       try {
         const data = await fetchDocumentList({
           page: 1,
@@ -218,17 +137,13 @@ function DocumentListPage() {
           category: undefined,
           keyword: undefined
         });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const list = data.list.map((item: any) => ({
-          ...item,
-          reads: item.readCount,
-          likes: item.likeCount,
-          comments: item.commentCount,
-          status: item.status as DocumentStatus
-        }));
-        setDocuments(list);
-      } catch {
-        setDocuments(initialDocuments);
+        if (data && data.list) {
+          setDocuments(data.list);
+        }
+      } catch (error) {
+        console.error("Failed to load documents:", error);
+      } finally {
+        setLoading(false);
       }
     }
     load();
@@ -560,7 +475,7 @@ function DocumentListPage() {
                     </div>
                     <div className="flex items-center justify-between text-[var(--text-color-secondary)]">
                       <span>分类：{item.category}</span>
-                      <span>阅读量：{item.reads.toLocaleString()}</span>
+                      <span>阅读量：{item.readCount.toLocaleString()}</span>
                     </div>
                   </div>
                 </Card>
@@ -768,8 +683,10 @@ function DocumentListPage() {
                 </TableColumn>
               </TableHeader>
               <TableBody
-                items={pageItems}
+                items={loading ? [] : pageItems}
                 emptyContent="暂未找到文档记录，可先在文档上传页面创建新内容。"
+                isLoading={loading}
+                loadingContent={<Loading height={200} text="获取文档列表数据中..." />}
               >
                 {item => (
                   <TableRow key={item.id}>
@@ -859,13 +776,13 @@ function DocumentListPage() {
                       </Chip>
                     </TableCell>
                     <TableCell className="px-3 py-2 align-top text-right">
-                      {item.reads.toLocaleString()}
+                      {item.readCount.toLocaleString()}
                     </TableCell>
                     <TableCell className="px-3 py-2 align-top text-right">
-                      {item.likes.toLocaleString()}
+                      {item.likeCount.toLocaleString()}
                     </TableCell>
                     <TableCell className="px-3 py-2 align-top text-right">
-                      {item.comments.toLocaleString()}
+                      {item.commentCount.toLocaleString()}
                     </TableCell>
                     <TableCell className="px-3 py-2 align-top">
                       {item.updatedAt}
@@ -925,6 +842,8 @@ function DocumentListPage() {
               </TableBody>
             </Table>
           </div>
+          ) : loading ? (
+            <Loading height={400} text="获取文档数据中..." />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {pageItems.map(item => (
@@ -953,8 +872,14 @@ function DocumentListPage() {
                    </div>
                    <div className="flex justify-between items-center text-[0.6875rem] text-[var(--text-color-secondary)] border-t border-[var(--border-color)] pt-2 mt-2">
                       <div className="flex gap-3">
-                          <span>阅读 {item.reads}</span>
-                          <span>点赞 {item.likes}</span>
+                        <div className="flex items-center gap-1">
+                          <FiEye size={14} />
+                          <span>{item.readCount}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <FiBarChart2 size={14} />
+                          <span>{item.likeCount}</span>
+                        </div>
                       </div>
                       <div className="flex gap-1">
                           {item.pinned && <span className="text-danger">置顶</span>}
@@ -1033,7 +958,7 @@ function DocumentListPage() {
                     <div className="space-y-0.5">
                       <div className="text-[var(--text-color-secondary)]">阅读量</div>
                       <div className="text-base font-semibold">
-                        {activeDocument.reads.toLocaleString()}
+                        {activeDocument.readCount.toLocaleString()}
                       </div>
                     </div>
                     <div className="space-y-0.5">
@@ -1043,13 +968,13 @@ function DocumentListPage() {
                     <div className="space-y-0.5">
                       <div className="text-[var(--text-color-secondary)]">点赞</div>
                       <div className="text-base font-semibold">
-                        {activeDocument.likes.toLocaleString()}
+                        {activeDocument.likeCount.toLocaleString()}
                       </div>
                     </div>
                     <div className="space-y-0.5">
                       <div className="text-[var(--text-color-secondary)]">评论</div>
                       <div className="text-base font-semibold">
-                        {activeDocument.comments.toLocaleString()}
+                        {activeDocument.commentCount.toLocaleString()}
                       </div>
                     </div>
                   </div>

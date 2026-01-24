@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   SelectItem,
   Button,
@@ -20,19 +20,14 @@ import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminInput } from "@/components/Admin/AdminInput";
 import { AdminTextarea } from "@/components/Admin/AdminTextarea";
-
-type DictStatus = "enabled" | "disabled";
-
-type DictItem = {
-  id: string;
-  code: string;
-  name: string;
-  category: string;
-  description: string;
-  itemCount: number;
-  status: DictStatus;
-  updatedAt: string;
-};
+import { Loading } from "@/components/Loading";
+import {
+  type DictItem,
+  type DictStatus,
+  fetchDictList,
+  saveDict,
+  toggleDictStatus
+} from "@/api/admin/system";
 
 type DictFormState = {
   id?: string;
@@ -45,75 +40,13 @@ type DictFormState = {
 
 type StatusFilter = "all" | "enabled" | "disabled";
 
-const initialDicts: DictItem[] = [
-  {
-    id: "d_001",
-    code: "user_status",
-    name: "用户状态",
-    category: "用户与权限",
-    description: "控制用户在前台与后台的可见性与登录能力。",
-    itemCount: 4,
-    status: "enabled",
-    updatedAt: "2026-01-10 10:12:00"
-  },
-  {
-    id: "d_002",
-    code: "video_category",
-    name: "视频分类",
-    category: "内容管理",
-    description: "用于对教学视频进行多维度分类与筛选。",
-    itemCount: 8,
-    status: "enabled",
-    updatedAt: "2026-01-11 09:32:18"
-  },
-  {
-    id: "d_003",
-    code: "doc_tag",
-    name: "文档标签",
-    category: "内容管理",
-    description: "常用文档标签集合，便于前台按标签聚合展示。",
-    itemCount: 12,
-    status: "enabled",
-    updatedAt: "2026-01-12 14:03:45"
-  },
-  {
-    id: "d_004",
-    code: "notify_channel",
-    name: "通知渠道",
-    category: "系统配置",
-    description: "系统告警与运营通知的推送渠道集合。",
-    itemCount: 5,
-    status: "enabled",
-    updatedAt: "2026-01-13 16:20:30"
-  },
-  {
-    id: "d_005",
-    code: "feature_flag",
-    name: "功能开关",
-    category: "系统配置",
-    description: "用于灰度发布与 A/B 实验的功能开关配置。",
-    itemCount: 6,
-    status: "disabled",
-    updatedAt: "2026-01-14 11:08:12"
-  }
-];
-
-function formatNow() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const hour = String(now.getHours()).padStart(2, "0");
-  const minute = String(now.getMinutes()).padStart(2, "0");
-  const second = String(now.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
-}
-
 function DictPage() {
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<DictItem[]>(() => initialDicts);
+  const [items, setItems] = useState<DictItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   const [formVisible, setFormVisible] = useState(false);
   const [formState, setFormState] = useState<DictFormState>({
     code: "",
@@ -124,39 +57,32 @@ function DictPage() {
   });
   const [formError, setFormError] = useState("");
 
-  const filteredItems = useMemo(() => {
-    const trimmedKeyword = keyword.trim().toLowerCase();
-    return items.filter(item => {
-      if (trimmedKeyword) {
-        const joined = `${item.code} ${item.name} ${item.category}`.toLowerCase();
-        if (!joined.includes(trimmedKeyword)) {
-          return false;
-        }
-      }
-      if (statusFilter === "enabled" && item.status !== "enabled") {
-        return false;
-      }
-      if (statusFilter === "disabled" && item.status !== "disabled") {
-        return false;
-      }
-      return true;
-    });
-  }, [items, keyword, statusFilter]);
-
   const pageSize = 8;
-  const total = filteredItems.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const pageItems = filteredItems.slice(startIndex, endIndex);
 
-  const handlePageChange = (next: number) => {
-    if (next < 1 || next > totalPages) {
-      return;
+  const loadDictList = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetchDictList({
+        page,
+        pageSize,
+        keyword: keyword.trim() || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter
+      });
+      if (res) {
+        setItems(res.list);
+        setTotal(res.total);
+      }
+    } catch {
+      // 错误已在 API 层级处理并显示
+    } finally {
+      setIsLoading(false);
     }
-    setPage(next);
-  };
+  }, [page, pageSize, keyword, statusFilter]);
+
+  React.useEffect(() => {
+    loadDictList();
+  }, [loadDictList]);
 
   const handleResetFilter = () => {
     setKeyword("");
@@ -201,78 +127,50 @@ function DictPage() {
     }));
   };
 
-  const handleSubmitForm = () => {
+  const handleSubmitForm = async () => {
     const trimmedCode = formState.code.trim();
     const trimmedName = formState.name.trim();
     if (!trimmedCode || !trimmedName) {
       setFormError("请填写完整的字典编码和字典名称。");
       return;
     }
-    const updatedAt = formatNow();
-    if (formState.id) {
-      const id = formState.id;
-      setItems(previous =>
-        previous.map(item =>
-          item.id === id
-            ? {
-                ...item,
-                code: trimmedCode,
-                name: trimmedName,
-                category: formState.category.trim() || "未分组",
-                description: formState.description.trim(),
-                status: formState.status,
-                updatedAt
-              }
-            : item
-        )
-      );
-      addToast({
-        title: "字典更新成功",
-        description: `已更新字典「${trimmedName}」的信息，实际保存逻辑待接入接口。`,
-        color: "success"
-      });
-    } else {
-      const id = `dict_${Date.now()}`;
-      const newItem: DictItem = {
-        id,
+
+    try {
+      const res = await saveDict({
+        ...formState,
         code: trimmedCode,
         name: trimmedName,
         category: formState.category.trim() || "未分组",
-        description: formState.description.trim(),
-        status: formState.status,
-        itemCount: 0,
-        updatedAt
-      };
-      setItems(previous => [newItem, ...previous]);
-      setPage(1);
-      addToast({
-        title: "字典新增成功",
-        description: `已成功新增字典「${trimmedName}」，实际保存逻辑待接入接口。`,
-        color: "success"
+        description: formState.description.trim()
       });
+
+      if (res) {
+        addToast({
+          title: formState.id ? "字典更新成功" : "字典新增成功",
+          color: "success"
+        });
+        setFormVisible(false);
+        loadDictList();
+      }
+    } catch {
+      // 错误已在 API 层级处理并显示
     }
-    setFormVisible(false);
   };
 
-  const handleToggleStatus = (item: DictItem) => {
+  const handleToggleStatus = async (item: DictItem) => {
     const nextStatus: DictStatus = item.status === "enabled" ? "disabled" : "enabled";
-    const updatedAt = formatNow();
-    setItems(previous =>
-      previous.map(row =>
-        row.id === item.id
-          ? {
-              ...row,
-              status: nextStatus,
-              updatedAt
-            }
-          : row
-      )
-    );
-    addToast({
-      title: nextStatus === "enabled" ? "字典已启用" : "字典已停用",
-      description: `字典「${item.name}」的状态已切换为 ${nextStatus === "enabled" ? "启用" : "停用"}。`,
-      color: nextStatus === "enabled" ? "success" : "default"
-    });
+    try {
+      const res = await toggleDictStatus(item.id, nextStatus);
+      if (res) {
+        addToast({
+          title: "状态更新成功",
+          color: "success"
+        });
+        loadDictList();
+      }
+    } catch {
+      // 错误已在 API 层级处理并显示
+    }
   };
 
   return (
@@ -383,8 +281,10 @@ function DictPage() {
                 </TableColumn>
               </TableHeader>
               <TableBody
-                items={pageItems}
+                items={items}
                 emptyContent="未找到匹配的字典配置，可调整筛选条件后重试。"
+                isLoading={isLoading}
+                loadingContent={<Loading height={200} text="获取字典数据中..." />}
               >
                 {item => (
                   <TableRow
@@ -453,15 +353,15 @@ function DictPage() {
           <div className="mt-3 flex flex-col gap-2 text-xs md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <span>
-                共 {total} 条记录，当前第 {currentPage} / {totalPages} 页
+                共 {total} 条记录，当前第 {page} / {totalPages} 页
               </span>
             </div>
             <div className="flex items-center gap-2">
               <Pagination
                 size="sm"
                 total={totalPages}
-                page={currentPage}
-                onChange={handlePageChange}
+                page={page}
+                onChange={setPage}
                 showControls
               />
             </div>

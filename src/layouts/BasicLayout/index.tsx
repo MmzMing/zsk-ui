@@ -90,7 +90,6 @@ function BasicLayout() {
       { path: routes.allSearch, label: "知识库", icon: FiBookOpen },
       { path: routes.resume, label: "制作简历", icon: FiFileText },
       { path: routes.craziness, label: "AI", icon: FiCpu },
-      { path: routes.tools, label: "百宝袋", icon: FiBox },
       { path: routes.about, label: "关于博主", icon: FiUser }
     ],
     []

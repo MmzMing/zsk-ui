@@ -96,6 +96,8 @@ export async function postVideoComment(data: {
 
 export async function toggleCommentLike(commentId: string) {
   return request.post<{ isLiked: boolean; likes: number }>(
-    `/content/comment/like/${commentId}`
+    `/content/comment/like/${commentId}`,
+    null,
+    { params: { type: "video" } }
   );
 }

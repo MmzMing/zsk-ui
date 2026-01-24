@@ -3,12 +3,18 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Button,
-  Tab
+  Tab,
+  Pagination,
+  Card,
+  CardBody,
+  Image
 } from "@heroui/react";
+import { Loading } from "../../components/Loading";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { routes } from "../../router/routes";
 import Shuffle from "../../components/Motion/Shuffle";
 import TextType from "../../components/Motion/TextType";
+import { EmptyState } from "../../components/EmptyState";
 import { FiPlay, FiMessageSquare, FiEye, FiHeart, FiUsers } from "react-icons/fi";
 import {
   type SearchCategory,
@@ -16,11 +22,21 @@ import {
   type SearchResult,
   searchAll
 } from "../../api/front/search";
+import { mockSearchResults } from "../../api/mock/front/search";
 
 type ResultType = SearchResult["type"];
 
+const categoryToResultType: Partial<Record<SearchCategory, ResultType>> = {
+  video: "video",
+  document: "document",
+  tool: "tool",
+  user: "user"
+};
+
 const VIDEO_DEFAULT = "/DefaultImage/MyDefaultHomeVodie.png";
 const DOC_DEFAULT = "/DefaultImage/MyDefaultImage.jpg";
+
+
 
 const categories: {
   key: SearchCategory;
@@ -32,13 +48,6 @@ const categories: {
   { key: "tool", label: "百宝袋" },
   { key: "user", label: "用户" }
 ];
-
-const categoryToResultType: Partial<Record<SearchCategory, ResultType>> = {
-  video: "video",
-  document: "document",
-  tool: "tool",
-  user: "user"
-};
 
 const sortOptionsByCategory: Record<
   SearchCategory,
@@ -95,70 +104,6 @@ const timeRangeOptions = [
   { value: "1y", label: "一年内" }
 ];
 
-const mockResults: SearchResult[] = [
-  {
-    id: "1",
-    rank: 1,
-    type: "video",
-    title: "从 0 搭建个人知识库前端：架构与页面规划",
-    description: "完整拆解知识库小破站的前台系统设计，从路由到动效一站式讲解。",
-    tags: ["视频", "前端", "架构"],
-    thumbnail: "",
-    duration: "24:18",
-    playCount: 1200,
-    commentCount: 86,
-    timeRange: "1w"
-  },
-  {
-    id: "1", // 故意与视频 id 相同，测试区分逻辑
-    rank: 2,
-    type: "document",
-    title: "知识库小破站 · 需求与设计说明文档",
-    description: "详细记录项目背景、功能模块、交互设计与技术栈约定，便于长期维护。",
-    tags: ["文档", "设计稿"],
-    thumbnail: "",
-    readCount: 986,
-    favoriteCount: 120,
-    timeRange: "1m"
-  },
-  {
-    id: "3",
-    rank: 3,
-    type: "tool",
-    title: "Markdown 一键排版助手",
-    description: "支持标题规范化、代码块 high-light、目录生成的 Markdown 清理与排版小工具。",
-    tags: ["百宝袋", "实用工具"],
-    avatar: "",
-    usageCount: 2100,
-    favoriteCount: 312
-  },
-  {
-    id: "4",
-    rank: 4,
-    type: "user",
-    title: "知库小站长",
-    description: "个人知识库长期建设实践者，专注前端工程化与知识管理。",
-    tags: ["创作者", "前端"],
-    avatar: "",
-    followers: 3400,
-    works: 128,
-    levelTag: "前端架构"
-  },
-  {
-    id: "5",
-    rank: 5,
-    type: "video",
-    title: "React Bits 动效组件在知识库项目中的落地实践",
-    description: "基于 Scroll Stack、Animated Content 等组件重构首页推荐与搜索体验。",
-    tags: ["视频", "React Bits"],
-    thumbnail: "",
-    duration: "16:02",
-    playCount: 824,
-    commentCount: 32,
-    timeRange: "1m"
-  }
-];
-
 function AllSearchPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -171,51 +116,107 @@ function AllSearchPage() {
   const [timeRange, setTimeRange] = React.useState<string | null>(null);
   const [activeTag, setActiveTag] = React.useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = React.useState(true);
+  
   const [results, setResults] = React.useState<SearchResult[]>([]);
-  const [visibleCount, setVisibleCount] = React.useState(8);
-  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
+  const [page, setPage] = React.useState(1);
+  const [total, setTotal] = React.useState(0);
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  const PAGE_SIZE = 8;
+  const PAGE_SIZE = 16;
 
   React.useEffect(() => {
     let cancelled = false;
 
     async function fetchResults() {
+      setIsLoading(true);
+      const searchParams = {
+        keyword: appliedKeyword || undefined,
+        category: activeCategory,
+        sort: activeSort,
+        duration,
+        timeRange,
+        tag: activeTag,
+        page,
+        pageSize: PAGE_SIZE
+      };
+
+      // 使用公共 axios 实例的请求日志风格
+      console.log("► GET", "/search/all", searchParams);
+
       try {
-        const data = await searchAll({
-          keyword: appliedKeyword || undefined,
-          category: activeCategory,
-          sort: activeSort,
-          duration,
-          timeRange,
-          tag: activeTag
-        });
-        if (cancelled) {
-          return;
-        }
+        // 1. 调用公共 API 方法 (内部使用 src/api/axios.ts)
+        const data = await searchAll(searchParams);
+        
+        if (cancelled) return;
+        
         let list: SearchResult[] = [];
+        let totalCount = 0;
+        
         if (Array.isArray(data)) {
           list = data;
+          totalCount = data.length;
         } else if (data && Array.isArray(data.list)) {
           list = data.list;
-        } else {
-          list = [];
+          totalCount = data.total || 0;
         }
 
-        if (!list.length) {
-          setResults(mockResults);
-        } else {
-          setResults(list);
+        // 如果后端返回空列表，主动触发 Mock 回退
+        if (list.length === 0) {
+          console.log("No data from server, falling back to mock");
+          // 此处不再 throw，而是直接在下方处理，或者保留 throw 让 catch 处理
+          throw new Error("EMPTY_DATA");
         }
-        setVisibleCount(PAGE_SIZE);
-      } catch {
-        if (cancelled) {
-          return;
-        }
-        setResults(mockResults);
-        setVisibleCount(PAGE_SIZE);
+
+        setResults(list);
+        setTotal(totalCount);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        
+        const error = err as Error;
+        // 关键：由于接入了公共 axios.ts 的全局提示，此处只需处理日志和回退
+        console.error("✖ Request Error:", error.message);
+
+        // Fallback to mock data (不再区分 DEV 环境，按需回退)
+        console.log("Using mock data fallback");
+        
+        let filtered = [...mockSearchResults];
+          
+          // Category filter
+          if (activeCategory === "all") {
+            // 综合查询：只查询视频和文档
+            filtered = filtered.filter(item => item.type === "video" || item.type === "document");
+          } else {
+            const targetType = categoryToResultType[activeCategory];
+            if (targetType) {
+              filtered = filtered.filter(item => item.type === targetType);
+            }
+          }
+
+          // Keyword filter - 只有当关键词不为空时才过滤
+          if (appliedKeyword && appliedKeyword.trim() !== "") {
+            const k = appliedKeyword.toLowerCase().trim();
+            filtered = filtered.filter(item => 
+              item.title.toLowerCase().includes(k) || 
+              item.description.toLowerCase().includes(k)
+            );
+          }
+          
+          // Tag filter
+          if (activeTag) {
+             filtered = filtered.filter(item => item.tags?.includes(activeTag));
+          }
+
+          // Pagination logic for mock data
+          const start = (page - 1) * PAGE_SIZE;
+          const end = start + PAGE_SIZE;
+          const paginatedList = filtered.slice(start, end);
+
+          setResults(paginatedList);
+          setTotal(filtered.length);
       } finally {
-        // no-op
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     }
 
@@ -230,50 +231,21 @@ function AllSearchPage() {
     activeSort,
     duration,
     timeRange,
-    activeTag
+    activeTag,
+    page
   ]);
 
-  const filteredResults = React.useMemo(() => {
-    if (activeCategory === "all") {
-      // 综合搜索模式下，仅展示视频和文档
-      return results.filter(item => item.type === "video" || item.type === "document");
-    }
-    const targetType = categoryToResultType[activeCategory];
-    if (!targetType) {
-      return results;
-    }
-    return results.filter(item => item.type === targetType);
-  }, [results, activeCategory]);
-
+  // Reset page when filters change
   React.useEffect(() => {
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } =
-        document.documentElement;
-      if (
-        scrollHeight - (scrollTop + clientHeight) < 200 &&
-        !isLoadingMore &&
-        visibleCount < filteredResults.length
-      ) {
-        setIsLoadingMore(true);
-        window.setTimeout(() => {
-          setVisibleCount(current =>
-            Math.min(current + PAGE_SIZE, filteredResults.length)
-          );
-          setIsLoadingMore(false);
-        }, 600);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [isLoadingMore, visibleCount, filteredResults.length]);
-
-  const visibleResults = React.useMemo(
-    () => filteredResults.slice(0, visibleCount),
-    [filteredResults, visibleCount]
-  );
+    setPage(1);
+  }, [
+    appliedKeyword,
+    activeCategory,
+    activeSort,
+    duration,
+    timeRange,
+    activeTag
+  ]);
 
   React.useEffect(() => {
     const category = searchParams.get("category");
@@ -297,8 +269,13 @@ function AllSearchPage() {
       navigate(routes.docDetail.replace(":id", item.id));
       return;
     }
-    if (item.type === "tool" && item.url) {
-      window.open(item.url, "_blank", "noopener,noreferrer");
+    if (item.type === "tool") {
+      navigate(routes.toolboxDetail.replace(":id", item.id));
+      return;
+    }
+    if (item.type === "user") {
+      navigate(routes.userDetail.replace(":id", item.id));
+      return;
     }
   }
 
@@ -365,7 +342,7 @@ function AllSearchPage() {
           </div>
           <Button
             type="button"
-            className="inline-flex items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--primary-color)_15%,transparent)] px-6 py-2 text-xs md:text-sm font-medium text-[var(--primary-color)] hover:bg-[color-mix(in_srgb,var(--primary-color)_25%,transparent)]"
+            className="inline-flex items-center justify-center rounded-full bg-[var(--primary-color)] px-8 py-2 text-xs md:text-sm font-medium text-white hover:opacity-90 transition-opacity shadow-lg shadow-[var(--primary-color)]/20"
             onPress={() => setAppliedKeyword(keyword.trim())}
           >
             综合搜索
@@ -636,122 +613,179 @@ function AllSearchPage() {
       </section>
 
       <section className="space-y-4">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
-        >
-          {visibleResults.map(item => {
-            const isVideo = item.type === "video";
-            const isDocument = item.type === "document";
-            const isTool = item.type === "tool";
-            if (isVideo) {
-              const thumbnail = item.thumbnail || VIDEO_DEFAULT;
-              return (
-                <motion.article
-                  key={`${item.type}-${item.id}`}
-                  className="group flex flex-col gap-2 cursor-pointer"
-                  onClick={() => handleResultClick(item)}
-                  whileHover={{ y: -4, scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 420,
-                    damping: 32
-                  }}
-                >
-                  <div className="relative aspect-video overflow-hidden rounded-[var(--radius-base)] bg-black/40">
-                    <img
-                      src={thumbnail}
-                      alt={item.title}
-                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.04]"
-                      loading="lazy"
-                      onError={event => {
-                        event.currentTarget.src = VIDEO_DEFAULT;
-                      }}
-                    />
-                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-2.5 pb-1.5 text-[10px] text-white">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded">
-                          <FiPlay className="w-3 h-3" />
-                          <span>{item.playCount ?? 0}</span>
-                        </span>
-                        <span className="inline-flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded">
-                          <FiMessageSquare className="w-3 h-3" />
-                          <span>{item.commentCount ?? 0}</span>
-                        </span>
-                      </div>
-                      {item.duration && (
-                        <span className="rounded bg-black/80 px-1.5 py-0.5">
-                          {item.duration}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <h3 className="line-clamp-2 text-xs font-semibold md:text-sm">
-                      {item.title}
-                    </h3>
-                    <p className="line-clamp-2 text-[11px] text-[var(--text-color-secondary)]">
-                      {item.description}
-                    </p>
-                  </div>
-                </motion.article>
-              );
-            }
-
-            if (isDocument) {
-              const thumbnail = item.thumbnail || DOC_DEFAULT;
-              return (
-                <motion.article
-                  key={`${item.type}-${item.id}`}
-                  className="group flex flex-col gap-2 cursor-pointer"
-                  onClick={() => handleResultClick(item)}
-                  whileHover={{ y: -4, scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 420,
-                    damping: 32
-                  }}
-                >
-                  <div className="relative aspect-video overflow-hidden rounded-[var(--radius-base)] bg-black/40">
-                    <img
-                      src={thumbnail}
-                      alt={item.title}
-                      className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.04]"
-                      loading="lazy"
-                      onError={event => {
-                        event.currentTarget.src = DOC_DEFAULT;
-                      }}
-                    />
-                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-2.5 pb-1.5 text-[10px] text-white">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded">
-                          <FiEye className="w-3 h-3" />
-                          <span>{item.readCount ?? 0}</span>
-                        </span>
-                        <span className="inline-flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded">
-                          <FiHeart className="w-3 h-3" />
-                          <span>{item.favoriteCount ?? 0}</span>
-                        </span>
+        {isLoading ? (
+          <Loading className="py-20" height="auto" />
+        ) : results.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
+          >
+            {results.map(item => {
+              const isVideo = item.type === "video";
+              const isDocument = item.type === "document";
+              const isTool = item.type === "tool";
+              if (isVideo) {
+                const thumbnail = item.thumbnail || VIDEO_DEFAULT;
+                return (
+                  <motion.article
+                    key={`${item.type}-${item.id}`}
+                    className="group flex flex-col gap-2 cursor-pointer"
+                    onClick={() => handleResultClick(item)}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 420,
+                      damping: 32
+                    }}
+                  >
+                    <div className="relative aspect-video overflow-hidden rounded-[var(--radius-base)] bg-black/40">
+                      <img
+                        src={thumbnail}
+                        alt={item.title}
+                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.04]"
+                        onError={event => {
+                          event.currentTarget.src = VIDEO_DEFAULT;
+                        }}
+                      />
+                      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-2.5 pb-1.5 text-[10px] text-white">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded">
+                            <FiPlay className="w-3 h-3" />
+                            <span>{item.playCount ?? 0}</span>
+                          </span>
+                          <span className="inline-flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded">
+                            <FiMessageSquare className="w-3 h-3" />
+                            <span>{item.commentCount ?? 0}</span>
+                          </span>
+                        </div>
+                        {item.duration && (
+                          <span className="rounded bg-black/80 px-1.5 py-0.5">
+                            {item.duration}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <h3 className="line-clamp-2 text-xs font-semibold md:text-sm">
-                      {item.title}
-                    </h3>
-                    <p className="line-clamp-2 text-[11px] text-[var(--text-color-secondary)]">
-                      {item.description}
-                    </p>
-                  </div>
-                </motion.article>
-              );
-            }
+                    <div className="flex flex-col gap-1">
+                      <h3 className="line-clamp-2 text-xs font-semibold md:text-sm">
+                        {item.title}
+                      </h3>
+                      <p className="line-clamp-2 text-[11px] text-[var(--text-color-secondary)]">
+                        {item.description}
+                      </p>
+                    </div>
+                  </motion.article>
+                );
+              }
 
-            if (isTool) {
+              if (isDocument) {
+                const thumbnail = item.thumbnail || DOC_DEFAULT;
+                return (
+                  <motion.article
+                    key={`${item.type}-${item.id}`}
+                    className="group flex flex-col gap-2 cursor-pointer"
+                    onClick={() => handleResultClick(item)}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 420,
+                      damping: 32
+                    }}
+                  >
+                    <div className="relative aspect-video overflow-hidden rounded-[var(--radius-base)] bg-black/40">
+                      <img
+                        src={thumbnail}
+                        alt={item.title}
+                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.04]"
+                        onError={event => {
+                          event.currentTarget.src = DOC_DEFAULT;
+                        }}
+                      />
+                      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-2.5 pb-1.5 text-[10px] text-white">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded">
+                            <FiEye className="w-3 h-3" />
+                            <span>{item.readCount ?? 0}</span>
+                          </span>
+                          <span className="inline-flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded">
+                            <FiHeart className="w-3 h-3" />
+                            <span>{item.favoriteCount ?? 0}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="line-clamp-2 text-xs font-semibold md:text-sm">
+                        {item.title}
+                      </h3>
+                      <p className="line-clamp-2 text-[11px] text-[var(--text-color-secondary)]">
+                        {item.description}
+                      </p>
+                    </div>
+                  </motion.article>
+                );
+              }
+
+              if (isTool) {
+                return (
+                  <motion.article
+                    key={`${item.type}-${item.id}`}
+                    className="group relative h-full cursor-pointer"
+                    onClick={() => handleResultClick(item)}
+                    whileHover={{ y: -4 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  >
+                    <Card className="h-full border border-[var(--border-color)] bg-[var(--bg-elevated)] shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                      <CardBody className="p-5 flex flex-col items-center text-center gap-3 relative z-0">
+                        <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center text-2xl shadow-inner mb-1">
+                          {item.thumbnail ? (
+                            <Image src={item.thumbnail} alt={item.title} className="w-8 h-8 object-contain" removeWrapper />
+                          ) : (
+                            <span className="font-bold text-[var(--primary-color)]">{item.title.charAt(0)}</span>
+                          )}
+                        </div>
+                        <div className="w-full">
+                          <h3 className="font-bold text-base mb-1.5 truncate w-full">{item.title}</h3>
+                          <p className="text-xs text-[var(--text-color-secondary)] line-clamp-2 h-8 leading-4 group-hover:opacity-0 transition-opacity">
+                            {item.description}
+                          </p>
+                        </div>
+                        
+                        {/* Hover Overlay for more info */}
+                        <div className="absolute inset-0 bg-[var(--bg-elevated)]/95 backdrop-blur-sm p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-center items-center text-center gap-3 z-10">
+                          <p className="text-xs text-[var(--text-color)] line-clamp-3 leading-relaxed">
+                            {item.description}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5 justify-center">
+                             {item.tags?.slice(0, 3).map(tag => (
+                               <span key={tag} className="text-[10px] px-2 py-0.5 bg-[var(--primary-color)]/10 text-[var(--primary-color)] rounded-full border border-[var(--primary-color)]/20">
+                                 {tag}
+                               </span>
+                             ))}
+                          </div>
+                          <Button 
+                            size="sm" 
+                            color="primary" 
+                            variant="flat" 
+                            radius="full"
+                            className="mt-1 h-7 min-w-0 px-4 text-xs font-medium"
+                            onPress={() => handleResultClick(item)}
+                          >
+                            查看详情
+                          </Button>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  </motion.article>
+                );
+              }
+
+              // user
               return (
                 <motion.article
                   key={`${item.type}-${item.id}`}
@@ -765,21 +799,33 @@ function AllSearchPage() {
                     damping: 32
                   }}
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[var(--primary-color)]/80 via-purple-500/70 to-emerald-400/70 text-sm font-semibold text-white">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#ff4da6] via-[#ff7ac2] to-[#ffb3d9] text-sm font-semibold text-black">
                     {item.title.slice(0, 2)}
                   </div>
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
                       <h3 className="text-xs md:text-sm font-semibold line-clamp-1">
                         {item.title}
                       </h3>
-                      <Button
-                        size="sm"
-                        radius="full"
-                        className="h-7 px-3 bg-[var(--primary-color)] text-black text-[11px]"
-                      >
-                        立即跳转
-                      </Button>
+                      {item.levelTag && (
+                        <span className="inline-flex items-center rounded-full bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] px-2 py-0.5 text-[10px] text-[var(--primary-color)]">
+                          {item.levelTag}
+                        </span>
+                      )}
+                      {item.isLive && (
+                        <span className="inline-flex items-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[9px] text-white">
+                          LIVE
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-color-secondary)]">
+                      <span className="inline-flex items-center gap-0.5">
+                        <FiUsers className="w-3 h-3" />
+                        <span>{item.followers ?? 0} 粉丝</span>
+                      </span>
+                      {typeof item.works === "number" && (
+                        <span>{item.works} 个作品</span>
+                      )}
                     </div>
                     <p className="text-[11px] text-[var(--text-color-secondary)] line-clamp-2">
                       {item.description}
@@ -787,69 +833,23 @@ function AllSearchPage() {
                   </div>
                 </motion.article>
               );
-            }
+            })}
+          </motion.div>
+        )}
 
-            // user
-            return (
-              <motion.article
-                key={`${item.type}-${item.id}`}
-                className="flex items-center gap-3 cursor-pointer"
-                onClick={() => handleResultClick(item)}
-                whileHover={{ y: -3, scale: 1.01 }}
-                whileTap={{ scale: 0.97 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 420,
-                  damping: 32
-                }}
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#ff4da6] via-[#ff7ac2] to-[#ffb3d9] text-sm font-semibold text-black">
-                  {item.title.slice(0, 2)}
-                </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xs md:text-sm font-semibold line-clamp-1">
-                      {item.title}
-                    </h3>
-                    {item.levelTag && (
-                      <span className="inline-flex items-center rounded-full bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] px-2 py-0.5 text-[10px] text-[var(--primary-color)]">
-                        {item.levelTag}
-                      </span>
-                    )}
-                    {item.isLive && (
-                      <span className="inline-flex items-center rounded-full bg-rose-600 px-1.5 py-0.5 text-[9px] text-white">
-                        LIVE
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-color-secondary)]">
-                    <span className="inline-flex items-center gap-0.5">
-                      <FiUsers className="w-3 h-3" />
-                      <span>{item.followers ?? 0} 粉丝</span>
-                    </span>
-                    {typeof item.works === "number" && (
-                      <span>{item.works} 个作品</span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-[var(--text-color-secondary)] line-clamp-2">
-                    {item.description}
-                  </p>
-                </div>
-              </motion.article>
-            );
-          })}
-          {isLoadingMore &&
-            Array.from({ length: 4 }).map((_, index) => (
-              <div
-                key={`skeleton-${index}`}
-                className="flex flex-col gap-2 animate-pulse"
-              >
-                <div className="aspect-video rounded-[var(--radius-base)] bg-[color-mix(in_srgb,var(--bg-elevated)_80%,black_20%)]" />
-                <div className="h-3 rounded bg-[color-mix(in_srgb,var(--bg-elevated)_80%,black_20%)]" />
-                <div className="h-3 w-2/3 rounded bg-[color-mix(in_srgb,var(--bg-elevated)_80%,black_20%)]" />
-              </div>
-            ))}
-        </motion.div>
+        {/* Pagination */}
+        {!isLoading && total > 0 && (
+          <div className="flex justify-center py-6">
+            <Pagination
+              total={Math.ceil(total / PAGE_SIZE)}
+              page={page}
+              onChange={setPage}
+              showControls
+              color="primary"
+              variant="light"
+            />
+          </div>
+        )}
       </section>
     </div>
   );

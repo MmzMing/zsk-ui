@@ -24,7 +24,7 @@ function WordRotate(props: Props) {
   }, [props.words, props.interval]);
 
   return (
-    <div className={props.className}>
+    <div className={`relative ${props.className || ""}`}>
       <AnimatePresence mode="wait">
         <motion.span
           key={current}

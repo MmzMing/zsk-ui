@@ -1,191 +1,23 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Button, Card, Chip, DateRangePicker, Tab, Tooltip } from "@heroui/react";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
+import { Loading } from "@/components/Loading";
 import type { LineConfig } from "@ant-design/plots";
 import { Line } from "@ant-design/plots";
 import { getLocalTimeZone } from "@internationalized/date";
 import { FiRotateCcw } from "react-icons/fi";
 import { useAppStore } from "../../../store";
 
-type BehaviorRange = "today" | "7d";
-
-type BehaviorUser = {
-  id: string;
-  name: string;
-  role: string;
-  department: string;
-  lastLoginAt: string;
-  lastLoginIp: string;
-  riskLevel: "low" | "medium" | "high";
-};
-
-type BehaviorEvent = {
-  id: string;
-  userId: string;
-  time: string;
-  action: string;
-  module: string;
-  detail: string;
-  riskLevel: "low" | "medium" | "high";
-};
-
-type BehaviorPoint = {
-  userId: string;
-  range: BehaviorRange;
-  time: string;
-  count: number;
-};
-
-const behaviorUsers: BehaviorUser[] = [
-  {
-    id: "u_admin",
-    name: "系统管理员",
-    role: "超级管理员",
-    department: "技术部",
-    lastLoginAt: "2026-01-18 10:32:10",
-    lastLoginIp: "192.168.0.10",
-    riskLevel: "medium"
-  },
-  {
-    id: "u_editor",
-    name: "内容运营",
-    role: "编辑",
-    department: "内容运营部",
-    lastLoginAt: "2026-01-18 09:58:42",
-    lastLoginIp: "192.168.0.21",
-    riskLevel: "low"
-  },
-  {
-    id: "u_auditor",
-    name: "审核专员",
-    role: "审核员",
-    department: "审核中心",
-    lastLoginAt: "2026-01-18 10:05:17",
-    lastLoginIp: "192.168.0.33",
-    riskLevel: "low"
-  }
-];
-
-const behaviorTimeline: BehaviorPoint[] = [
-  { userId: "u_admin", range: "today", time: "09:00", count: 2 },
-  { userId: "u_admin", range: "today", time: "10:00", count: 5 },
-  { userId: "u_admin", range: "today", time: "11:00", count: 3 },
-  { userId: "u_admin", range: "today", time: "12:00", count: 1 },
-  { userId: "u_admin", range: "7d", time: "2026-01-12", count: 18 },
-  { userId: "u_admin", range: "7d", time: "2026-01-13", count: 14 },
-  { userId: "u_admin", range: "7d", time: "2026-01-14", count: 20 },
-  { userId: "u_admin", range: "7d", time: "2026-01-15", count: 16 },
-  { userId: "u_admin", range: "7d", time: "2026-01-16", count: 22 },
-  { userId: "u_admin", range: "7d", time: "2026-01-17", count: 19 },
-  { userId: "u_admin", range: "7d", time: "2026-01-18", count: 11 },
-  { userId: "u_editor", range: "today", time: "09:00", count: 3 },
-  { userId: "u_editor", range: "today", time: "10:00", count: 4 },
-  { userId: "u_editor", range: "today", time: "11:00", count: 2 },
-  { userId: "u_editor", range: "today", time: "12:00", count: 1 },
-  { userId: "u_editor", range: "7d", time: "2026-01-12", count: 10 },
-  { userId: "u_editor", range: "7d", time: "2026-01-13", count: 8 },
-  { userId: "u_editor", range: "7d", time: "2026-01-14", count: 11 },
-  { userId: "u_editor", range: "7d", time: "2026-01-15", count: 9 },
-  { userId: "u_editor", range: "7d", time: "2026-01-16", count: 12 },
-  { userId: "u_editor", range: "7d", time: "2026-01-17", count: 7 },
-  { userId: "u_editor", range: "7d", time: "2026-01-18", count: 6 },
-  { userId: "u_auditor", range: "today", time: "09:00", count: 1 },
-  { userId: "u_auditor", range: "today", time: "10:00", count: 2 },
-  { userId: "u_auditor", range: "today", time: "11:00", count: 2 },
-  { userId: "u_auditor", range: "today", time: "12:00", count: 1 },
-  { userId: "u_auditor", range: "7d", time: "2026-01-12", count: 6 },
-  { userId: "u_auditor", range: "7d", time: "2026-01-13", count: 7 },
-  { userId: "u_auditor", range: "7d", time: "2026-01-14", count: 5 },
-  { userId: "u_auditor", range: "7d", time: "2026-01-15", count: 9 },
-  { userId: "u_auditor", range: "7d", time: "2026-01-16", count: 8 },
-  { userId: "u_auditor", range: "7d", time: "2026-01-17", count: 7 },
-  { userId: "u_auditor", range: "7d", time: "2026-01-18", count: 4 }
-];
-
-const behaviorEvents: BehaviorEvent[] = [
-  {
-    id: "e1",
-    userId: "u_admin",
-    time: "10:32:10",
-    action: "登录后台",
-    module: "登录",
-    detail: "账号密码登录成功，设备为 Chrome 浏览器",
-    riskLevel: "low"
-  },
-  {
-    id: "e2",
-    userId: "u_admin",
-    time: "10:35:22",
-    action: "修改系统配置",
-    module: "系统设置",
-    detail: "更新站点名称与 Logo 配置",
-    riskLevel: "medium"
-  },
-  {
-    id: "e3",
-    userId: "u_admin",
-    time: "10:40:03",
-    action: "批量删除缓存键",
-    module: "系统运维",
-    detail: "删除前缀为 session:* 的会话缓存 120 条",
-    riskLevel: "high"
-  },
-  {
-    id: "e4",
-    userId: "u_admin",
-    time: "10:46:17",
-    action: "查看系统监控",
-    module: "系统运维",
-    detail: "查看最近 1 小时资源使用情况",
-    riskLevel: "low"
-  },
-  {
-    id: "e5",
-    userId: "u_editor",
-    time: "10:02:41",
-    action: "登录后台",
-    module: "登录",
-    detail: "邮箱验证码登录成功",
-    riskLevel: "low"
-  },
-  {
-    id: "e6",
-    userId: "u_editor",
-    time: "10:08:03",
-    action: "编辑文档",
-    module: "内容管理",
-    detail: "更新文档《知识库小破站 · 使用指南》的正文内容",
-    riskLevel: "low"
-  },
-  {
-    id: "e7",
-    userId: "u_editor",
-    time: "10:15:29",
-    action: "发布视频",
-    module: "内容管理",
-    detail: "发布新视频《从 0 搭建个人知识库前端》",
-    riskLevel: "medium"
-  },
-  {
-    id: "e8",
-    userId: "u_auditor",
-    time: "10:06:54",
-    action: "审核内容",
-    module: "审核中心",
-    detail: "审核通过 3 篇新提交的文档内容",
-    riskLevel: "low"
-  },
-  {
-    id: "e9",
-    userId: "u_auditor",
-    time: "10:18:37",
-    action: "驳回内容",
-    module: "审核中心",
-    detail: "驳回 1 条涉嫌广告的评论内容",
-    riskLevel: "medium"
-  }
-];
+import {
+  fetchBehaviorUsers,
+  fetchBehaviorTimeline,
+  fetchBehaviorEvents,
+  BehaviorUser,
+  BehaviorRange,
+  BehaviorPoint,
+  BehaviorEvent
+} from "../../../api/admin/ops";
 
 function getRiskChipProps(level: BehaviorUser["riskLevel"]) {
   if (level === "high") {
@@ -210,11 +42,37 @@ function getRiskChipProps(level: BehaviorUser["riskLevel"]) {
 }
 
 function UserBehaviorPage() {
-  const [activeUserId, setActiveUserId] = useState<string>("u_admin");
+  const [loading, setLoading] = useState(true);
+  const [activeUserId, setActiveUserId] = useState<string>("6201");
   const [range, setRange] = useState<BehaviorRange>("today");
   const [keyword, setKeyword] = useState("");
   const [activeView, setActiveView] = useState<"timeline" | "list">("timeline");
   const { themeMode } = useAppStore();
+
+  const [users, setUsers] = useState<BehaviorUser[]>([]);
+  const [events, setEvents] = useState<BehaviorEvent[]>([]);
+  const [timeline, setTimeline] = useState<BehaviorPoint[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [u, t, e] = await Promise.all([
+          fetchBehaviorUsers(),
+          fetchBehaviorTimeline({ userId: activeUserId, range }),
+          fetchBehaviorEvents({ userId: activeUserId, keyword })
+        ]);
+        if (u) setUsers(u);
+        if (t) setTimeline(t);
+        if (e) setEvents(e);
+      } catch (error) {
+        console.error("Failed to load behavior data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [activeUserId, range, keyword]);
 
   const chartTheme =
     themeMode === "dark"
@@ -227,39 +85,23 @@ function UserBehaviorPage() {
 
   const handleResetFilter = () => {
     setKeyword("");
-    setActiveUserId("u_admin");
+    setActiveUserId("6201");
     setRange("today");
   };
 
   const activeUser = useMemo(
-    () => behaviorUsers.find(item => item.id === activeUserId) ?? behaviorUsers[0],
-    [activeUserId]
+    () => users.find(item => item.id === activeUserId) ?? users[0],
+    [users, activeUserId]
   );
 
-  const filteredEvents = useMemo(() => {
-    const trimmed = keyword.trim().toLowerCase();
-    return behaviorEvents.filter(item => {
-      if (item.userId !== activeUser.id) {
-        return false;
-      }
-      if (!trimmed) {
-        return true;
-      }
-      const content = `${item.action} ${item.module} ${item.detail}`.toLowerCase();
-      return content.includes(trimmed);
-    });
-  }, [activeUser.id, keyword]);
+  const filteredEvents = events;
 
-  const lineData = useMemo(
-    () =>
-      behaviorTimeline
-        .filter(item => item.userId === activeUser.id && item.range === range)
-        .map(item => ({
-          time: item.time,
-          value: item.count
-        })),
-    [activeUser.id, range]
-  );
+  const lineData = useMemo(() => {
+    return timeline.map(item => ({
+      time: item.time,
+      value: item.count
+    }));
+  }, [timeline]);
 
   const lineConfig: LineConfig = useMemo(
     () => ({
@@ -394,7 +236,7 @@ function UserBehaviorPage() {
                   tab: "h-7 px-4 text-xs",
                 }}
               >
-                {behaviorUsers.map((user) => (
+                {users.map((user) => (
                   <Tab key={user.id} title={user.name} />
                 ))}
               </AdminTabs>
@@ -419,79 +261,91 @@ function UserBehaviorPage() {
               }}
             >
               <Tab key="timeline" title="行为轨迹时序图">
-                <div className="mt-2 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <div className="text-[var(--text-color-secondary)]">
-                        操作频次随时间分布
+                <div className="mt-2 space-y-2 relative min-h-[240px]">
+                  {loading ? (
+                    <Loading height={240} />
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <div className="text-[var(--text-color-secondary)]">
+                            操作频次随时间分布
+                          </div>
+                          <div className="text-[11px] text-[var(--text-color-secondary)]">
+                            当前展示用户最近时间段的操作次数变化，用于识别异常高频操作。
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <span className="text-[var(--text-color-secondary)]">当前分析基于上方选择的时间范围</span>
+                        </div>
                       </div>
-                      <div className="text-[11px] text-[var(--text-color-secondary)]">
-                        当前展示用户最近时间段的操作次数变化，用于识别异常高频操作。
+                      <div className="h-60">
+                        <Line {...lineConfig} />
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px]">
-                      <span className="text-[var(--text-color-secondary)]">当前分析基于上方选择的时间范围</span>
-                    </div>
-                  </div>
-                  <div className="h-60">
-                    <Line {...lineConfig} />
-                  </div>
+                    </>
+                  )}
                 </div>
               </Tab>
               <Tab key="list" title="行为明细列表">
-                <div className="mt-2 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[var(--text-color-secondary)]">
-                      近期行为明细
-                    </div>
-                    <div className="text-[11px] text-[var(--text-color-secondary)]">
-                      共 {filteredEvents.length} 条记录
-                    </div>
-                  </div>
-                  <div className="max-h-80 overflow-auto space-y-1.5">
-                    {filteredEvents.length === 0 ? (
-                      <div className="px-2 py-4 text-[11px] text-[var(--text-color-secondary)]">
-                        未找到匹配的行为记录，可尝试调整关键字或切换用户。
+                <div className="mt-2 space-y-2 relative min-h-[320px]">
+                  {loading ? (
+                    <Loading height={320} />
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="text-[var(--text-color-secondary)]">
+                          近期行为明细
+                        </div>
+                        <div className="text-[11px] text-[var(--text-color-secondary)]">
+                          共 {filteredEvents.length} 条记录
+                        </div>
                       </div>
-                    ) : (
-                      filteredEvents.map(item => {
-                        const riskProps = getRiskChipProps(item.riskLevel);
-                        return (
-                          <div
-                            key={item.id}
-                            className="flex items-start justify-between gap-2 rounded-md border border-[var(--border-color)] bg-[var(--bg-elevated)]/70 px-3 py-2"
-                          >
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{item.action}</span>
-                                <Chip
-                                  size="sm"
-                                  variant="flat"
-                                  className={
-                                    "text-[10px] px-2 h-5 " + riskProps.className
-                                  }
-                                  color={riskProps.color}
-                                >
-                                  {riskProps.label}
-                                </Chip>
-                              </div>
-                              <div className="text-[11px] text-[var(--text-color-secondary)]">
-                                模块：{item.module}
-                              </div>
-                              <div className="text-[11px] text-[var(--text-color-secondary)]">
-                                {item.detail}
-                              </div>
-                            </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="text-[11px] text-[var(--text-color-secondary)]">
-                                {item.time}
-                              </span>
-                            </div>
+                      <div className="max-h-80 overflow-auto space-y-1.5">
+                        {filteredEvents.length === 0 ? (
+                          <div className="px-2 py-4 text-[11px] text-[var(--text-color-secondary)]">
+                            未找到匹配的行为记录，可尝试调整关键字或切换用户。
                           </div>
-                        );
-                      })
-                    )}
-                  </div>
+                        ) : (
+                          filteredEvents.map(item => {
+                            const riskProps = getRiskChipProps(item.riskLevel);
+                            return (
+                              <div
+                                key={item.id}
+                                className="flex items-start justify-between gap-2 rounded-md border border-[var(--border-color)] bg-[var(--bg-elevated)]/70 px-3 py-2"
+                              >
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{item.action}</span>
+                                    <Chip
+                                      size="sm"
+                                      variant="flat"
+                                      className={
+                                        "text-[10px] px-2 h-5 " + riskProps.className
+                                      }
+                                      color={riskProps.color}
+                                    >
+                                      {riskProps.label}
+                                    </Chip>
+                                  </div>
+                                  <div className="text-[11px] text-[var(--text-color-secondary)]">
+                                    模块：{item.module}
+                                  </div>
+                                  <div className="text-[11px] text-[var(--text-color-secondary)]">
+                                    {item.detail}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                  <span className="text-[11px] text-[var(--text-color-secondary)]">
+                                    {item.time}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </Tab>
             </AdminTabs>
@@ -499,51 +353,61 @@ function UserBehaviorPage() {
         </Card>
 
         <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-          <div className="p-4 space-y-3 text-xs">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="text-[var(--text-color-secondary)]">
-                  用户侧边信息面板
+          <div className="p-4 space-y-3 text-xs relative min-h-[200px]">
+            {loading ? (
+              <Loading height={200} />
+            ) : !activeUser ? (
+              <div className="flex h-full items-center justify-center text-[var(--text-color-secondary)]">
+                暂无用户数据
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="text-[var(--text-color-secondary)]">
+                      用户侧边信息面板
+                    </div>
+                    <div className="text-sm font-medium">
+                      {activeUser.name}（{activeUser.role}）
+                    </div>
+                  </div>
+                  <Chip
+                    size="sm"
+                    variant="flat"
+                    className={
+                      "text-xs " + getRiskChipProps(activeUser.riskLevel).className
+                    }
+                    color={getRiskChipProps(activeUser.riskLevel).color}
+                  >
+                    {getRiskChipProps(activeUser.riskLevel).label}
+                  </Chip>
                 </div>
-                <div className="text-sm font-medium">
-                  {activeUser.name}（{activeUser.role}）
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <div className="text-[var(--text-color-secondary)]">所属部门</div>
+                    <div>{activeUser.department}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[var(--text-color-secondary)]">最近登录时间</div>
+                    <div>{activeUser.lastLoginAt}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[var(--text-color-secondary)]">最近登录 IP</div>
+                    <div>{activeUser.lastLoginIp}</div>
+                  </div>
                 </div>
-              </div>
-              <Chip
-                size="sm"
-                variant="flat"
-                className={
-                  "text-xs " + getRiskChipProps(activeUser.riskLevel).className
-                }
-                color={getRiskChipProps(activeUser.riskLevel).color}
-              >
-                {getRiskChipProps(activeUser.riskLevel).label}
-              </Chip>
-            </div>
-            <div className="space-y-2">
-              <div className="space-y-1">
-                <div className="text-[var(--text-color-secondary)]">所属部门</div>
-                <div>{activeUser.department}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-[var(--text-color-secondary)]">最近登录时间</div>
-                <div>{activeUser.lastLoginAt}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-[var(--text-color-secondary)]">最近登录 IP</div>
-                <div>{activeUser.lastLoginIp}</div>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-[var(--border-color)] space-y-2">
-              <div className="text-[var(--text-color-secondary)]">
-                安全建议（示例）
-              </div>
-              <ul className="list-disc pl-4 space-y-1 text-xs text-[var(--text-color-secondary)]">
-                <li>定期检查该用户的高风险操作记录，如批量删除、敏感配置变更。</li>
-                <li>建议开启登录保护策略，如 IP 白名单或多因素认证。</li>
-                <li>结合系统日志模块，交叉验证该用户操作与系统异常之间的关联。</li>
-              </ul>
-            </div>
+                <div className="pt-2 border-t border-[var(--border-color)] space-y-2">
+                  <div className="text-[var(--text-color-secondary)]">
+                    安全建议（示例）
+                  </div>
+                  <ul className="list-disc pl-4 space-y-1 text-xs text-[var(--text-color-secondary)]">
+                    <li>定期检查该用户的高风险操作记录，如批量删除、敏感配置变更。</li>
+                    <li>建议开启登录保护策略，如 IP 白名单或多因素认证。</li>
+                    <li>结合系统日志模块，交叉验证该用户操作与系统异常之间的关联。</li>
+                  </ul>
+                </div>
+              </>
+            )}
           </div>
         </Card>
       </div>

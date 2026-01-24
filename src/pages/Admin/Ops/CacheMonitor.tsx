@@ -1,44 +1,101 @@
-import React, { useMemo, useState } from "react";
-import { Card, Chip, Button, Tab } from "@heroui/react";
+import React, { useMemo, useState, useEffect } from "react";
+import { Card, Chip, Button, Tab, addToast } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
+import { Loading } from "@/components/Loading";
 import type { ColumnConfig, LineConfig } from "@ant-design/plots";
 import { Column, Line } from "@ant-design/plots";
 import { useAppStore } from "../../../store";
 
-type CacheInstance = {
-  id: string;
-  name: string;
-  usage: number;
-  nodes: number;
-  hitRate: number;
-};
-
-const instances: CacheInstance[] = [
-  { id: "redis-main", name: "Redis 主实例", usage: 0.91, nodes: 3, hitRate: 0.93 },
-  { id: "redis-session", name: "会话缓存", usage: 0.76, nodes: 2, hitRate: 0.97 },
-  { id: "redis-feed", name: "Feed 流缓存", usage: 0.84, nodes: 4, hitRate: 0.89 }
-];
-
-const hitRateTrendData: LineConfig["data"] = [
-  { time: "10:00", value: 96, type: "命中率" },
-  { time: "10:10", value: 95, type: "命中率" },
-  { time: "10:20", value: 93, type: "命中率" },
-  { time: "10:30", value: 94, type: "命中率" },
-  { time: "10:40", value: 95, type: "命中率" }
-];
-
-const qpsTrendData: ColumnConfig["data"] = [
-  { time: "10:00", value: 430, type: "请求 QPS" },
-  { time: "10:10", value: 520, type: "请求 QPS" },
-  { time: "10:20", value: 610, type: "请求 QPS" },
-  { time: "10:30", value: 580, type: "请求 QPS" },
-  { time: "10:40", value: 640, type: "请求 QPS" }
-];
+import { CacheInstanceItem as CacheInstance, fetchCacheInstances, fetchCacheHitRateTrend, fetchCacheQpsTrend, fetchCacheLogs, CacheLogItem } from "../../../api/admin/ops";
 
 function CacheMonitorPage() {
+  const [loading, setLoading] = useState(false);
+  const [loadingTrend, setLoadingTrend] = useState(false);
   const [order, setOrder] = useState<"asc" | "desc">("desc");
-  const [activeInstanceId, setActiveInstanceId] = useState("redis-main");
+  const [activeInstanceId, setActiveInstanceId] = useState("");
+  const [instances, setInstances] = useState<CacheInstance[]>([]);
+  const [hitRateTrendData, setHitRateTrendData] = useState<LineConfig["data"]>([]);
+  const [qpsTrendData, setQpsTrendData] = useState<ColumnConfig["data"]>([]);
+  const [cacheLogs, setCacheLogs] = useState<CacheLogItem[]>([]);
   const { themeMode } = useAppStore();
+
+  // 初始加载实例列表
+  useEffect(() => {
+    async function loadInitialData() {
+      setLoading(true);
+      // 同时开启趋势数据的 loading，防止内容闪烁
+      setLoadingTrend(true);
+      try {
+        const instRes = await fetchCacheInstances();
+        if (instRes && instRes.length > 0) {
+          setInstances(instRes);
+          const defaultInstance = instRes.find(i => i.id === "redis-main") || instRes[0];
+          setActiveInstanceId(defaultInstance.id);
+          
+          // 立即加载第一个实例的数据，避免触发第二个 useEffect 的延迟
+          const [hitRes, qpsRes, logRes] = await Promise.all([
+            fetchCacheHitRateTrend({ instanceId: defaultInstance.id }),
+            fetchCacheQpsTrend({ instanceId: defaultInstance.id }),
+            fetchCacheLogs({ instanceId: defaultInstance.id })
+          ]);
+          
+          if (hitRes) setHitRateTrendData(hitRes);
+          if (qpsRes) setQpsTrendData(qpsRes);
+          if (logRes) setCacheLogs(logRes);
+        }
+      } catch (error) {
+        console.error("Failed to load initial cache data:", error);
+      } finally {
+        setLoading(false);
+        setLoadingTrend(false);
+      }
+    }
+    loadInitialData();
+  }, []);
+
+  // 当手动切换选中实例时，加载对应的趋势数据和日志
+  useEffect(() => {
+    // 只有当 activeInstanceId 存在且不是初始加载（即 loading 为 false）时才执行
+    if (!activeInstanceId || loading) return;
+
+    async function loadDetailData() {
+      setLoadingTrend(true);
+      try {
+        const [hitRes, qpsRes, logRes] = await Promise.all([
+          fetchCacheHitRateTrend({ instanceId: activeInstanceId }),
+          fetchCacheQpsTrend({ instanceId: activeInstanceId }),
+          fetchCacheLogs({ instanceId: activeInstanceId })
+        ]);
+        
+        if (hitRes) setHitRateTrendData(hitRes);
+        if (qpsRes) setQpsTrendData(qpsRes);
+        if (logRes) setCacheLogs(logRes);
+      } catch (error) {
+        console.error("Failed to load detail data:", error);
+      } finally {
+        setLoadingTrend(false);
+      }
+    }
+    loadDetailData();
+  }, [activeInstanceId, loading]);
+
+  const handleClearCache = async () => {
+    if (!activeInstanceId) return;
+    
+    try {
+      setLoadingTrend(true);
+      await import("../../../api/admin/ops").then(m => m.clearCacheInstance({ instanceId: activeInstanceId }));
+      addToast({
+        title: "清理成功",
+        description: `已清理实例 ${activeInstanceId} 的所有缓存数据。`,
+        color: "success"
+      });
+    } catch (error) {
+      console.error("handleClearCache error:", error);
+    } finally {
+      setLoadingTrend(false);
+    }
+  };
 
   const chartTheme =
     themeMode === "dark"
@@ -55,7 +112,7 @@ function CacheMonitorPage() {
       order === "desc" ? b.usage - a.usage : a.usage - b.usage
     );
     return list;
-  }, [order]);
+  }, [order, instances]);
 
   const activeInstance = useMemo(
     () => sortedInstances.find(item => item.id === activeInstanceId) ?? sortedInstances[0],
@@ -98,7 +155,7 @@ function CacheMonitorPage() {
       },
       theme: chartTheme
     }),
-    [chartTheme]
+    [hitRateTrendData, chartTheme]
   );
 
   const qpsColumnConfig: ColumnConfig = useMemo(
@@ -129,7 +186,7 @@ function CacheMonitorPage() {
       },
       theme: chartTheme
     }),
-    [chartTheme]
+    [qpsTrendData, chartTheme]
   );
 
   return (
@@ -169,115 +226,144 @@ function CacheMonitorPage() {
               </Button>
             </div>
           </div>
-          <div className="p-2 space-y-2 text-xs max-h-72 overflow-auto">
-            {sortedInstances.map(item => {
-              const percent = Math.round(item.usage * 100);
-              const critical = percent >= 90;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={
-                    "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md border text-left transition-colors " +
-                    (activeInstance?.id === item.id
-                      ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)]"
-                      : "border-[var(--border-color)] hover:bg-[var(--bg-elevated)]/90")
-                  }
-                  onClick={() => setActiveInstanceId(item.id)}
-                >
-                  <div className="flex flex-col">
-                    <span className="text-[var(--text-color)]">{item.name}</span>
-                    <span className="text-xs text-[var(--text-color-secondary)]">
-                      节点数：{item.nodes} · 命中率 {Math.round(item.hitRate * 100)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {critical && (
-                      <Chip size="sm" color="danger" variant="flat" className="text-xs">
-                        即将满
-                      </Chip>
-                    )}
-                    <span className="text-xs">{percent}%</span>
-                  </div>
-                </button>
-              );
-            })}
+          <div className="p-2 space-y-2 text-xs max-h-[500px] overflow-auto relative min-h-[200px]">
+            {loading ? (
+              <Loading height={200} />
+            ) : (
+              sortedInstances.map(item => {
+                const percent = Math.round(item.usage * 100);
+                const critical = percent >= 90;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={
+                      "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md border text-left transition-colors " +
+                      (activeInstance?.id === item.id
+                        ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)]"
+                        : "border-[var(--border-color)] hover:bg-[var(--bg-elevated)]/90")
+                    }
+                    onClick={() => setActiveInstanceId(item.id)}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-[var(--text-color)]">{item.name}</span>
+                      <span className="text-xs text-[var(--text-color-secondary)]">
+                        节点数：{item.nodes} · 命中率 {Math.round(item.hitRate * 100)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {critical && (
+                        <Chip size="sm" color="danger" variant="flat" className="text-xs">
+                          即将满
+                        </Chip>
+                      )}
+                      <span className="text-xs">{percent}%</span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
           </div>
         </Card>
 
-        <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-          <div className="p-4 space-y-3 text-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {activeInstance?.name ?? "请选择缓存实例"}
-                </span>
-                {activeInstance && (
-                  <span className="text-[11px] text-[var(--text-color-secondary)]">
-                    当前使用率 {Math.round(activeInstance.usage * 100)}%，命中率{" "}
-                    {Math.round(activeInstance.hitRate * 100)}%
-                  </span>
+        <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 min-h-[400px]">
+          <div className="p-4 space-y-3 text-xs relative">
+            {(loading || loadingTrend) ? (
+              <Loading height={320} />
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">
+                      {activeInstance?.name ?? "请选择缓存实例"}
+                    </span>
+                    {activeInstance && (
+                      <span className="text-[11px] text-[var(--text-color-secondary)]">
+                        当前使用率 {Math.round(activeInstance.usage * 100)}%，命中率{" "}
+                        {Math.round(activeInstance.hitRate * 100)}%
+                      </span>
+                    )}
+                  </div>
+                  {activeInstance && (
+                    <Button
+                      size="sm"
+                      color="danger"
+                      variant="flat"
+                      className="h-7 text-xs"
+                      onPress={handleClearCache}
+                    >
+                      清空缓存
+                    </Button>
+                  )}
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <div className="text-[var(--text-color-secondary)]">内存占用</div>
+                    <div className="text-sm font-medium">
+                      {activeInstance ? `${Math.round(activeInstance.usage * 100)}%` : "-"}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[var(--text-color-secondary)]">命中率</div>
+                    <div className="text-sm font-medium">
+                      {activeInstance ? `${Math.round(activeInstance.hitRate * 100)}%` : "-"}
+                    </div>
+                  </div>
+                </div>
+                {activeInstance && activeInstance.hitRate < 0.9 && (
+                  <div className="text-[11px] text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/20">
+                    命中率低于 90%，建议检查缓存键粒度、过期策略与热点数据是否合理。
+                  </div>
                 )}
-              </div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
-                <div className="text-[var(--text-color-secondary)]">内存占用</div>
-                <div className="text-sm">
-                  {activeInstance ? `${Math.round(activeInstance.usage * 100)}%` : "-"}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-[var(--text-color-secondary)]">命中率</div>
-                <div className="text-sm">
-                  {activeInstance ? `${Math.round(activeInstance.hitRate * 100)}%` : "-"}
-                </div>
-              </div>
-            </div>
-            {activeInstance && activeInstance.hitRate < 0.9 && (
-              <div className="text-[11px] text-yellow-500">
-                命中率低于 90%，建议检查缓存键粒度、过期策略与热点数据是否合理。
-              </div>
+                <AdminTabs
+                  aria-label="缓存监控图表"
+                  size="sm"
+                  className="mt-1"
+                >
+                  <Tab key="hit" title="命中率趋势">
+                    <div className="h-56 mt-2">
+                      <Line {...hitLineConfig} />
+                    </div>
+                  </Tab>
+                  <Tab key="qps" title="QPS 趋势">
+                    <div className="h-56 mt-2">
+                      <Column {...qpsColumnConfig} />
+                    </div>
+                  </Tab>
+                </AdminTabs>
+              </>
             )}
-            <AdminTabs
-              aria-label="缓存监控图表"
-              size="sm"
-              className="mt-1"
-            >
-              <Tab key="hit" title="命中率趋势">
-                <div className="h-56 mt-2">
-                  <Line {...hitLineConfig} />
-                </div>
-              </Tab>
-              <Tab key="qps" title="QPS 趋势">
-                <div className="h-56 mt-2">
-                  <Column {...qpsColumnConfig} />
-                </div>
-              </Tab>
-            </AdminTabs>
           </div>
         </Card>
       </div>
 
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-        <div className="p-4 space-y-3 text-xs">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium">缓存操作日志（示例）</div>
-          </div>
-          <div className="space-y-1">
-            <div className="flex items-center justify-between px-2 py-1 rounded-md bg-[var(--bg-elevated)]/80">
-              <span>10:40</span>
-              <span className="text-xs text-[var(--text-color-secondary)]">
-                [redis-main] 批量删除键前缀为 session:* 的 120 个键
-              </span>
-            </div>
-            <div className="flex items-center justify-between px-2 py-1 rounded-md bg-[var(--bg-elevated)]/80">
-              <span>10:30</span>
-              <span className="text-xs text-[var(--text-color-secondary)]">
-                [redis-feed] 刷新热点列表缓存，耗时 120ms
-              </span>
-            </div>
-          </div>
+        <div className="p-4 space-y-3 text-xs relative min-h-[120px]">
+          {loadingTrend ? (
+            <Loading height={80} />
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">缓存操作日志</div>
+              </div>
+              <div className="space-y-1">
+                {cacheLogs.length > 0 ? (
+                  cacheLogs.map(log => (
+                    <div key={log.id} className="flex items-center justify-between px-2 py-1 rounded-md bg-[var(--bg-elevated)]/80">
+                      <span>{log.time}</span>
+                      <span className="text-xs text-[var(--text-color-secondary)]">
+                        [{log.instanceId}] {log.message}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-[var(--text-color-secondary)]">
+                    暂无操作日志
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </Card>
     </div>

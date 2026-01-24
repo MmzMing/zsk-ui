@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SelectItem,
   Button,
@@ -16,128 +16,18 @@ import {
 } from "@heroui/react";
 import { FiRefreshCw, FiRotateCcw, FiTrash2 } from "react-icons/fi";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
-
-type CacheKeyItem = {
-  id: string;
-  key: string;
-  type: "string" | "hash" | "list" | "set" | "zset";
-  size: number;
-  ttl: number | null;
-  instanceId: string;
-  instanceName: string;
-  updatedAt: string;
-};
+import { Loading } from "@/components/Loading";
+import { 
+  CacheKeyItem, 
+  fetchCacheKeys, 
+  fetchCacheInstances, 
+  refreshCacheKey, 
+  deleteCacheKey, 
+  batchRefreshCacheKeys, 
+  batchDeleteCacheKeys 
+} from "../../../api/admin/ops";
 
 type TtlFilter = "all" | "expiring" | "no-expire";
-
-const cacheInstances: { id: string; name: string }[] = [
-  { id: "redis-main", name: "Redis 主实例" },
-  { id: "redis-session", name: "会话缓存" },
-  { id: "redis-feed", name: "Feed 流缓存" }
-];
-
-const initialKeys: CacheKeyItem[] = [
-  {
-    id: "k1",
-    key: "session:user:10001",
-    type: "hash",
-    size: 8.2,
-    ttl: 420,
-    instanceId: "redis-session",
-    instanceName: "会话缓存",
-    updatedAt: "10:41:03"
-  },
-  {
-    id: "k2",
-    key: "session:user:10002",
-    type: "hash",
-    size: 7.6,
-    ttl: 300,
-    instanceId: "redis-session",
-    instanceName: "会话缓存",
-    updatedAt: "10:40:12"
-  },
-  {
-    id: "k3",
-    key: "feed:home:hot",
-    type: "zset",
-    size: 24.3,
-    ttl: null,
-    instanceId: "redis-feed",
-    instanceName: "Feed 流缓存",
-    updatedAt: "10:39:27"
-  },
-  {
-    id: "k4",
-    key: "feed:user:10001",
-    type: "zset",
-    size: 16.7,
-    ttl: 900,
-    instanceId: "redis-feed",
-    instanceName: "Feed 流缓存",
-    updatedAt: "10:37:52"
-  },
-  {
-    id: "k5",
-    key: "config:site:settings",
-    type: "hash",
-    size: 3.1,
-    ttl: null,
-    instanceId: "redis-main",
-    instanceName: "Redis 主实例",
-    updatedAt: "10:36:18"
-  },
-  {
-    id: "k6",
-    key: "config:feature:beta",
-    type: "string",
-    size: 1.2,
-    ttl: 1200,
-    instanceId: "redis-main",
-    instanceName: "Redis 主实例",
-    updatedAt: "10:34:09"
-  },
-  {
-    id: "k7",
-    key: "doc:view:counter:123",
-    type: "string",
-    size: 0.8,
-    ttl: 1800,
-    instanceId: "redis-main",
-    instanceName: "Redis 主实例",
-    updatedAt: "10:30:42"
-  },
-  {
-    id: "k8",
-    key: "login:fail:ip:127.0.0.1",
-    type: "string",
-    size: 0.5,
-    ttl: 240,
-    instanceId: "redis-session",
-    instanceName: "会话缓存",
-    updatedAt: "10:29:15"
-  },
-  {
-    id: "k9",
-    key: "doc:recommend:homepage",
-    type: "list",
-    size: 12.4,
-    ttl: 600,
-    instanceId: "redis-feed",
-    instanceName: "Feed 流缓存",
-    updatedAt: "10:26:51"
-  },
-  {
-    id: "k10",
-    key: "user:profile:10001",
-    type: "hash",
-    size: 5.4,
-    ttl: null,
-    instanceId: "redis-main",
-    instanceName: "Redis 主实例",
-    updatedAt: "10:22:37"
-  }
-];
 
 function formatSize(value: number) {
   if (value >= 1024) {
@@ -176,42 +66,64 @@ function formatTtl(ttl: number | null) {
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 
 function CacheListPage() {
+  const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [instanceFilter, setInstanceFilter] = useState<string>("all");
   const [ttlFilter, setTtlFilter] = useState<TtlFilter>("all");
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<CacheKeyItem[]>(() => initialKeys);
+  const [items, setItems] = useState<CacheKeyItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [cacheInstances, setCacheInstances] = useState<{ id: string; name: string }[]>([]);
+  const [total, setTotal] = useState(0);
 
-  const filteredItems = useMemo(() => {
-    const trimmedKeyword = keyword.trim().toLowerCase();
-    return items.filter(item => {
-      if (trimmedKeyword && !item.key.toLowerCase().includes(trimmedKeyword)) {
-        return false;
-      }
-      if (instanceFilter !== "all" && item.instanceId !== instanceFilter) {
-        return false;
-      }
-      if (ttlFilter === "expiring") {
-        if (item.ttl === null || item.ttl > 300) {
-          return false;
+  useEffect(() => {
+    async function loadInstances() {
+      try {
+        const res = await fetchCacheInstances();
+        if (res) {
+          setCacheInstances(res);
         }
-      } else if (ttlFilter === "no-expire") {
-        if (item.ttl !== null) {
-          return false;
-        }
+      } catch (error) {
+        console.error("Failed to load cache instances:", error);
       }
-      return true;
-    });
-  }, [items, keyword, instanceFilter, ttlFilter]);
+    }
+    loadInstances();
+  }, []);
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const res = await fetchCacheKeys({
+          keyword,
+          instanceId: instanceFilter,
+          ttlFilter,
+          page,
+          pageSize: 8
+        });
+        if (res) {
+          setItems(res.list);
+          setTotal(res.total);
+        }
+      } catch (error) {
+        console.error("Failed to load cache keys:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [keyword, instanceFilter, ttlFilter, page]);
 
   const pageSize = 8;
-  const total = filteredItems.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const pageItems = filteredItems.slice(startIndex, endIndex);
+  
+  // Client-side filtering is no longer needed as we fetch filtered data
+  // But for the mock implementation in API, it handles filtering. 
+  // However, `fetchCacheKeys` mock implementation returns filtered list.
+  // So we just use `items`.
+  const pageItems = items; 
+
   const hasSelection = selectedIds.length > 0;
 
   const handleTableSelectionChange = (keys: "all" | Set<React.Key>) => {
@@ -230,50 +142,102 @@ function CacheListPage() {
     setSelectedIds([]);
   };
 
-  const handleBatchRefresh = () => {
+  const handleBatchRefresh = async () => {
     if (!hasSelection) {
       return;
     }
-    const count = selectedIds.length;
-    addToast({
-      title: "批量刷新任务已提交",
-      description: `共提交 ${count} 个键的刷新任务，实际逻辑待接入缓存接口。`,
-      color: "success"
-    });
+    setLoading(true);
+    try {
+      await batchRefreshCacheKeys({ ids: selectedIds });
+      // 校验响应，如果后端返回了错误信息或非200状态（假设 request 已经处理了非200，但我们这里可以额外校验业务逻辑）
+      // 如果 request.post 返回的是数据，通常认为成功。如果有特定的 message 且 res 为空或不符合预期，可以抛出错误。
+      addToast({
+        title: "批量刷新成功",
+        description: `已提交 ${selectedIds.length} 个键的刷新任务。`,
+        color: "success"
+      });
+      setSelectedIds([]);
+    } catch (error) {
+      console.error("handleBatchRefresh error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleBatchDelete = () => {
+  const handleBatchDelete = async () => {
     if (!hasSelection) {
       return;
     }
-    const count = selectedIds.length;
-    setItems(previous => previous.filter(item => !selectedIds.includes(item.id)));
-    setSelectedIds([]);
-    addToast({
-      title: "批量删除成功",
-      description: `已从当前列表中删除 ${count} 个键，实际删除逻辑待接入缓存接口。`,
-      color: "success"
-    });
-    setPage(1);
+    setLoading(true);
+    try {
+      await batchDeleteCacheKeys({ ids: selectedIds });
+      addToast({
+        title: "批量删除成功",
+        description: `已成功删除 ${selectedIds.length} 个缓存键。`,
+        color: "success"
+      });
+      setSelectedIds([]);
+      // 重新加载当前页数据
+      const res = await fetchCacheKeys({
+        keyword,
+        instanceId: instanceFilter,
+        ttlFilter,
+        page,
+        pageSize: 8
+      });
+      if (res) {
+        setItems(res.list);
+        setTotal(res.total);
+      }
+    } catch (error) {
+      console.error("handleBatchDelete error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleItemRefresh = (item: CacheKeyItem) => {
-    addToast({
-      title: "刷新任务已提交",
-      description: `已对键 ${item.key} 触发单次刷新操作，实际逻辑待接入缓存接口。`,
-      color: "success"
-    });
+  const handleItemRefresh = async (item: CacheKeyItem) => {
+    setLoading(true);
+    try {
+      await refreshCacheKey({ id: item.id });
+      addToast({
+        title: "刷新成功",
+        description: `已对键 ${item.key} 触发单次刷新操作。`,
+        color: "success"
+      });
+    } catch (error) {
+      console.error("handleItemRefresh error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleItemDelete = (item: CacheKeyItem) => {
-    setItems(previous => previous.filter(row => row.id !== item.id));
-    setSelectedIds(previous => previous.filter(id => id !== item.id));
-    addToast({
-      title: "缓存键已删除",
-      description: `已从当前列表中删除键 ${item.key}，实际删除逻辑待接入缓存接口。`,
-      color: "success"
-    });
-    setPage(1);
+  const handleItemDelete = async (item: CacheKeyItem) => {
+    setLoading(true);
+    try {
+      await deleteCacheKey({ id: item.id });
+      addToast({
+        title: "删除成功",
+        description: `已删除缓存键 ${item.key}。`,
+        color: "success"
+      });
+      // 重新加载当前页数据
+      const res = await fetchCacheKeys({
+        keyword,
+        instanceId: instanceFilter,
+        ttlFilter,
+        page,
+        pageSize: 8
+      });
+      if (res) {
+        setItems(res.list);
+        setTotal(res.total);
+      }
+    } catch (error) {
+      console.error("handleItemDelete error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePageChange = (next: number) => {
@@ -325,7 +289,6 @@ function CacheListPage() {
                   { label: "全部实例", id: "all" },
                   ...cacheInstances
                 ]}
-                isClearable
               >
                 {(item: { id: string; name?: string; label?: string }) => (
                   <SelectItem key={item.id}>
@@ -397,42 +360,44 @@ function CacheListPage() {
       </div>
 
       <div className="p-3">
-          <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
-            <Table
-              aria-label="缓存键列表"
-              className="min-w-full text-xs"
-              selectionMode="multiple"
-              selectedKeys={selectedIds.length ? new Set(selectedIds) : new Set()}
-              onSelectionChange={handleTableSelectionChange}
+        <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
+          <Table
+            aria-label="缓存键列表"
+            className="min-w-full text-xs"
+            selectionMode="multiple"
+            selectedKeys={selectedIds.length ? new Set(selectedIds) : new Set()}
+            onSelectionChange={handleTableSelectionChange}
+          >
+            <TableHeader className="bg-[var(--bg-elevated)]/80">
+              <TableColumn className="px-3 py-2 text-left font-medium">
+                键名
+              </TableColumn>
+              <TableColumn className="px-3 py-2 text-left font-medium">
+                所属实例
+              </TableColumn>
+              <TableColumn className="px-3 py-2 text-left font-medium">
+                类型
+              </TableColumn>
+              <TableColumn className="px-3 py-2 text-left font-medium">
+                大小
+              </TableColumn>
+              <TableColumn className="px-3 py-2 text-left font-medium">
+                过期时间
+              </TableColumn>
+              <TableColumn className="px-3 py-2 text-left font-medium">
+                最后更新时间
+              </TableColumn>
+              <TableColumn className="px-3 py-2 text-left font-medium">
+                操作
+              </TableColumn>
+            </TableHeader>
+            <TableBody
+              items={loading ? [] : pageItems}
+              emptyContent="未找到匹配的缓存键，可调整筛选条件后重试。"
+              isLoading={loading}
+              loadingContent={<Loading height={200} text="获取缓存键数据中..." />}
             >
-              <TableHeader className="bg-[var(--bg-elevated)]/80">
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  键名
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  所属实例
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  类型
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  大小
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  过期时间
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  最后更新时间
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  操作
-                </TableColumn>
-              </TableHeader>
-              <TableBody
-                items={pageItems}
-                emptyContent="未找到匹配的缓存键，可调整筛选条件后重试。"
-              >
-                {item => {
+              {item => {
                   const expiring = item.ttl !== null && item.ttl <= 300 && item.ttl > 0;
                   return (
                     <TableRow

@@ -29,12 +29,24 @@ import {
 } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
-import {
-    initVideoUpload,
-    uploadVideoChunk,
-    mergeVideoUpload,
-    type UploadTaskItem
+import { 
+  initVideoUpload,
+  uploadVideoChunk,
+  mergeVideoUpload,
+  fetchVideoCategories,
+  fetchTagOptions,
+  fetchUploadTaskList,
+  fetchDraftList,
+  type UploadTaskItem,
+  type ChapterItem,
+  type DraftItem,
+  type PermissionType,
+  type WatermarkType,
+  type WatermarkPosition,
+  type VideoCategory,
+  type VideoTag
 } from "@/api/admin/video";
+import { Loading } from "@/components/Loading";
 import {
     FiClock,
     FiInfo,
@@ -44,150 +56,10 @@ import {
     FiVideo,
     FiChevronRight,
     FiCamera,
-    FiFileText,
     FiTag
 } from "react-icons/fi";
 
 type UploadTask = UploadTaskItem;
-
-type ChapterItem = {
-  id: string;
-  title: string;
-  timeInSeconds: number;
-};
-
-type SubtitleTrack = {
-  id: string;
-  language: string;
-  fileName: string;
-};
-
-type DraftItem = {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  coverImage?: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type PermissionType = "public" | "private" | "password";
-
-type WatermarkType = "text" | "image";
-
-type WatermarkPosition =
-  | "top-left"
-  | "top-center"
-  | "top-right"
-  | "center-left"
-  | "center"
-  | "center-right"
-  | "bottom-left"
-  | "bottom-center"
-  | "bottom-right";
-
-const initialTasks: UploadTask[] = [
-  {
-    id: "task_001",
-    title: "从 0 搭建个人知识库前端",
-    fileName: "kb-front-bootcamp-01.mp4",
-    category: "前端基础",
-    size: 512 * 1024 * 1024,
-    status: "success",
-    progress: 100,
-    isAiChecked: true,
-    aiRiskLevel: "low",
-    createdAt: "2026-01-18 10:20:00"
-  },
-  {
-    id: "task_002",
-    title: "如何把零散笔记整理成知识库",
-    fileName: "kb-note-organize-02.mp4",
-    category: "效率方法",
-    size: 384 * 1024 * 1024,
-    status: "uploading",
-    progress: 62,
-    isAiChecked: false,
-    createdAt: "2026-01-18 10:32:15"
-  },
-  {
-    id: "task_003",
-    title: "前端工程化下的内容管理实践",
-    fileName: "kb-content-engineering-03.mp4",
-    category: "工程实践",
-    size: 728 * 1024 * 1024,
-    status: "error",
-    progress: 37,
-    isAiChecked: false,
-    createdAt: "2026-01-18 10:05:42"
-  }
-];
-
-const CATEGORY_DATA = [
-  {
-    key: "frontend",
-    label: "前端开发",
-    children: [
-      { key: "react", label: "React" },
-      { key: "vue", label: "Vue" },
-      { key: "angular", label: "Angular" },
-      { key: "html_css", label: "HTML / CSS" },
-      { key: "engineering", label: "工程化" }
-    ]
-  },
-  {
-    key: "backend",
-    label: "后端开发",
-    children: [
-      { key: "java", label: "Java" },
-      { key: "python", label: "Python" },
-      { key: "go", label: "Go" },
-      { key: "nodejs", label: "Node.js" },
-      { key: "microservice", label: "微服务" }
-    ]
-  },
-  {
-    key: "cs",
-    label: "计算机基础",
-    children: [
-      { key: "network", label: "计算机网络" },
-      { key: "os", label: "操作系统" },
-      { key: "algo", label: "数据结构与算法" }
-    ]
-  },
-  {
-    key: "ai",
-    label: "人工智能",
-    children: [
-      { key: "ml", label: "机器学习" },
-      { key: "dl", label: "深度学习" },
-      { key: "cv", label: "计算机视觉" },
-      { key: "nlp", label: "自然语言处理" }
-    ]
-  },
-  {
-    key: "other",
-    label: "其他",
-    children: [
-      { key: "life", label: "生活" },
-      { key: "game", label: "游戏" },
-      { key: "music", label: "音乐" }
-    ]
-  }
-];
-
-const TAG_OPTIONS = [
-  { key: "tutorial", label: "教程" },
-  { key: "vlog", label: "Vlog" },
-  { key: "review", label: "测评" },
-  { key: "game", label: "游戏" },
-  { key: "music", label: "音乐" },
-  { key: "tech", label: "科技" },
-  { key: "coding", label: "编程" },
-  { key: "career", label: "职场" },
-  { key: "life", label: "生活" }
-];
 
 function formatSize(size: number) {
   if (size <= 0) {
@@ -202,9 +74,12 @@ function formatSize(size: number) {
 }
 
 function VideoUploadPage() {
-  const [, setTasks] = useState<UploadTask[]>(() => initialTasks);
+  const [loading, setLoading] = useState(false);
+  const [tasks, setTasks] = useState<UploadTask[]>([]);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
+  const [categoryData, setCategoryData] = useState<VideoCategory[]>([]);
+  const [tagOptions, setTagOptions] = useState<VideoTag[]>([]);
   const [activeCategoryLevel1, setActiveCategoryLevel1] = useState<string>("");
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set([]));
@@ -215,14 +90,11 @@ function VideoUploadPage() {
   const [selectedFileSize, setSelectedFileSize] = useState(0);
   const [message, setMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const subtitleFileInputRef = useRef<HTMLInputElement | null>(null);
   const watermarkImageInputRef = useRef<HTMLInputElement | null>(null);
 
   const [chapters, setChapters] = useState<ChapterItem[]>([]);
   const [chapterTitle, setChapterTitle] = useState("");
   const [chapterTime, setChapterTime] = useState("");
-
-  const [subtitleTracks, setSubtitleTracks] = useState<SubtitleTrack[]>([]);
 
   const [permissionType, setPermissionType] = useState<PermissionType>("public");
   const [visibleUsers, setVisibleUsers] = useState<string[]>([]);
@@ -231,6 +103,47 @@ function VideoUploadPage() {
   const [accessPasswordConfirm, setAccessPasswordConfirm] = useState("");
 
   const [drafts, setDrafts] = useState<DraftItem[]>([]);
+
+  useEffect(() => {
+    async function loadInitialData() {
+      setLoading(true);
+      try {
+        const [cats, tags, taskList, draftList] = await Promise.all([
+          fetchVideoCategories(),
+          fetchTagOptions(),
+          fetchUploadTaskList({ page: 1, pageSize: 10 }),
+          fetchDraftList({ page: 1, pageSize: 10 })
+        ]);
+        if (cats) setCategoryData(cats);
+        if (tags) setTagOptions(tags);
+        if (taskList && taskList.list) setTasks(taskList.list);
+        if (draftList && draftList.list) setDrafts(draftList.list);
+      } catch (error) {
+        console.error("加载上传页面初始数据失败", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadInitialData();
+  }, []);
+
+  const CATEGORY_DATA = useMemo(() => {
+    return categoryData.map(cat => ({
+      key: cat.id,
+      label: cat.name,
+      children: cat.children.map(child => ({
+        key: child.id,
+        label: child.name
+      }))
+    }));
+  }, [categoryData]);
+
+  const TAG_OPTIONS = useMemo(() => {
+    return tagOptions.map(tag => ({
+      key: tag.id,
+      label: tag.name
+    }));
+  }, [tagOptions]);
 
   const [watermarkType, setWatermarkType] = useState<WatermarkType>("text");
   const [watermarkText, setWatermarkText] = useState("");
@@ -317,6 +230,7 @@ function VideoUploadPage() {
     // Start upload interaction
     setIsUploading(true);
     setUploadProgress(0);
+    setLoading(true);
 
     try {
       // 1. 初始化上传 (获取 uploadId)
@@ -336,6 +250,7 @@ function VideoUploadPage() {
       if (initRes && !initRes.needUpload) {
         setUploadProgress(100);
         setIsUploading(false);
+        setLoading(false);
         setMessage("文件已存在，实现秒传。");
         return;
       }
@@ -382,12 +297,14 @@ function VideoUploadPage() {
 
       setIsUploading(false);
       setUploadProgress(100);
+      setLoading(false);
       setMessage("视频上传成功并完成分块合并！");
     } catch (error) {
       console.error("Upload failed:", error);
       setIsUploading(false);
+      setLoading(false);
       // 如果报错是因为接口不存在（模拟环境），我们还是模拟完成进度，让 UI 看起来正常
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         const interval = setInterval(() => {
           setUploadProgress(prev => {
             if (prev >= 100) {
@@ -438,7 +355,7 @@ function VideoUploadPage() {
       return;
     }
     const now = new Date();
-    const id = `task_${now.getTime()}`;
+    const id = `${now.getTime()}`;
     const nextTask: UploadTask = {
       id,
       title: trimmedTitle,
@@ -488,7 +405,7 @@ function VideoUploadPage() {
       return;
     }
     const now = Date.now();
-    const id = `chapter_${now}`;
+    const id = `${now}`;
     const next: ChapterItem = {
       id,
       title: trimmedTitle,
@@ -509,43 +426,6 @@ function VideoUploadPage() {
       return;
     }
     setChapters(previous => previous.filter(item => item.id !== id));
-  };
-
-  const handleSelectSubtitleFile = () => {
-    if (subtitleFileInputRef.current) {
-      subtitleFileInputRef.current.click();
-    }
-  };
-
-  const handleSubtitleFileChange: React.ChangeEventHandler<HTMLInputElement> = event => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    const id = `subtitle_${Date.now()}`;
-    file
-      .text()
-      .then(() => {
-        setSubtitleTracks(previous => [
-          {
-            id,
-            language: "", // 移除语言逻辑，设为空字符串
-            fileName: file.name
-          },
-          ...previous
-        ]);
-        setMessage("字幕文件已上传。");
-      })
-      .catch(() => {
-        setMessage("读取字幕文件内容失败，请稍后重试。");
-      })
-      .finally(() => {
-        event.target.value = "";
-      });
-  };
-
-  const handleRemoveSubtitle = (id: string) => {
-    setSubtitleTracks(previous => previous.filter(item => item.id !== id));
   };
 
   const handleAddVisibleUser = () => {
@@ -593,7 +473,7 @@ function VideoUploadPage() {
     }
     const now = new Date();
     const formatted = now.toISOString().replace("T", " ").slice(0, 19);
-    const id = `draft_${now.getTime()}`;
+    const id = `${now.getTime()}`;
     const next: DraftItem = {
       id,
       title: trimmedTitle || "未命名视频",
@@ -740,6 +620,7 @@ function VideoUploadPage() {
                     }}
                     isInvalid={isTitleTouched && !title.trim()}
                     errorMessage={isTitleTouched && !title.trim() ? "请输入视频标题" : ""}
+                    isDisabled={loading}
                     classNames={{
                       inputWrapper: "h-10 border-[var(--border-color)] hover:border-[var(--primary-color)] transition-colors bg-[var(--bg-elevated)]/30",
                       input: "text-xs"
@@ -758,6 +639,8 @@ function VideoUploadPage() {
                         aria-label="视频分类"
                         className="w-full justify-between h-10 border-[var(--border-color)] hover:border-[var(--primary-color)] bg-[var(--bg-elevated)]/30 text-xs font-normal px-3"
                         endContent={<FiChevronRight className="text-[var(--text-color-secondary)] rotate-90" />}
+                        isLoading={loading}
+                        isDisabled={loading}
                       >
                         {category ? (
                           <div className="flex items-center gap-1">
@@ -787,7 +670,7 @@ function VideoUploadPage() {
                               title: "text-xs font-medium"
                             }}
                           >
-                            {CATEGORY_DATA.map(cat => (
+                            {(loading ? [] : CATEGORY_DATA).map(cat => (
                               <ListboxItem key={cat.key} endContent={<FiChevronRight className="text-[10px] opacity-50" />}>
                                 {cat.label}
                               </ListboxItem>
@@ -816,7 +699,7 @@ function VideoUploadPage() {
                               title: "text-xs"
                             }}
                           >
-                            {(CATEGORY_DATA.find(c => c.key === activeCategoryLevel1)?.children || []).map(sub => (
+                            {(loading ? [] : (CATEGORY_DATA.find(c => c.key === activeCategoryLevel1)?.children || [])).map(sub => (
                               <ListboxItem key={sub.label}>
                                 {sub.label}
                               </ListboxItem>
@@ -844,6 +727,7 @@ function VideoUploadPage() {
                     value={description}
                     onValueChange={setDescription}
                     minRows={4}
+                    isDisabled={loading}
                     classNames={{
                       inputWrapper: "border-[var(--border-color)] hover:border-[var(--primary-color)] transition-colors bg-[var(--bg-elevated)]/30 p-3",
                       input: "text-xs leading-relaxed"
@@ -862,12 +746,14 @@ function VideoUploadPage() {
                     selectedKeys={selectedTags}
                     onSelectionChange={(keys) => setSelectedTags(keys as Set<string>)}
                     startContent={<FiTag className="text-[var(--text-color-secondary)] text-xs" />}
+                    isLoading={loading}
+                    isDisabled={loading}
                     classNames={{
                       trigger: "h-10 border-[var(--border-color)] hover:border-[var(--primary-color)] bg-[var(--bg-elevated)]/30",
                       value: "text-xs"
                     }}
                   >
-                    {TAG_OPTIONS.map(tag => (
+                    {(loading ? [] : TAG_OPTIONS).map(tag => (
                       <SelectItem key={tag.key} textValue={tag.label}>
                         {tag.label}
                       </SelectItem>
@@ -885,170 +771,185 @@ function VideoUploadPage() {
              
              <div className="p-4 space-y-8">
                  <div className="grid gap-8 md:grid-cols-2 items-start">
-                    {/* 1. 章节标记 */}
-                    <div className="space-y-3">
-                       <div className="text-xs font-medium text-[var(--text-color-secondary)] border-b border-dashed border-[var(--border-color)] pb-1">章节标记</div>
-                       <div className="flex gap-2">
-                          <Input
-                            size="sm"
-                            variant="bordered"
-                            placeholder="章节标题"
-                            value={chapterTitle}
-                            onValueChange={setChapterTitle}
-                            classNames={{
-                              inputWrapper: [
-                                "h-8",
-                                "bg-transparent",
-                                "border border-[var(--border-color)]",
-                                "dark:border-white/20",
-                                "hover:border-[var(--primary-color)]/80!",
-                                "group-data-[focus=true]:border-[var(--primary-color)]!",
-                                "transition-colors",
-                                "shadow-none"
-                              ].join(" "),
-                              input: "text-xs"
-                            }}
-                            className="flex-1"
-                          />
-                          <Input
-                            size="sm"
-                            variant="bordered"
-                            placeholder="秒数"
-                            value={chapterTime}
-                            onValueChange={setChapterTime}
-                            classNames={{
-                              inputWrapper: [
-                                "h-8",
-                                "bg-transparent",
-                                "border border-[var(--border-color)]",
-                                "dark:border-white/20",
-                                "hover:border-[var(--primary-color)]/80!",
-                                "group-data-[focus=true]:border-[var(--primary-color)]!",
-                                "transition-colors",
-                                "shadow-none"
-                              ].join(" "),
-                              input: "text-xs"
-                            }}
-                            className="w-20"
-                          />
-                          <Button size="sm" className="h-8 min-w-0 px-3" onPress={handleAddChapter}>添加</Button>
-                       </div>
-                       <div className="border border-[var(--border-color)] rounded-md h-32 overflow-auto">
-                          <ul className="divide-y divide-[var(--border-color)]">
-                            {chapters.length === 0 && <li className="px-3 py-2 text-[10px] text-[var(--text-color-secondary)]">暂无章节</li>}
-                            {chapters.map((item, idx) => (
-                              <li key={item.id} className="px-3 py-1.5 flex justify-between items-center text-[11px] hover:bg-[var(--bg-elevated)]/50">
-                                 <div className="flex gap-2">
-                                    <span className="text-[var(--text-color-secondary)] font-mono">{String(idx+1).padStart(2, '0')}</span>
-                                    <span>{item.title}</span>
-                                    <span className="text-[var(--text-color-secondary)]">({item.timeInSeconds}s)</span>
-                                 </div>
-                                 <FiTrash2 className="cursor-pointer text-red-400 hover:text-red-500" onClick={() => handleRemoveChapter(item.id)} />
-                              </li>
-                            ))}
-                          </ul>
-                       </div>
-                    </div>
+                {/* 章节标记 */}
+                <div className="space-y-3">
+                  <div className="text-xs font-medium text-[var(--text-color-secondary)] border-b border-dashed border-[var(--border-color)] pb-1">章节标记</div>
+                  <div className="flex gap-2">
+                    <Input
+                      size="sm"
+                      variant="bordered"
+                      placeholder="章节标题"
+                      value={chapterTitle}
+                      onValueChange={setChapterTitle}
+                      isDisabled={loading}
+                      classNames={{
+                        inputWrapper: [
+                          "h-8",
+                          "bg-transparent",
+                          "border border-[var(--border-color)]",
+                          "dark:border-white/20",
+                          "hover:border-[var(--primary-color)]/80!",
+                          "group-data-[focus=true]:border-[var(--primary-color)]!",
+                          "transition-colors",
+                          "shadow-none"
+                        ].join(" "),
+                        input: "text-xs"
+                      }}
+                      className="flex-1"
+                    />
+                    <Input
+                      size="sm"
+                      variant="bordered"
+                      placeholder="秒数"
+                      value={chapterTime}
+                      onValueChange={setChapterTime}
+                      isDisabled={loading}
+                      classNames={{
+                        inputWrapper: [
+                          "h-8",
+                          "bg-transparent",
+                          "border border-[var(--border-color)]",
+                          "dark:border-white/20",
+                          "hover:border-[var(--primary-color)]/80!",
+                          "group-data-[focus=true]:border-[var(--primary-color)]!",
+                          "transition-colors",
+                          "shadow-none"
+                        ].join(" "),
+                        input: "text-xs"
+                      }}
+                      className="w-20"
+                    />
+                    <Button size="sm" className="h-8 min-w-0 px-3" onPress={handleAddChapter} isDisabled={loading}>添加</Button>
+                  </div>
+                  <div className="border border-[var(--border-color)] rounded-md h-32 overflow-auto relative">
+                    {loading && (
+                      <div className="absolute inset-0 z-10 bg-[var(--bg-elevated)]/50 flex items-center justify-center">
+                        <Loading spinnerSize="sm" />
+                      </div>
+                    )}
+                    <ul className="divide-y divide-[var(--border-color)]">
+                      {(loading ? [] : chapters).length === 0 && !loading && <li className="px-3 py-2 text-[10px] text-[var(--text-color-secondary)]">暂无章节</li>}
+                      {(loading ? [] : chapters).map((item, idx) => (
+                        <li key={item.id} className="px-3 py-1.5 flex justify-between items-center text-[11px] hover:bg-[var(--bg-elevated)]/50">
+                          <div className="flex gap-2">
+                            <span className="text-[var(--text-color-secondary)] font-mono">{String(idx+1).padStart(2, '0')}</span>
+                            <span>{item.title}</span>
+                            <span className="text-[var(--text-color-secondary)]">({item.timeInSeconds}s)</span>
+                          </div>
+                          <FiTrash2 className="cursor-pointer text-red-400 hover:text-red-500" onClick={() => handleRemoveChapter(item.id)} />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
 
-                    {/* 2. 权限设置 */}
-                    <div className="space-y-3">
-                       <div className="text-xs font-medium text-[var(--text-color-secondary)] border-b border-dashed border-[var(--border-color)] pb-1">权限设置</div>
-                       <AdminTabs selectedKey={permissionType} onSelectionChange={handlePermissionTypeChange} size="sm">
-                          <Tab key="public" title="公开" />
-                          <Tab key="private" title="私有" />
-                          <Tab key="password" title="密码访问" />
-                       </AdminTabs>
-                       
-                       <div className="p-4 border border-[var(--border-color)] rounded-lg bg-[var(--bg-elevated)]/30 min-h-[100px]">
-                          {permissionType === "public" && <div className="text-xs text-[var(--text-color-secondary)]">此视频将对所有访客可见。</div>}
-                          {permissionType === "private" && (
-                             <div className="space-y-3">
-                                <div className="flex gap-2">
-                                   <Input 
-                                  size="sm" 
-                                  variant="bordered" 
-                                  aria-label="用户名"
-                                  placeholder="输入用户名添加可见权限" 
-                                  value={visibleUserInput} 
-                                  onValueChange={setVisibleUserInput} 
-                                  classNames={{
-                                    inputWrapper: [
-                                      "h-8",
-                                      "bg-transparent",
-                                      "border border-[var(--border-color)]",
-                                      "dark:border-white/20",
-                                      "hover:border-[var(--primary-color)]/80!",
-                                      "group-data-[focus=true]:border-[var(--primary-color)]!",
-                                      "transition-colors",
-                                      "shadow-none"
-                                    ].join(" "),
-                                    input: "text-xs"
-                                  }}
-                                  className="flex-1"
-                                />
-                                <Button size="sm" className="h-8" onPress={handleAddVisibleUser}>添加</Button>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                   {visibleUsers.map(u => <Chip key={u} onClose={() => handleRemoveVisibleUser(u)} size="sm" variant="flat">{u}</Chip>)}
-                                   {visibleUsers.length === 0 && <span className="text-xs text-[var(--text-color-secondary)]">暂无指定用户，仅自己可见。</span>}
-                                </div>
-                             </div>
-                          )}
-                          {permissionType === "password" && (
-                             <div className="space-y-3">
-                                <Input 
-                                  type="password" 
-                                  size="sm" 
-                                  variant="bordered" 
-                                  label="设置密码" 
-                                  labelPlacement="outside" 
-                                  placeholder="******" 
-                                  value={accessPassword} 
-                                  onValueChange={setAccessPassword} 
-                                  classNames={{
-                                    label: "text-xs font-medium text-[var(--text-color-secondary)]",
-                                    inputWrapper: [
-                                      "h-8",
-                                      "bg-transparent",
-                                      "border border-[var(--border-color)]",
-                                      "dark:border-white/20",
-                                      "hover:border-[var(--primary-color)]/80!",
-                                      "group-data-[focus=true]:border-[var(--primary-color)]!",
-                                      "transition-colors",
-                                      "shadow-none"
-                                    ].join(" "),
-                                    input: "text-xs"
-                                  }}
-                                />
-                                <Input 
-                                  type="password" 
-                                  size="sm" 
-                                  variant="bordered" 
-                                  label="确认密码" 
-                                  labelPlacement="outside" 
-                                  placeholder="******" 
-                                  value={accessPasswordConfirm} 
-                                  onValueChange={setAccessPasswordConfirm} 
-                                  classNames={{
-                                    label: "text-xs font-medium text-[var(--text-color-secondary)]",
-                                    inputWrapper: [
-                                      "h-8",
-                                      "bg-transparent",
-                                      "border border-[var(--border-color)]",
-                                      "dark:border-white/20",
-                                      "hover:border-[var(--primary-color)]/80!",
-                                      "group-data-[focus=true]:border-[var(--primary-color)]!",
-                                      "transition-colors",
-                                      "shadow-none"
-                                    ].join(" "),
-                                    input: "text-xs"
-                                  }}
-                                />
-                                {accessPassword !== accessPasswordConfirm && <span className="text-xs text-red-500">密码不一致</span>}
-                             </div>
-                          )}
-                       </div>
-                    </div>
+                {/* 2. 权限设置 */}
+                <div className="space-y-3">
+                   <div className="text-xs font-medium text-[var(--text-color-secondary)] border-b border-dashed border-[var(--border-color)] pb-1">权限设置</div>
+                   <AdminTabs selectedKey={permissionType} onSelectionChange={handlePermissionTypeChange} size="sm" isDisabled={loading}>
+                      <Tab key="public" title="公开" />
+                      <Tab key="private" title="私有" />
+                      <Tab key="password" title="密码访问" />
+                   </AdminTabs>
+                   
+                   <div className="p-4 border border-[var(--border-color)] rounded-lg bg-[var(--bg-elevated)]/30 min-h-[100px] relative">
+                      {loading && (
+                        <div className="absolute inset-0 z-10 bg-[var(--bg-elevated)]/50 flex items-center justify-center">
+                          <Loading spinnerSize="sm" />
+                        </div>
+                      )}
+                      {permissionType === "public" && <div className="text-xs text-[var(--text-color-secondary)]">此视频将对所有访客可见。</div>}
+                      {permissionType === "private" && (
+                         <div className="space-y-3">
+                            <div className="flex gap-2">
+                               <Input 
+                              size="sm" 
+                              variant="bordered" 
+                              aria-label="用户名"
+                              placeholder="输入用户名添加可见权限" 
+                              value={visibleUserInput} 
+                              onValueChange={setVisibleUserInput} 
+                              isDisabled={loading}
+                              classNames={{
+                                inputWrapper: [
+                                  "h-8",
+                                  "bg-transparent",
+                                  "border border-[var(--border-color)]",
+                                  "dark:border-white/20",
+                                  "hover:border-[var(--primary-color)]/80!",
+                                  "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                  "transition-colors",
+                                  "shadow-none"
+                                ].join(" "),
+                                input: "text-xs"
+                              }}
+                              className="flex-1"
+                            />
+                            <Button size="sm" className="h-8" onPress={handleAddVisibleUser} isDisabled={loading}>添加</Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                               {(loading ? [] : visibleUsers).map(u => <Chip key={u} onClose={() => handleRemoveVisibleUser(u)} size="sm" variant="flat">{u}</Chip>)}
+                               {(loading ? [] : visibleUsers).length === 0 && !loading && <span className="text-xs text-[var(--text-color-secondary)]">暂无指定用户，仅自己可见。</span>}
+                            </div>
+                         </div>
+                      )}
+                      {permissionType === "password" && (
+                         <div className="space-y-3">
+                            <Input 
+                              type="password" 
+                              size="sm" 
+                              variant="bordered" 
+                              label="设置密码" 
+                              labelPlacement="outside" 
+                              placeholder="******" 
+                              value={accessPassword} 
+                              onValueChange={setAccessPassword} 
+                              isDisabled={loading}
+                              classNames={{
+                                label: "text-xs font-medium text-[var(--text-color-secondary)]",
+                                inputWrapper: [
+                                  "h-8",
+                                  "bg-transparent",
+                                  "border border-[var(--border-color)]",
+                                  "dark:border-white/20",
+                                  "hover:border(--primary-color)]/80!",
+                                  "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                  "transition-colors",
+                                  "shadow-none"
+                                ].join(" "),
+                                input: "text-xs"
+                              }}
+                            />
+                            <Input 
+                              type="password" 
+                              size="sm" 
+                              variant="bordered" 
+                              label="确认密码" 
+                              labelPlacement="outside" 
+                              placeholder="******" 
+                              value={accessPasswordConfirm} 
+                              onValueChange={setAccessPasswordConfirm} 
+                              isDisabled={loading}
+                              classNames={{
+                                label: "text-xs font-medium text-[var(--text-color-secondary)]",
+                                inputWrapper: [
+                                  "h-8",
+                                  "bg-transparent",
+                                  "border border-[var(--border-color)]",
+                                  "dark:border-white/20",
+                                  "hover:border-[var(--primary-color)]/80!",
+                                  "group-data-[focus=true]:border-[var(--primary-color)]!",
+                                  "transition-colors",
+                                  "shadow-none"
+                                ].join(" "),
+                                input: "text-xs"
+                              }}
+                            />
+                            {accessPassword !== accessPasswordConfirm && <span className="text-xs text-red-500">密码不一致</span>}
+                         </div>
+                      )}
+                   </div>
+                </div>
                  </div>
 
                  {/* 3. 水印设置 (Full width) */}
@@ -1236,25 +1137,25 @@ function VideoUploadPage() {
               <div className="p-4 space-y-4">
                  <input ref={fileInputRef} type="file" accept="video/*" className="hidden" onChange={handleFileChange} />
 
-                 {/* 1. 未选择文件：显示上传拖拽区 */}
-                 {!selectedFileName && (
-                     <div 
-                        className="border-2 border-dashed border-[var(--border-color)] rounded-lg h-[200px] flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-[var(--primary-color)] hover:bg-[var(--bg-elevated)]/50 transition-colors"
-                        onClick={handleSelectFile}
-                        onDrop={handleDrop}
-                        onDragOver={handleDragOver}
-                     >
-                        <div className="h-12 w-12 rounded-full bg-[var(--bg-content2)] flex items-center justify-center">
-                            <FiUpload className="text-2xl text-[var(--text-color-secondary)]" />
-                        </div>
-                        <div className="text-center space-y-1">
-                            <div className="text-sm font-medium">将视频拖到此处，或点击上传</div>
-                            <div className="text-[10px] text-[var(--text-color-secondary)]">
-                                支持 mp4, mov, avi, mkv, webm 格式，最大 4GB
-                            </div>
-                        </div>
-                     </div>
-                 )}
+                {/* 1. 未选择文件：显示上传拖拽区 */}
+                {!selectedFileName && (
+                    <div 
+                       className={`border-2 border-dashed border-[var(--border-color)] rounded-lg h-[200px] flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-[var(--primary-color)] hover:bg-[var(--bg-elevated)]/50 transition-colors ${loading ? "opacity-50 pointer-events-none" : ""}`}
+                       onClick={handleSelectFile}
+                       onDrop={handleDrop}
+                       onDragOver={handleDragOver}
+                    >
+                       <div className="h-12 w-12 rounded-full bg-[var(--bg-content2)] flex items-center justify-center">
+                           <FiUpload className="text-2xl text-[var(--text-color-secondary)]" />
+                       </div>
+                       <div className="text-center space-y-1">
+                           <div className="text-sm font-medium">将视频拖到此处，或点击上传</div>
+                           <div className="text-[10px] text-[var(--text-color-secondary)]">
+                               支持 mp4, mov, avi, mkv, webm 格式，最大 4GB
+                           </div>
+                       </div>
+                    </div>
+                )}
                  
                  {/* 2. 已选择文件：显示视频预览与进度 */}
                  {selectedFileName && (
@@ -1324,47 +1225,50 @@ function VideoUploadPage() {
               </div>
            </Card>
 
-           {/* 发布操作 */}
-           <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-              <div className="p-4 space-y-3">
-                 <Button
-                    fullWidth
-                    color="primary"
-                    className="font-medium"
-                    startContent={<FiUploadCloud className="text-lg" />}
-                     onPress={handleCreateTask}
-                      isDisabled={isUploading || !selectedFileName || !isFormValid}
+                {/* 发布操作 */}
+                <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+                  <div className="p-4 space-y-3">
+                    <Button
+                      fullWidth
+                      color="primary"
+                      className="font-medium"
+                      startContent={<FiUploadCloud className="text-lg" />}
+                      onPress={handleCreateTask}
+                      isDisabled={isUploading || !selectedFileName || !isFormValid || loading}
+                      isLoading={loading}
                     >
                       开始上传并发布
                     </Button>
-                 <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      fullWidth
-                      variant="flat"
-                      className="text-xs"
-                      onPress={handleSaveDraft}
-                    >
-                      保存草稿
-                    </Button>
-                    <Button
-                      fullWidth
-                      variant="light"
-                      className="text-xs"
-                      onPress={() => {
-                        setTitle("");
-                        setCategory("");
-                        setSelectedTags(new Set([]));
-                        setDescription("");
-                        setMessage("");
-                        handleRemoveVideo();
-                        setCoverImage(DEFAULT_COVER);
-                      }}
-                    >
-                      重置
-                    </Button>
-                 </div>
-              </div>
-           </Card>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        fullWidth
+                        variant="flat"
+                        className="text-xs"
+                        onPress={handleSaveDraft}
+                        isDisabled={loading}
+                      >
+                        保存草稿
+                      </Button>
+                      <Button
+                        fullWidth
+                        variant="light"
+                        className="text-xs"
+                        onPress={() => {
+                          setTitle("");
+                          setCategory("");
+                          setSelectedTags(new Set([]));
+                          setDescription("");
+                          setMessage("");
+                          handleRemoveVideo();
+                          setCoverImage(DEFAULT_COVER);
+                        }}
+                        isDisabled={loading}
+                      >
+                        重置
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
         </div>
       </div>
 
@@ -1410,49 +1314,76 @@ function VideoUploadPage() {
 
       {/* 底部：上传任务与草稿列表 */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-         {/* 字幕管理 */}
-         <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[400px] flex flex-col">
+         {/* 上传任务列表 */}
+         <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[400px] flex flex-col relative">
+            {loading && (
+               <div className="absolute inset-0 z-10 bg-[var(--bg-elevated)]/50 flex items-center justify-center">
+                  <Loading spinnerSize="sm" />
+               </div>
+            )}
             <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center">
                <div className="flex items-center gap-2">
                   <div className="h-6 w-6 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] flex items-center justify-center text-[var(--primary-color)]">
-                     <FiFileText className="text-xs" />
+                     <FiUploadCloud className="text-xs" />
                   </div>
-                  <div className="text-sm font-medium">字幕管理</div>
+                  <div className="text-sm font-medium">上传任务列表</div>
                </div>
-               <div className="flex items-center gap-2">
-                  <input ref={subtitleFileInputRef} type="file" accept=".srt,.vtt" className="hidden" onChange={handleSubtitleFileChange} />
-                  <Button 
-                    size="sm" 
-                    color="primary" 
-                    variant="flat" 
-                    onPress={handleSelectSubtitleFile}
-                    startContent={<FiUpload className="text-xs" />}
-                  >
-                    上传字幕
-                  </Button>
+               <div className="text-[10px] text-[var(--text-color-secondary)]">
+                  进行中: {(loading ? [] : tasks).filter(t => t.status === 'uploading').length}
                </div>
             </div>
             <div className="flex-1 overflow-auto p-2">
-               <Table aria-label="字幕列表" className="min-w-full text-xs">
+               <Table aria-label="上传任务列表" className="min-w-full text-xs" removeWrapper>
                   <TableHeader>
-                     <TableColumn>字幕文件名</TableColumn>
-                     <TableColumn width={100} align="end">操作</TableColumn>
+                     <TableColumn>文件名</TableColumn>
+                     <TableColumn width={100}>大小</TableColumn>
+                     <TableColumn width={150}>状态</TableColumn>
+                     <TableColumn width={80} align="end">操作</TableColumn>
                   </TableHeader>
-                  <TableBody items={subtitleTracks} emptyContent="暂无字幕文件">
+                  <TableBody 
+                     items={loading ? [] : tasks} 
+                     emptyContent={loading ? " " : "暂无上传任务"}
+                  >
                      {item => (
                         <TableRow key={item.id}>
                            <TableCell>
                               <div className="flex flex-col">
-                                 <span className="font-medium truncate max-w-[300px]" title={item.fileName}>{item.fileName}</span>
+                                 <span className="font-medium truncate max-w-[200px]" title={item.title}>{item.title}</span>
+                              </div>
+                           </TableCell>
+                           <TableCell>
+                              <span className="text-[10px] text-[var(--text-color-secondary)]">{formatSize(item.size)}</span>
+                           </TableCell>
+                           <TableCell>
+                              <div className="flex flex-col gap-1 w-full">
+                                 <div className="flex items-center justify-between text-[10px]">
+                                    <span className={item.status === 'success' ? "text-success" : item.status === 'error' ? "text-danger" : "text-[var(--primary-color)]"}>
+                                       {item.status === 'success' ? '已完成' : item.status === 'error' ? '失败' : `${item.progress}%`}
+                                    </span>
+                                 </div>
+                                 {item.status === 'uploading' && (
+                                    <div className="w-full h-1 bg-[var(--bg-default)] rounded-full overflow-hidden">
+                                       <div 
+                                          className="h-full bg-[var(--primary-color)] transition-all duration-300" 
+                                          style={{ width: `${item.progress}%` }}
+                                       ></div>
+                                    </div>
+                                 )}
                               </div>
                            </TableCell>
                            <TableCell>
                               <div className="flex justify-end gap-1">
-                                 <Tooltip content="删除">
-                                    <Button isIconOnly size="sm" variant="light" color="danger" onPress={() => handleRemoveSubtitle(item.id)}>
-                                       <FiTrash2 className="text-xs" />
-                                    </Button>
-                                 </Tooltip>
+                                 {item.status === 'uploading' ? (
+                                    <div className="w-6 h-6 flex items-center justify-center">
+                                       <div className="w-2 h-2 bg-warning rounded-full animate-pulse" />
+                                    </div>
+                                 ) : (
+                                    <Tooltip content="删除">
+                                       <Button isIconOnly size="sm" variant="light" color="danger">
+                                          <FiTrash2 className="text-xs" />
+                                       </Button>
+                                    </Tooltip>
+                                 )}
                               </div>
                            </TableCell>
                         </TableRow>
@@ -1463,7 +1394,12 @@ function VideoUploadPage() {
          </Card>
 
          {/* 草稿箱 */}
-         <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[400px] flex flex-col">
+         <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 h-[400px] flex flex-col relative">
+            {loading && (
+               <div className="absolute inset-0 z-10 bg-[var(--bg-elevated)]/50 flex items-center justify-center">
+                  <Loading spinnerSize="sm" />
+               </div>
+            )}
             <div className="p-3 border-b border-[var(--border-color)] flex items-center justify-between">
                <div className="flex items-center gap-2">
                   <div className="h-6 w-6 rounded-full bg-[color-mix(in_srgb,var(--warning-color)_10%,transparent)] flex items-center justify-center text-[var(--warning-color)]">
@@ -1471,18 +1407,21 @@ function VideoUploadPage() {
                   </div>
                   <div className="text-sm font-medium">草稿箱</div>
                </div>
-               <Button size="sm" variant="light" className="h-7 text-xs" onPress={() => setDrafts([])}>
+               <Button size="sm" variant="light" className="h-7 text-xs" onPress={() => setDrafts([])} isDisabled={loading}>
                   清空
                </Button>
             </div>
             <div className="flex-1 overflow-auto p-2">
-               <Table aria-label="草稿列表" className="min-w-full text-xs">
+               <Table aria-label="草稿列表" className="min-w-full text-xs" removeWrapper>
                   <TableHeader>
                      <TableColumn>草稿标题</TableColumn>
                      <TableColumn width={120}>时间</TableColumn>
                      <TableColumn width={100} align="end">操作</TableColumn>
                   </TableHeader>
-                  <TableBody items={drafts} emptyContent="暂无草稿">
+                  <TableBody 
+                     items={loading ? [] : drafts} 
+                     emptyContent={loading ? " " : "暂无草稿"}
+                  >
                      {item => (
                         <TableRow key={item.id}>
                            <TableCell>
@@ -1497,12 +1436,12 @@ function VideoUploadPage() {
                            <TableCell>
                               <div className="flex justify-end gap-1">
                                  <Tooltip content="恢复">
-                                    <Button isIconOnly size="sm" variant="light" color="primary" onPress={() => handleLoadDraft(item)}>
+                                    <Button isIconOnly size="sm" variant="light" color="primary" onPress={() => handleLoadDraft(item)} isDisabled={loading}>
                                        <FiUpload className="text-xs" />
                                     </Button>
                                  </Tooltip>
                                  <Tooltip content="删除">
-                                    <Button isIconOnly size="sm" variant="light" color="danger" onPress={() => handleDeleteDraft(item.id)}>
+                                    <Button isIconOnly size="sm" variant="light" color="danger" onPress={() => handleDeleteDraft(item.id)} isDisabled={loading}>
                                        <FiTrash2 className="text-xs" />
                                     </Button>
                                  </Tooltip>
