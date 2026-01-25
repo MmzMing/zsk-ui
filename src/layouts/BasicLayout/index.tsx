@@ -286,12 +286,12 @@ function BasicLayout() {
             >
               <div className="relative w-10 h-10">
                 <img
-                  src="/logo/MyLogo.png"
+                  src="/logo/MyLogoSvg.svg"
                   alt="Logo"
                   className={`w-full h-full rounded-lg object-contain transition-all duration-300 ${isDark ? 'invert' : ''} group-hover:opacity-0`}
                 />
                 <img
-                  src="/logo/MyLogo.png"
+                  src="/logo/MyLogoSvg.svg"
                   alt="Logo"
                   className="absolute inset-0 w-full h-full rounded-lg object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                   style={{

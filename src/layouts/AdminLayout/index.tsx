@@ -754,7 +754,7 @@ function AdminLayout() {
             onClick={handleLogoClick}
           >
             <img
-              src="/logo/MyLogo.png"
+              src="/logo/MyLogoSvg.svg"
               alt="Logo"
               className="w-8 h-8 rounded-lg object-contain dark:invert"
             />

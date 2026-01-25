@@ -286,7 +286,7 @@ function ForgotPasswordPage() {
           <div className="flex items-center justify-between text-xs text-slate-200/80">
             <div className="flex items-center gap-2">
               <img
-                src="/logo/MyLogo.png"
+                src="/logo/MyLogoSvg.svg"
                 alt="Logo"
                 className="w-8 h-8 rounded-lg object-contain"
               />
