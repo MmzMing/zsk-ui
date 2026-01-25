@@ -342,7 +342,7 @@ function AllSearchPage() {
           </div>
           <Button
             type="button"
-            className="inline-flex items-center justify-center rounded-full bg-[var(--primary-color)] px-8 py-2 text-xs md:text-sm font-medium text-white hover:opacity-90 transition-opacity shadow-lg shadow-[var(--primary-color)]/20"
+            className="inline-flex items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--bg-elevated)] px-8 py-2 text-xs md:text-sm font-medium text-[var(--text-color)] hover:border-[var(--primary-color)] hover:text-[var(--primary-color)] transition-all shadow-sm"
             onPress={() => setAppliedKeyword(keyword.trim())}
           >
             综合搜索
@@ -595,7 +595,7 @@ function AllSearchPage() {
                       size="sm"
                       variant="flat"
                       radius="full"
-                      className="h-7 px-4 text-[11px] font-medium bg-danger/15 text-danger hover:bg-danger hover:text-white transition-all duration-200"
+                      className="h-7 px-4 text-[11px] font-medium border border-danger/50 bg-danger/15 text-danger hover:bg-danger hover:text-white transition-all duration-200"
                       onPress={() => {
                         setDuration(null);
                         setTimeRange(null);

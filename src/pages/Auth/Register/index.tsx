@@ -20,7 +20,7 @@ import InteractiveHoverButton from "../../../components/Motion/InteractiveHoverB
 import { Shuffle } from "../../../components/Motion/Shuffle";
 import { TextType } from "../../../components/Motion/TextType";
 import { UserAgreementModal, PrivacyPolicyModal } from "../../../components/AgreementModals";
-import { fetchSliderCaptcha, verifySliderCaptcha, preCheckAndGetCaptcha, register } from "../../../api/auth";
+import { verifySliderCaptcha, preCheckAndGetCaptcha, register } from "../../../api/auth";
 
 const bgImages = ["/auth/auth-Polling-1.png", "/auth/auth-Polling-2.png" , "/auth/auth-Polling-3.png"];
 

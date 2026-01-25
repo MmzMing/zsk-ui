@@ -19,7 +19,7 @@ import InteractiveHoverButton from "../../../components/Motion/InteractiveHoverB
 import { useUserStore } from "../../../store/modules/userStore";
 import { useAppStore } from "../../../store";
 import { UserAgreementModal, PrivacyPolicyModal } from "../../../components/AgreementModals";
-import { fetchSliderCaptcha, verifySliderCaptcha, preCheckAndGetCaptcha, login } from "../../../api/auth";
+import { verifySliderCaptcha, preCheckAndGetCaptcha, login } from "../../../api/auth";
 import Shuffle from "../../../components/Motion/Shuffle";
 import TextType from "../../../components/Motion/TextType";
 import { RiHome4Line } from "react-icons/ri";

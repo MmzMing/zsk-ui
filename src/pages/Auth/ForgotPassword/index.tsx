@@ -18,7 +18,7 @@ import {
   ModalContent,
   ModalHeader
 } from "@heroui/react";
-import { fetchSliderCaptcha, verifySliderCaptcha, preCheckAndGetCaptcha, forgotPassword } from "../../../api/auth";
+import { verifySliderCaptcha, preCheckAndGetCaptcha, forgotPassword } from "../../../api/auth";
 
 const bgImages = ["/auth/auth-Polling-1.png", "/auth/auth-Polling-2.png" , "/auth/auth-Polling-3.png"];
 

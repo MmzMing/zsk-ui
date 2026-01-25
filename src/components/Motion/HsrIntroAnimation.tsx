@@ -12,9 +12,14 @@ const HsrIntroAnimation: React.FC<HsrIntroAnimationProps> = ({ onComplete }) => 
   
   const [isVisible, setIsVisible] = useState(() => {
     if (typeof window === "undefined") return false;
+    
+    // Only show on home page or if coming from auth
+    const isHomePage = location.pathname === "/" || location.pathname === "/home";
+    const fromAuth = (location.state as { fromAuth?: boolean })?.fromAuth;
+    
+    if (!isHomePage && !fromAuth) return false;
 
     // 0. If coming from Auth pages, ALWAYS show animation (ignoring other checks)
-    const fromAuth = (location.state as { fromAuth?: boolean })?.fromAuth;
     if (fromAuth) {
       // Clear the state to prevent loop if user refreshes? 
       // Actually state is preserved on refresh in some browsers, but usually okay.
@@ -92,30 +97,30 @@ const HsrIntroAnimation: React.FC<HsrIntroAnimationProps> = ({ onComplete }) => 
                 {icons.map((item, index) => (
                     <motion.div
                         key={index}
-                        className="absolute flex items-center justify-center w-24 h-24 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.2)] z-0"
+                        className="absolute flex items-center justify-center w-24 h-24 rounded-full bg-white/10 backdrop-blur-xl border border-white/30 shadow-[0_0_30px_rgba(255,255,255,0.3)] z-0"
                         style={{ 
                             // Initial random spread x positions
-                            left: `calc(50% + ${(index - 1.5) * 90}px)`, 
+                            left: `calc(50% + ${(index - 1.5) * 100}px)`, 
                         }}
-                        initial={{ y: "110vh", opacity: 1, scale: 2.5 }}
+                        initial={{ y: 600, opacity: 0, scale: 0.5 }}
                         animate={{ 
                             y: [
-                                "110vh", // Start below screen (Lowest position)
-                                "-200px", // Toss Up (Peak)
-                                "70px"     // Fall to final position
+                                600, // Start below
+                                -350, // Toss Up (Peak)
+                                0     // Fall to center
                             ],
-                            opacity: [1, 1, 1, 0], // Stay visible until swap, then vanish
-                            scale: [2.5, 1.2, 0.6, 0.6], // Big -> Small process
+                            opacity: [0, 1, 1, 0], 
+                            scale: [0.5, 1.2, 0.8, 0.8], 
                             rotate: [0, 180, 360, 360]
                         }}
                         transition={{
-                            duration: 2.2, // Total duration
-                            delay: index * 0.15, // Sequential Toss
-                            times: [0, 0.45, 0.8, 1], // 0->0.45(Up), 0.45->0.8(Down), 0.8->1(Vanish)
-                            ease: ["circOut", "circIn", "linear"] // Physical feel
+                            duration: 2.0, 
+                            delay: index * 0.1, 
+                            times: [0, 0.4, 0.8, 1], 
+                            ease: ["circOut", "circIn", "linear"] 
                         }}
                     >
-                        <item.Icon size={48} color={item.color} />
+                        <item.Icon size={40} color={item.color} />
                     </motion.div>
                 ))}
 

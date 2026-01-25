@@ -1,27 +1,22 @@
-import React, { Suspense } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { Button } from "@heroui/react";
 import { useNavigate } from "react-router-dom";
 import { routes } from "../../../router/routes";
 import { ArrowRight, Box, Layers, Zap } from "lucide-react";
 
-const ParticleBanner = React.lazy(() => import("../../../components/Three/ParticleBanner"));
+import ParticleBanner from "../../../components/Three/ParticleBanner";
 
 export default function HomeBanner() {
   const navigate = useNavigate();
 
   return (
-    <motion.section
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.6 }}
+    <section
       className="min-h-screen flex items-center px-[var(--content-padding)] relative overflow-hidden"
     >
       {/* 背景粒子层 - 仅在桌面端显示 */}
       <div className="hidden lg:block absolute inset-0 z-0 pointer-events-none">
-        <Suspense fallback={null}>
-          <ParticleBanner />
-        </Suspense>
+        <ParticleBanner />
       </div>
 
       <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center z-10 relative">
@@ -126,7 +121,7 @@ export default function HomeBanner() {
         {/* 右侧占位，保持 Grid 布局平衡，但内容交给背景层渲染 */}
         <div className="hidden lg:block h-[600px] w-full" />
       </div>
-    </motion.section>
+    </section>
   );
 }
 
