@@ -61,15 +61,15 @@ export default function VideoRecommend({ items }: Props) {
 
   return (
     <section className="min-h-screen flex flex-col pt-24 pb-12 space-y-8 px-2 md:px-[var(--content-padding)]">
-      <div className="max-w-6xl mx-auto w-full flex flex-col items-center space-y-2">
+      <div className="max-w-6xl mx-auto w-full flex flex-col items-center space-y-4 py-4">
         <ScrollFloat
-          containerClassName="text-lg md:text-xl font-semibold"
+          containerClassName="text-lg md:text-xl font-semibold py-2"
           textClassName="tracking-tight"
         >
           视频推荐
         </ScrollFloat>
         <ScrollFloat
-          containerClassName="text-[11px] md:text-xs text-[var(--text-color-secondary)]"
+          containerClassName="text-[11px] md:text-xs text-[var(--text-color-secondary)] py-1"
           textClassName="tracking-wide"
         >
           精选技术视频与实战教程

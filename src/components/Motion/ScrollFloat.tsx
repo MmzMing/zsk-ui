@@ -53,16 +53,16 @@ const ScrollFloat: React.FC<ScrollFloatProps> = ({
       {
         willChange: 'opacity, transform',
         opacity: 0,
-        yPercent: 120,
-        scaleY: 2.3,
-        scaleX: 0.7,
-        transformOrigin: '50% 0%'
+        y: '1.2em',
+        scaleY: 1.5,
+        scaleX: 0.9,
+        transformOrigin: '50% 100%'
       },
       {
         duration: animationDuration,
         ease: ease,
         opacity: 1,
-        yPercent: 0,
+        y: 0,
         scaleY: 1,
         scaleX: 1,
         stagger: stagger,
