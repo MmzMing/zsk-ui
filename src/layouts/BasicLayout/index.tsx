@@ -17,6 +17,10 @@ import PageTransitionWrapper from "../../components/Motion/PageTransitionWrapper
 import WordRotate from "../../components/Motion/WordRotate";
 import { ThemeToggler } from "../../components/MagicUI/ThemeToggler";
 import {
+  UserAgreementModal,
+  PrivacyPolicyModal
+} from "../../components/AgreementModals";
+import {
   FiHelpCircle,
   FiMail,
   FiMessageSquare,
@@ -31,7 +35,8 @@ import {
   FiLogOut,
   FiGlobe,
   FiArrowUp,
-  FiCpu
+  FiCpu,
+  FiInfo
 } from "react-icons/fi";
 import {
   SiX,
@@ -68,6 +73,8 @@ function BasicLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [agreementVisible, setAgreementVisible] = useState(false);
+  const [privacyVisible, setPrivacyVisible] = useState(false);
   const { token, reset: resetUser } = useUserStore();
   const {
     boxBorderEnabled,
@@ -534,7 +541,7 @@ function BasicLayout() {
           </PageTransitionWrapper>
         </div>
       </main>
-      <footer className="relative z-20 text-sm bg-black text-gray-400">
+      <footer className="relative z-20 text-sm bg-transparent text-gray-400">
         <div className="max-w-6xl mx-auto py-12 md:py-20 flex flex-col gap-8">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
             <div className="md:basis-3/5 space-y-4">
@@ -577,13 +584,13 @@ function BasicLayout() {
                   <FiHelpCircle className="w-4 h-4" />
                   <span>问题解答</span>
                 </button>
-                <button
-                  type="button"
+                <Link
+                  to={routes.about}
                   className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
-                  <FiMail className="w-4 h-4" />
+                  <FiInfo className="w-4 h-4" />
                   <span>联系方式</span>
-                </button>
+                </Link>
                 <button
                   type="button"
                   className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
@@ -591,13 +598,15 @@ function BasicLayout() {
                   <FiMessageSquare className="w-4 h-4" />
                   <span>反馈</span>
                 </button>
-                <button
-                  type="button"
+                <a
+                  href="https://github.com/MmzMing/zsk-ui"
+                  target="_blank"
+                  rel="noreferrer"
                   className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
                   <FiFileText className="w-4 h-4" />
                   <span>更新日志</span>
-                </button>
+                </a>
               </div>
               <div className="space-y-3">
                 <div className="font-semibold text-gray-200 text-base">
@@ -612,15 +621,15 @@ function BasicLayout() {
                   <FiGithub className="w-4 h-4" />
                   <span>GitHub</span>
                 </a>
-                <button
-                  type="button"
+                <a
+                  href="tencent://groupwpa/?subcmd=all&param=901786989"
                   className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
                   <FaQq className="w-4 h-4" />
                   <span>QQ</span>
-                </button>
+                </a>
                 <a
-                  href="https://twitter.com"
+                  href="https://x.com/home"
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
@@ -644,6 +653,7 @@ function BasicLayout() {
                 </div>
                 <button
                   type="button"
+                  onClick={() => setPrivacyVisible(true)}
                   className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
                   <FiShield className="w-4 h-4" />
@@ -651,6 +661,7 @@ function BasicLayout() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setAgreementVisible(true)}
                   className="flex items-center gap-2 hover:text-[var(--primary-color)] transition-colors text-gray-400"
                 >
                   <FiFileText className="w-4 h-4" />
@@ -671,6 +682,16 @@ function BasicLayout() {
       <SystemSettingsPanel
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
+      />
+
+      <UserAgreementModal
+        isOpen={agreementVisible}
+        onOpenChange={setAgreementVisible}
+      />
+
+      <PrivacyPolicyModal
+        isOpen={privacyVisible}
+        onOpenChange={setPrivacyVisible}
       />
 
       <AnimatePresence>

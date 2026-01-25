@@ -20,6 +20,24 @@ export async function fetchSliderCaptcha(scene: SliderScene) {
   });
 }
 
+// New function for pre-check credentials and get captcha
+export async function preCheckAndGetCaptcha(data: { account: string; password?: string; scene: SliderScene }) {
+  try {
+    return await request.post<SliderCaptchaData>("/auth/pre-check", data);
+  } catch (error) {
+    // In DEV environment, if API fails, fallback to mock data
+    if (import.meta.env.DEV) {
+      console.warn("Dev fallback: preCheckAndGetCaptcha failed, returning mock captcha");
+      return {
+        uuid: "mock-uuid-" + Date.now(),
+        bgUrl: "https://img.alicdn.com/tfs/TB1sW.QZpXXXXc.XXXXXXXXXXXX-400-200.jpg",
+        puzzleUrl: "https://img.alicdn.com/tfs/TB1W8_QZpXXXXb.XXXXXXXXXXXX-400-200.jpg"
+      };
+    }
+    throw error;
+  }
+}
+
 export async function verifySliderCaptcha(body: {
   scene: SliderScene;
   uuid: string;
@@ -27,7 +45,18 @@ export async function verifySliderCaptcha(body: {
   email?: string;
   [key: string]: unknown;
 }) {
-  return request.post<SliderVerifyResult>("/auth/captcha/slider/verify", body);
+  try {
+    return await request.post<SliderVerifyResult>("/auth/captcha/slider/verify", body);
+  } catch (error) {
+    // In DEV environment, if API fails, fallback to mock success
+    if (import.meta.env.DEV) {
+      console.warn("Dev fallback: verifySliderCaptcha failed, returning mock success");
+      return {
+        passed: true
+      };
+    }
+    throw error;
+  }
 }
 
 export type LoginRequest = {
@@ -51,7 +80,33 @@ export type LoginResponse = {
 };
 
 export async function login(data: LoginRequest) {
-  return request.post<LoginResponse>("/auth/login", data);
+  try {
+    return await request.post<LoginResponse>("/auth/login", data);
+  } catch (error) {
+    // In DEV environment, if API fails, fallback to mock logic
+    if (import.meta.env.DEV) {
+      console.warn("Dev fallback: login failed, using mock logic");
+      
+      // Verify code if present (default mock code: 123456)
+      if (data.code && data.code !== "123456") {
+        throw new Error("验证码错误");
+      }
+
+      // Mock success response
+      return {
+        token: `mock-token-${Date.now()}`,
+        refreshToken: `mock-refresh-${Date.now()}`,
+        expiresIn: 3600,
+        user: {
+          id: "mock-user-id",
+          username: data.username || data.email?.split('@')[0] || "MockUser",
+          avatar: "https://i.pravatar.cc/150?u=mock",
+          roles: ["admin"]
+        }
+      };
+    }
+    throw error;
+  }
 }
 
 export type RegisterRequest = {
@@ -62,7 +117,18 @@ export type RegisterRequest = {
 };
 
 export async function register(data: RegisterRequest) {
-  return request.post<boolean>("/auth/register", data);
+  try {
+    return await request.post<boolean>("/auth/register", data);
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn("Dev fallback: register failed, using mock logic");
+      if (data.code && data.code !== "123456") {
+        throw new Error("验证码错误");
+      }
+      return true;
+    }
+    throw error;
+  }
 }
 
 export async function logout() {
@@ -80,5 +146,16 @@ export type ForgotPasswordRequest = {
 };
 
 export async function forgotPassword(data: ForgotPasswordRequest) {
-  return request.post<boolean>("/auth/forgot-password", data);
+  try {
+    return await request.post<boolean>("/auth/forgot-password", data);
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn("Dev fallback: forgotPassword failed, using mock logic");
+      if (data.code && data.code !== "123456") {
+        throw new Error("验证码错误");
+      }
+      return true;
+    }
+    throw error;
+  }
 }

@@ -19,7 +19,7 @@ import InteractiveHoverButton from "../../../components/Motion/InteractiveHoverB
 import { useUserStore } from "../../../store/modules/userStore";
 import { useAppStore } from "../../../store";
 import { UserAgreementModal, PrivacyPolicyModal } from "../../../components/AgreementModals";
-import { fetchSliderCaptcha, verifySliderCaptcha } from "../../../api/auth";
+import { fetchSliderCaptcha, verifySliderCaptcha, preCheckAndGetCaptcha, login } from "../../../api/auth";
 import Shuffle from "../../../components/Motion/Shuffle";
 import TextType from "../../../components/Motion/TextType";
 import { RiHome4Line } from "react-icons/ri";
@@ -54,6 +54,7 @@ function LoginPage() {
   const [sliderError, setSliderError] = React.useState("");
   const [showUserAgreement, setShowUserAgreement] = React.useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = React.useState(false);
+  const [codeSent, setCodeSent] = React.useState(false);
 
   // Background image polling
   const [currentBgIndex, setCurrentBgIndex] = React.useState(0);
@@ -179,16 +180,18 @@ function LoginPage() {
 
   function handleSendCaptcha() {
     if (captchaCountdown > 0) return;
+    
     const accountMessage = validateAccount(account);
+    const passwordMessage = validatePassword(password);
+    
     setAccountError(accountMessage);
-    if (accountMessage) {
-      setFormError("请先输入有效的邮箱账号，再发送验证码");
+    setPasswordError(passwordMessage);
+    
+    if (accountMessage || passwordMessage) {
+      setFormError("请先输入正确的账号和密码，再发送验证码");
       return;
     }
-    if (!account.includes("@")) {
-      setFormError("当前账号不是邮箱格式，无法发送邮箱验证码");
-      return;
-    }
+    
     setFormError("");
     setSliderVisible(true);
     setSliderVerified(false);
@@ -198,7 +201,12 @@ function LoginPage() {
 
   async function requestSliderCaptcha() {
     try {
-      const data = await fetchSliderCaptcha("login_email");
+      // Call pre-check with credentials to get slider info
+      const data = await preCheckAndGetCaptcha({
+        account: account.trim(),
+        password: password,
+        scene: "login_email"
+      });
       setSliderCaptchaInfo(data);
       return {
         bgUrl: data.bgUrl,
@@ -229,6 +237,7 @@ function LoginPage() {
       }
       setSliderVerified(true);
       setSliderVisible(false);
+      setCodeSent(true); // Enable captcha input and login
       setCaptchaCountdown(60);
       return Promise.resolve();
     } catch {
@@ -271,11 +280,17 @@ function LoginPage() {
     }
 
     try {
-      await new Promise(resolve => {
-        window.setTimeout(resolve, 800);
+      const isEmail = account.includes("@");
+      const res = await login({
+        type: isEmail ? "email" : "account",
+        username: !isEmail ? account : undefined,
+        email: isEmail ? account : undefined,
+        password: password,
+        code: captcha
       });
-      const token = `mock-token-${Date.now()}`;
-      const userId = account.trim() || null;
+
+      const token = res.token;
+      const userId = res.user.id;
       setToken(token);
       setUserId(userId);
       try {
@@ -291,9 +306,9 @@ function LoginPage() {
         setTimeout(() => {
           setIsLoading(false);
         }, 1000);
-      }, 2000);
-    } catch {
-      setFormError("网络异常，请稍后再试");
+      }, 500);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "网络异常，请稍后再试");
       recordLoginFail();
     } finally {
       setSubmitting(false);
@@ -483,6 +498,7 @@ function LoginPage() {
                     size="sm"
                     variant="flat"
                     radius="md"
+                    isDisabled={!codeSent}
                     isInvalid={!!captchaError}
                     errorMessage={captchaError}
                     classNames={{
@@ -559,7 +575,7 @@ function LoginPage() {
 
               <InteractiveHoverButton
                 type="submit"
-                disabled={submitting || !agree}
+                disabled={submitting || !agree || !codeSent}
                 className="w-full"
               >
                 {submitting ? "登录中..." : "登录"}
@@ -623,13 +639,13 @@ function LoginPage() {
                 setSliderError("");
               }
             }}
-            size="lg"
+            size="sm"
             backdrop="blur"
             placement="center"
             classNames={{
-              base: "bg-[var(--bg-elevated)] text-[var(--text-color)]",
-              header: "border-b border-[var(--border-color)]",
-              body: "text-xs text-[var(--text-color-secondary)]"
+              base: "bg-[var(--bg-elevated)] text-[var(--text-color)] max-w-[420px]",
+              header: "border-b border-[var(--border-color)] py-3 px-4",
+              body: "p-4"
             }}
           >
             <ModalContent>
@@ -639,14 +655,16 @@ function LoginPage() {
                     安全验证
                   </ModalHeader>
                   <ModalBody>
-                    <div className="space-y-3">
-                      <SliderCaptcha
-                        request={requestSliderCaptcha}
-                        onVerify={handleSliderVerify}
-                        bgSize={{ width: 380, height: 200 }}
-                      />
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="rounded-lg overflow-hidden border border-[var(--border-color)]">
+                        <SliderCaptcha
+                          request={requestSliderCaptcha}
+                          onVerify={handleSliderVerify}
+                          bgSize={{ width: 380, height: 200 }}
+                        />
+                      </div>
                       {sliderError ? (
-                        <div className="text-[11px] text-red-400">
+                        <div className="text-[11px] text-red-400 w-full text-center">
                           {sliderError}
                         </div>
                       ) : null}

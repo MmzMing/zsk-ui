@@ -59,6 +59,13 @@ function AdminLayout() {
     showTopNav
   } = useAppStore();
 
+  // Check authentication status
+  useEffect(() => {
+    if (!token) {
+      navigate(routes.login);
+    }
+  }, [token, navigate]);
+
   // Apply global font size to root element
   useEffect(() => {
     document.documentElement.style.fontSize = `${fontSize}px`;
@@ -575,6 +582,10 @@ function AdminLayout() {
   // -------------------------
   // Render: Dock Mode
   // -------------------------
+  if (!token) {
+    return null;
+  }
+
   if (layoutMode === "dock") {
     return (
       <div

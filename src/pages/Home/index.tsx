@@ -13,7 +13,7 @@ import { routes } from "../../router/routes";
 import HomeBanner from "./components/HomeBanner";
 import HsrIntroAnimation from "../../components/Motion/HsrIntroAnimation";
 import { LazyLoadWrapper } from "../../components/LazyLoadWrapper";
-import { ParticlesBackground } from "../../components/MagicUI/ParticlesBackground";
+import { Particles } from "../../components/ui/particles";
 import { Loading } from "../../components/Loading";
 
 const VideoRecommend = React.lazy(() => import("./components/VideoRecommend"));
@@ -114,8 +114,14 @@ function HomePage() {
   );
 
   return (
-    <div className="min-h-screen relative bg-black">
-      <ParticlesBackground />
+    <div className="min-h-screen relative">
+      <Particles
+        className="fixed inset-0 z-0 bg-black"
+        quantity={100}
+        ease={80}
+        color="#ffffff"
+        refresh
+      />
       <div className="relative z-10">
         <HsrIntroAnimation />
         <HomeBanner />

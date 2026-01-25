@@ -1,47 +1,65 @@
 import React from "react";
 import { Accordion, AccordionItem, Card, Button, Avatar } from "@heroui/react";
 import { FiMail, FiPhone, FiMapPin, FiGithub, FiTwitter } from "react-icons/fi";
-import { FaJava, FaReact, FaQq, FaDiscord } from "react-icons/fa6";
-import { SiSpringboot, SiTypescript, SiApacheecharts, SiApache } from "react-icons/si";
+import { FaJava, FaReact, FaDocker, FaQq, FaDiscord } from "react-icons/fa6";
+import { 
+  SiSpring, 
+  SiTypescript, 
+  SiMysql, 
+  SiRedis, 
+  SiApacherocketmq 
+} from "react-icons/si";
 import LogoLoop from "../../components/Motion/LogoLoop";
 
 function AboutPage() {
   const techStack = [
     {
       id: "java",
-      name: "Java",
+      name: "JAVA",
       description: "后端核心开发语言",
       icon: <FaJava className="text-[#5382a1]" />
     },
     {
-      id: "react",
-      name: "React",
-      description: "构建用户界面的 JavaScript 库",
-      icon: <FaReact className="text-[#61dafb]" />
+      id: "mysql",
+      name: "MYSQL",
+      description: "关系型数据库管理系统",
+      icon: <SiMysql className="text-[#4479a1]" />
+    },
+    {
+      id: "redis",
+      name: "REDIS",
+      description: "高性能键值对数据库",
+      icon: <SiRedis className="text-[#dc382d]" />
     },
     {
       id: "spring",
-      name: "Spring Boot",
+      name: "SPRING",
       description: "企业级应用开发框架",
-      icon: <SiSpringboot className="text-[#6db33f]" />
+      icon: <SiSpring className="text-[#6db33f]" />
     },
     {
-      id: "ts",
-      name: "TypeScript",
-      description: "JavaScript 的超集",
-      icon: <SiTypescript className="text-[#3178c6]" />
-    },
-    {
-      id: "echarts",
-      name: "ECharts",
-      description: "数据可视化图表库",
-      icon: <SiApacheecharts className="text-[#e4393c]" />
+      id: "docker",
+      name: "DOCKER",
+      description: "容器化部署与管理",
+      icon: <FaDocker className="text-[#2496ed]" />
     },
     {
       id: "rocketmq",
-      name: "RocketMQ",
+      name: "ROCKETMQ",
       description: "分布式消息中间件",
-      icon: <SiApache className="text-[#c71585]" />
+      icon: <SiApacherocketmq className="text-[#d42029]" />
+    },
+    {
+      id: "react",
+      name: "REACT",
+      description: "构建用户界面的前端库",
+      icon: <FaReact className="text-[#61dafb]" />
+    },
+    {
+      id: "ts",
+      name: "TS",
+      description: "JavaScript 的超集",
+      icon: <SiTypescript className="text-[#3178c6]" />
     }
   ];
 

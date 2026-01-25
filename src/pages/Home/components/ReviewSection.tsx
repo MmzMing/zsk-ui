@@ -1,92 +1,100 @@
-import React, { useMemo } from "react";
+import React from "react";
 import ScrollFloat from "../../../components/Motion/ScrollFloat";
-import Masonry from "../../../components/Motion/Masonry";
+import { Marquee } from "../../../components/ui/marquee";
+import { cn } from "../../../lib/utils";
 import type { HomeReview } from "../../../api/front/home";
+import { FaStar } from "react-icons/fa";
 
 type Props = {
   reviews: HomeReview[];
 };
 
-export default function ReviewSection({ reviews }: Props) {
-  const [isMobile, setIsMobile] = React.useState(false);
-
-  React.useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  const displayReviews = useMemo(() => {
-    if (isMobile) {
-      return reviews.slice(0, 3);
-    }
-    return reviews;
-  }, [reviews, isMobile]);
-
-  const masonryItems = useMemo(
-    () =>
-      displayReviews.map(item => ({
-        id: item.id,
-        height: isMobile ? 320 : 260,
-        content: (
-          <div
-            className="relative rounded-[var(--radius-base)] border border-zinc-800 bg-zinc-900/90 px-4 py-3 md:px-5 md:py-4 shadow-[0_10px_25px_rgba(0,0,0,0.45)]/40 overflow-hidden transition-transform duration-150 hover:-translate-y-0.5 h-full flex flex-col"
-          >
-            <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-400/0 via-emerald-400/60 to-sky-400/0" />
-            <div className="flex items-start gap-3 flex-1 min-h-0">
-              <div className="mt-0.5 h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-medium text-blue-400 shrink-0">
-                {item.name.slice(0, 1)}
-              </div>
-              <div className="flex-1 min-w-0 flex flex-col h-full">
-                <div className="flex items-center justify-between gap-2 shrink-0">
-                  <div className="min-w-0">
-                    <div className="text-xs font-medium truncate text-gray-200">
-                      {item.name}
-                    </div>
-                    <div className="text-[10px] text-gray-500 truncate">
-                      {item.role}
-                    </div>
-                  </div>
-                  <div className="text-right text-[10px] text-gray-500 shrink-0">
-                    <div className="truncate">{item.source}</div>
-                    <div>{item.date}</div>
-                  </div>
-                </div>
-                <p className={`mt-2 text-xs leading-relaxed text-gray-400 ${isMobile ? "" : "line-clamp-3"}`}>
-                  {item.content}
-                </p>
-              </div>
-            </div>
+const ReviewCard = ({
+  name,
+  date,
+  body,
+  source,
+}: {
+  name: string;
+  date: string;
+  body: string;
+  source: string;
+}) => {
+  return (
+    <figure
+      className={cn(
+        "relative w-[340px] cursor-pointer overflow-hidden rounded-xl border p-6 flex flex-col gap-2 transition-all duration-300",
+        "border-zinc-800 bg-transparent hover:border-zinc-700",
+        // 随机高度模拟不规则感 (通过内容长度自然形成)
+        "h-fit min-h-[160px]"
+      )}
+    >
+      <div className="flex flex-col gap-1">
+        <figcaption className="text-[15px] font-medium text-[var(--primary-color)] leading-tight">
+          {name}
+        </figcaption>
+        <div className="flex items-center gap-1.5 mt-1">
+          <div className="flex text-[#f59e0b] text-[10px]">
+            {[...Array(5)].map((_, i) => (
+              <FaStar key={i} />
+            ))}
           </div>
-        )
-      })),
-    [displayReviews, isMobile]
+          <span className="text-[11px] text-zinc-500 font-medium">5.00</span>
+          <span className="text-[11px] text-zinc-500">{date}</span>
+        </div>
+      </div>
+      <blockquote className="mt-2 text-[13px] leading-relaxed text-zinc-200">
+        "{body}"
+      </blockquote>
+      <div className="mt-auto pt-4">
+        <span className="text-[13px] font-bold text-[var(--primary-color)] opacity-90 lowercase">
+          {source || "upwork"}
+        </span>
+      </div>
+    </figure>
   );
+};
+
+export default function ReviewSection({ reviews }: Props) {
+  const firstRow = reviews.slice(0, Math.ceil(reviews.length / 2));
+  const secondRow = reviews.slice(Math.ceil(reviews.length / 2));
 
   return (
-    <section className={`${isMobile ? "py-10" : "min-h-screen"} flex flex-col justify-center space-y-10 px-[var(--content-padding)] overflow-hidden text-gray-200`}>
-      <div className="max-w-6xl mx-auto w-full flex flex-col items-center space-y-3">
+    <section className="dark relative flex min-h-[600px] w-full flex-col items-center justify-center overflow-hidden py-24 bg-transparent">
+       <div className="mb-16 flex flex-col items-center space-y-3 z-10">
         <ScrollFloat
-          containerClassName="text-lg md:text-xl font-semibold"
+          containerClassName="text-2xl md:text-3xl font-bold text-white"
           textClassName="tracking-tight"
         >
           以下是各大网友对我的评价
         </ScrollFloat>
       </div>
-      <div className="mt-6 md:mt-8 max-w-6xl mx-auto w-full">
-        {isMobile ? (
-          <div className="flex flex-col gap-4">
-            {masonryItems.map(item => (
-              <div key={item.id} className="w-full">
-                {item.content}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Masonry items={masonryItems} />
-        )}
+      
+      <div className="flex flex-col gap-6 w-full [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+        <Marquee pauseOnHover className="[--duration:20s] [--gap:1.5rem]" repeat={4}>
+          {firstRow.map((review) => (
+            <ReviewCard
+              key={review.id}
+              name={review.name}
+              date={review.date}
+              body={review.content}
+              source={review.source}
+            />
+          ))}
+        </Marquee>
+        <Marquee reverse pauseOnHover className="[--duration:25s] [--gap:1.5rem]" repeat={4}>
+          {secondRow.map((review) => (
+            <ReviewCard
+              key={review.id}
+              name={review.name}
+              date={review.date}
+              body={review.content}
+              source={review.source}
+            />
+          ))}
+        </Marquee>
       </div>
     </section>
   );
 }
+

@@ -18,7 +18,7 @@ import {
   ModalContent,
   ModalHeader
 } from "@heroui/react";
-import { fetchSliderCaptcha, verifySliderCaptcha } from "../../../api/auth";
+import { fetchSliderCaptcha, verifySliderCaptcha, preCheckAndGetCaptcha, forgotPassword } from "../../../api/auth";
 
 const bgImages = ["/auth/auth-Polling-1.png", "/auth/auth-Polling-2.png" , "/auth/auth-Polling-3.png"];
 
@@ -55,6 +55,7 @@ function ForgotPasswordPage() {
     puzzleUrl: string;
   } | null>(null);
   const [sliderError, setSliderError] = React.useState("");
+  const [codeSent, setCodeSent] = React.useState(false);
 
   React.useEffect(() => {
     if (!captchaCountdown) return;
@@ -183,7 +184,10 @@ function ForgotPasswordPage() {
 
   async function requestSliderCaptcha() {
     try {
-      const data = await fetchSliderCaptcha("forgot_email");
+      const data = await preCheckAndGetCaptcha({
+        account: email.trim(),
+        scene: "forgot_email"
+      });
       setSliderCaptchaInfo(data);
       return {
         bgUrl: data.bgUrl,
@@ -215,6 +219,7 @@ function ForgotPasswordPage() {
       }
       setSliderVerified(true);
       setSliderVisible(false);
+      setCodeSent(true);
       setCaptchaCountdown(60);
       return Promise.resolve();
     } catch {
@@ -223,7 +228,7 @@ function ForgotPasswordPage() {
     }
   }
 
-  function handleResetSubmit(event: React.FormEvent) {
+  async function handleResetSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (submitting) return;
     const passwordMessage = validatePassword(newPassword);
@@ -234,12 +239,30 @@ function ForgotPasswordPage() {
       setFormError("请先修正表单中的错误后再尝试重置密码");
       return;
     }
+    
+    if (!codeSent) {
+      setFormError("请先获取并输入验证码");
+      return;
+    }
+
     setFormError("");
     setSubmitting(true);
-    window.setTimeout(() => {
+    
+    try {
+      await forgotPassword({
+        email: email,
+        code: captcha,
+        newPassword: newPassword
+      });
+      
+      window.setTimeout(() => {
+        setSubmitting(false);
+        navigate(routes.login);
+      }, 800);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "网络异常，请稍后再试");
       setSubmitting(false);
-      navigate(routes.login);
-    }, 800);
+    }
   }
 
   return (
@@ -456,6 +479,7 @@ function ForgotPasswordPage() {
                         size="sm"
                         variant="flat"
                         radius="md"
+                        isDisabled={!codeSent}
                         isInvalid={!!captchaError}
                         errorMessage={captchaError}
                         classNames={{
@@ -482,7 +506,11 @@ function ForgotPasswordPage() {
                   </div>
                 </div>
 
-                <InteractiveHoverButton type="submit" className="w-full">
+                <InteractiveHoverButton
+                  type="submit"
+                  disabled={submitting || !codeSent}
+                  className="w-full"
+                >
                   提交验证并进入重置密码
                 </InteractiveHoverButton>
               </form>
@@ -571,13 +599,13 @@ function ForgotPasswordPage() {
                 setSliderError("");
               }
             }}
-            size="lg"
+            size="sm"
             backdrop="blur"
             placement="center"
             classNames={{
-              base: "bg-[var(--bg-elevated)] text-[var(--text-color)]",
-              header: "border-b border-[var(--border-color)]",
-              body: "text-xs text-[var(--text-color-secondary)]"
+              base: "bg-[var(--bg-elevated)] text-[var(--text-color)] max-w-[420px]",
+              header: "border-b border-[var(--border-color)] py-3 px-4",
+              body: "p-4"
             }}
           >
             <ModalContent>
@@ -587,14 +615,16 @@ function ForgotPasswordPage() {
                     安全验证
                   </ModalHeader>
                   <ModalBody>
-                    <div className="space-y-3">
-                      <SliderCaptcha
-                        request={requestSliderCaptcha}
-                        onVerify={handleSliderVerify}
-                        bgSize={{ width: 380, height: 200 }}
-                      />
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="rounded-lg overflow-hidden border border-[var(--border-color)]">
+                        <SliderCaptcha
+                          request={requestSliderCaptcha}
+                          onVerify={handleSliderVerify}
+                          bgSize={{ width: 380, height: 200 }}
+                        />
+                      </div>
                       {sliderError ? (
-                        <div className="text-[11px] text-red-400">
+                        <div className="text-[11px] text-red-400 w-full text-center">
                           {sliderError}
                         </div>
                       ) : null}

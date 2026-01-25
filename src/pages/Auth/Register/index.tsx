@@ -20,7 +20,7 @@ import InteractiveHoverButton from "../../../components/Motion/InteractiveHoverB
 import { Shuffle } from "../../../components/Motion/Shuffle";
 import { TextType } from "../../../components/Motion/TextType";
 import { UserAgreementModal, PrivacyPolicyModal } from "../../../components/AgreementModals";
-import { fetchSliderCaptcha, verifySliderCaptcha } from "../../../api/auth";
+import { fetchSliderCaptcha, verifySliderCaptcha, preCheckAndGetCaptcha, register } from "../../../api/auth";
 
 const bgImages = ["/auth/auth-Polling-1.png", "/auth/auth-Polling-2.png" , "/auth/auth-Polling-3.png"];
 
@@ -62,6 +62,7 @@ function RegisterPage() {
   const [captchaCountdown, setCaptchaCountdown] = React.useState(0);
   const [showUserAgreement, setShowUserAgreement] = React.useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = React.useState(false);
+  const [codeSent, setCodeSent] = React.useState(false);
 
   React.useEffect(() => {
     if (!captchaCountdown) return;
@@ -181,12 +182,22 @@ function RegisterPage() {
 
   function handleSendCaptcha() {
     if (captchaCountdown > 0) return;
+    
     const emailMessage = validateEmail(email);
+    const usernameMessage = validateUsername(username);
+    const passwordMessage = validatePassword(password);
+    const confirmPasswordMessage = validateConfirmPassword(password, confirmPassword);
+    
     setEmailError(emailMessage);
-    if (emailMessage) {
-      setFormError("请先输入有效的邮箱地址，再发送验证码");
+    setUsernameError(usernameMessage);
+    setPasswordError(passwordMessage);
+    setConfirmPasswordError(confirmPasswordMessage);
+    
+    if (emailMessage || usernameMessage || passwordMessage || confirmPasswordMessage) {
+      setFormError("请先正确填写注册信息，再发送验证码");
       return;
     }
+    
     setFormError("");
     setSliderVisible(true);
     setSliderVerified(false);
@@ -196,7 +207,10 @@ function RegisterPage() {
 
   async function requestSliderCaptcha() {
     try {
-      const data = await fetchSliderCaptcha("register_email");
+      const data = await preCheckAndGetCaptcha({
+        account: email.trim(),
+        scene: "register_email"
+      });
       setSliderCaptchaInfo(data);
       return {
         bgUrl: data.bgUrl,
@@ -227,6 +241,7 @@ function RegisterPage() {
       }
       setSliderVerified(true);
       setSliderVisible(false);
+      setCodeSent(true);
       setCaptchaCountdown(60);
       return Promise.resolve();
     } catch {
@@ -279,13 +294,20 @@ function RegisterPage() {
     setSubmitting(true);
 
     try {
-      await hashPassword(password);
+      const hashedPassword = await hashPassword(password);
+      await register({
+        username: username,
+        email: email,
+        password: hashedPassword,
+        code: captcha
+      });
+      
       await new Promise(resolve => {
         window.setTimeout(resolve, 800);
       });
       navigate(routes.login);
-    } catch {
-      setFormError("网络异常，请稍后再试");
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "网络异常，请稍后再试");
     } finally {
       setSubmitting(false);
     }
@@ -522,6 +544,7 @@ function RegisterPage() {
                     size="sm"
                     variant="flat"
                     radius="md"
+                    isDisabled={!codeSent}
                     isInvalid={!!captchaError}
                     errorMessage={captchaError}
                     classNames={{
@@ -587,7 +610,7 @@ function RegisterPage() {
                 </span>
               <InteractiveHoverButton
                 type="submit"
-                disabled={submitting || !agree}
+                disabled={submitting || !agree || !codeSent}
                 className="w-full"
               >
                 {submitting ? "注册中..." : "注册"}
@@ -609,47 +632,49 @@ function RegisterPage() {
         </div>
 
         <Modal
-          isOpen={sliderVisible}
-          onOpenChange={isOpen => {
-            setSliderVisible(isOpen);
-            if (!isOpen) {
-              setSliderCaptchaInfo(null);
-              setSliderError("");
-            }
-          }}
-          size="lg"
-          backdrop="blur"
-          placement="center"
-          classNames={{
-            base: "bg-[var(--bg-elevated)] text-[var(--text-color)]",
-            header: "border-b border-[var(--border-color)]",
-            body: "text-xs text-[var(--text-color-secondary)]"
-          }}
-        >
-          <ModalContent>
-            {() => (
-              <>
-                <ModalHeader className="text-sm font-semibold">
-                  安全验证
-                </ModalHeader>
-                <ModalBody>
-                  <div className="space-y-3">
-                    <SliderCaptcha
-                      request={requestSliderCaptcha}
-                      onVerify={handleSliderVerify}
-                      bgSize={{ width: 380, height: 200 }}
-                    />
-                    {sliderError ? (
-                      <div className="text-[11px] text-red-400">
-                        {sliderError}
+            isOpen={sliderVisible}
+            onOpenChange={isOpen => {
+              setSliderVisible(isOpen);
+              if (!isOpen) {
+                setSliderCaptchaInfo(null);
+                setSliderError("");
+              }
+            }}
+            size="sm"
+            backdrop="blur"
+            placement="center"
+            classNames={{
+              base: "bg-[var(--bg-elevated)] text-[var(--text-color)] max-w-[420px]",
+              header: "border-b border-[var(--border-color)] py-3 px-4",
+              body: "p-4"
+            }}
+          >
+            <ModalContent>
+              {() => (
+                <>
+                  <ModalHeader className="text-sm font-semibold">
+                    安全验证
+                  </ModalHeader>
+                  <ModalBody>
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="rounded-lg overflow-hidden border border-[var(--border-color)]">
+                        <SliderCaptcha
+                          request={requestSliderCaptcha}
+                          onVerify={handleSliderVerify}
+                          bgSize={{ width: 380, height: 200 }}
+                        />
                       </div>
-                    ) : null}
-                  </div>
-                </ModalBody>
-              </>
-            )}
-          </ModalContent>
-        </Modal>
+                      {sliderError ? (
+                        <div className="text-[11px] text-red-400 w-full text-center">
+                          {sliderError}
+                        </div>
+                      ) : null}
+                    </div>
+                  </ModalBody>
+                </>
+              )}
+            </ModalContent>
+          </Modal>
 
         <UserAgreementModal
           isOpen={showUserAgreement}
