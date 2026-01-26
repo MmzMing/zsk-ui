@@ -1,3 +1,4 @@
+// ===== 1. 依赖导入区域 =====
 import React, { useMemo, useState, useEffect } from "react";
 import { Button, Card, Chip, Input, NumberInput, Switch, Checkbox, addToast } from "@heroui/react";
 import * as Icons from "react-icons/fi";
@@ -25,22 +26,41 @@ import {
   updateMenuTree,
   createMenu,
   updateMenu,
-  deleteMenu
+  batchDeleteMenu
 } from "@/api/admin/menu";
 import { Loading } from "@/components/Loading";
 
+// ===== 2. TODO待处理导入区域 =====
+
+// ===== 3. 状态控制逻辑区域 =====
+/**
+ * 图标选项类型
+ */
 type IconOption = {
+  /** 图标ID */
   id: string;
+  /** 图标名称 */
   name: string;
+  /** 图标组件 */
   icon: React.ReactNode;
 };
 
+/**
+ * 树形数据节点类型
+ */
 type RcTreeDataNode = {
+  /** 节点唯一标识 */
   key: string;
+  /** 节点标题渲染 */
   title: React.ReactNode;
+  /** 子节点列表 */
   children?: RcTreeDataNode[];
 };
 
+// ===== 4. 通用工具函数区域 =====
+/**
+ * 图标选项配置
+ */
 const iconOptions: IconOption[] = [
   { id: "FiHome", name: "首页", icon: <FiHome className="w-4 h-4" /> },
   { id: "FiMenu", name: "菜单", icon: <FiMenu className="w-4 h-4" /> },
@@ -55,7 +75,12 @@ const iconOptions: IconOption[] = [
   { id: "FiBell", name: "通知", icon: <FiBell className="w-4 h-4" /> }
 ];
 
-
+/**
+ * 扁平化菜单树
+ * @param nodes 菜单节点列表
+ * @param depth 当前深度
+ * @returns 扁平化后的带深度信息节点列表
+ */
 function flattenMenu(nodes: MenuNode[], depth = 0): Array<MenuNode & { depth: number }> {
   const result: Array<MenuNode & { depth: number }> = [];
   nodes
@@ -70,6 +95,12 @@ function flattenMenu(nodes: MenuNode[], depth = 0): Array<MenuNode & { depth: nu
   return result;
 }
 
+/**
+ * 查找指定ID的节点
+ * @param nodes 菜单节点列表
+ * @param id 目标ID
+ * @returns 找到的节点或null
+ */
 function findNode(nodes: MenuNode[], id: string): MenuNode | null {
   for (const node of nodes) {
     if (node.id === id) {
@@ -85,6 +116,13 @@ function findNode(nodes: MenuNode[], id: string): MenuNode | null {
   return null;
 }
 
+/**
+ * 查找节点的父级信息
+ * @param nodes 菜单节点列表
+ * @param id 目标ID
+ * @param parentId 当前遍历的父级ID
+ * @returns 父级ID与在父级中的索引
+ */
 function findParentInfo(
   nodes: MenuNode[],
   id: string,
@@ -105,6 +143,12 @@ function findParentInfo(
   return null;
 }
 
+/**
+ * 移除指定ID的节点
+ * @param nodes 菜单节点列表
+ * @param id 目标ID
+ * @returns 更新后的树与被移除的节点
+ */
 function removeNode(
   nodes: MenuNode[],
   id: string
@@ -132,6 +176,14 @@ function removeNode(
   return { tree: next, removed };
 }
 
+/**
+ * 在指定位置插入节点
+ * @param nodes 菜单节点列表
+ * @param parentId 目标父级ID
+ * @param index 插入索引
+ * @param newNode 待插入节点
+ * @returns 更新后的树
+ */
 function insertNodeAt(
   nodes: MenuNode[],
   parentId: string | null,
@@ -167,6 +219,12 @@ function insertNodeAt(
   });
 }
 
+/**
+ * 重新计算节点排序
+ * @param nodes 菜单节点列表
+ * @param parentId 当前父级ID
+ * @returns 更新后的树
+ */
 function recalcOrder(nodes: MenuNode[], parentId: string | null = null): MenuNode[] {
   return nodes.map((node, index) => {
     const next: MenuNode = {
@@ -181,6 +239,11 @@ function recalcOrder(nodes: MenuNode[], parentId: string | null = null): MenuNod
   });
 }
 
+/**
+ * 收集节点及其所有后代节点的ID
+ * @param node 目标节点
+ * @returns ID列表
+ */
 function collectNodeAndDescendants(node: MenuNode): string[] {
   const ids = [node.id];
   if (node.children && node.children.length) {
@@ -191,6 +254,28 @@ function collectNodeAndDescendants(node: MenuNode): string[] {
   return ids;
 }
 
+/**
+ * 获取图标显示文本
+ * @param iconName 图标ID
+ * @returns 图标名称
+ */
+function getIconLabel(iconName: string) {
+  const match = iconOptions.find(item => item.id === iconName);
+  return match ? match.name : "未设置";
+}
+
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+
+// ===== 7. 数据处理函数区域 =====
+/**
+ * 构建树形组件所需的数据结构
+ * @param nodes 菜单节点列表
+ * @param selectedIds 已选节点ID列表
+ * @param toggleNodeChecked 切换勾选状态回调
+ * @returns RcTreeDataNode数组
+ */
 function buildTreeData(
   nodes: MenuNode[],
   selectedIds: string[],
@@ -241,31 +326,39 @@ function buildTreeData(
     }));
 }
 
-function getIconLabel(iconName: string) {
-  const match = iconOptions.find(item => item.id === iconName);
-  return match ? match.name : "未设置";
-}
-
+// ===== 8. UI渲染逻辑区域 =====
+/**
+ * 菜单管理页面组件
+ */
 function MenuPage() {
+  // 菜单树数据
   const [menuTree, setMenuTree] = useState<MenuNode[]>([]);
+  // 加载状态
   const [isLoading, setIsLoading] = useState(true);
+  // 当前激活（选中编辑）的菜单ID
   const [activeId, setActiveId] = useState<string | null>(null);
+  // 批量选中的菜单ID列表
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // 提示信息文本
   const [message, setMessage] = useState("");
-
+  // 当前正在选择图标的目标ID
   const [iconPickerTargetId, setIconPickerTargetId] = useState<string | null>(null);
 
+  // 扁平化菜单数据，用于计算总数等
   const flatMenu = useMemo(() => flattenMenu(menuTree), [menuTree]);
 
+  // 当前激活的菜单节点详情
   const activeNode = useMemo(
     () => (activeId ? findNode(menuTree, activeId) : null),
     [activeId, menuTree]
   );
 
+  /**
+   * 加载菜单树数据
+   */
   const loadMenuTree = React.useCallback(async () => {
-    setIsLoading(true);
-    const res = await fetchAdminMenuTree();
-    if (res.code === 200 && !res.msg) {
+    const res = await fetchAdminMenuTree(setIsLoading);
+    if (res && res.code === 200) {
       setMenuTree(res.data);
       setActiveId(prev => {
         if (res.data.length > 0 && !prev) {
@@ -274,16 +367,19 @@ function MenuPage() {
         return prev;
       });
     }
-    setIsLoading(false);
   }, []);
 
+  // 页面加载时初始化数据
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadMenuTree();
   }, [loadMenuTree]);
 
+  /**
+   * 新增一级根菜单
+   */
   const handleAddRootMenu = async () => {
-    const nextId = String(Date.now()); // 简单生成纯数字 ID 字符串
+    const nextId = String(Date.now());
     const next: MenuNode = {
       id: nextId,
       name: "新建菜单",
@@ -296,7 +392,7 @@ function MenuPage() {
       children: []
     };
     const res = await createMenu(next);
-    if (res.code === 200 && !res.msg) {
+    if (res && res.code === 200) {
       addToast({
         title: "新增菜单成功",
         color: "success"
@@ -306,6 +402,9 @@ function MenuPage() {
     }
   };
 
+  /**
+   * 新增子菜单
+   */
   const handleAddChildMenu = async () => {
     if (!activeId) {
       return;
@@ -327,7 +426,7 @@ function MenuPage() {
       children: []
     };
     const res = await createMenu(next);
-    if (res.code === 200 && !res.msg) {
+    if (res && res.code === 200) {
       addToast({
         title: "新增子菜单成功",
         color: "success"
@@ -337,6 +436,9 @@ function MenuPage() {
     }
   };
 
+  /**
+   * 批量删除选中的菜单
+   */
   const handleBatchDelete = async () => {
     if (!selectedIds.length) {
       return;
@@ -347,18 +449,12 @@ function MenuPage() {
     if (!confirmed) {
       return;
     }
-    let successCount = 0;
-    for (const id of selectedIds) {
-      const res = await deleteMenu(id);
-      if (res.code === 200 && !res.msg) {
-        successCount++;
-      }
-    }
-    
-    if (successCount > 0) {
+    const res = await batchDeleteMenu(selectedIds);
+
+    if (res && res.code === 200) {
       addToast({
-        title: successCount === selectedIds.length ? "批量删除成功" : `部分删除成功 (${successCount}/${selectedIds.length})`,
-        color: successCount === selectedIds.length ? "success" : "warning"
+        title: "批量删除成功",
+        color: "success"
       });
       setSelectedIds([]);
       loadMenuTree();
@@ -368,6 +464,9 @@ function MenuPage() {
     }
   };
 
+  /**
+   * 处理树节点选中
+   */
   const handleTreeSelect = (keys: React.Key[]) => {
     const first = keys[0];
     if (typeof first === "string") {
@@ -377,6 +476,9 @@ function MenuPage() {
     }
   };
 
+  /**
+   * 切换树节点勾选状态
+   */
   const handleToggleNodeChecked = (id: string, checked: boolean) => {
     const target = findNode(menuTree, id);
     if (!target) {
@@ -394,6 +496,9 @@ function MenuPage() {
     });
   };
 
+  /**
+   * 处理树节点拖拽放置
+   */
   const handleTreeDrop = async (info: {
     dragNode: { key: React.Key };
     node: { key: React.Key };
@@ -428,37 +533,35 @@ function MenuPage() {
     }
 
     const nextTree = recalcOrder(insertNodeAt(withoutDrag, parentId, index, removed));
-    try {
-      const res = await updateMenuTree(nextTree);
-      if (res.code === 200 && !res.msg) {
-        addToast({
-          title: "层级调整成功",
-          color: "success"
-        });
-        loadMenuTree();
-      }
-    } catch (error) {
-      console.error("Update menu tree failed:", error);
+    const res = await updateMenuTree(nextTree);
+    if (res && res.code === 200) {
+      addToast({
+        title: "层级调整成功",
+        color: "success"
+      });
+      loadMenuTree();
     }
   };
 
+  /**
+   * 处理表单字段变更
+   */
   const handleFieldChange = async (patch: Partial<MenuNode>) => {
     if (!activeId || !activeNode) {
       return;
     }
-    try {
-      const res = await updateMenu({
-        ...activeNode,
-        ...patch
-      });
-      if (res.code === 200 && !res.msg) {
-        loadMenuTree();
-      }
-    } catch (error) {
-      console.error("Update menu failed:", error);
+    const res = await updateMenu({
+      ...activeNode,
+      ...patch
+    });
+    if (res && res.code === 200) {
+      loadMenuTree();
     }
   };
 
+  /**
+   * 打开图标选择器
+   */
   const handleOpenIconPicker = () => {
     if (!activeId) {
       return;
@@ -466,39 +569,37 @@ function MenuPage() {
     setIconPickerTargetId(activeId);
   };
 
+  /**
+   * 选择图标回调
+   */
   const handleSelectIcon = async (iconId: string) => {
     if (!iconPickerTargetId || !activeNode) {
       return;
     }
-    try {
-      const res = await updateMenu({
-        ...activeNode,
-        iconName: iconId
+    const res = await updateMenu({
+      ...activeNode,
+      iconName: iconId
+    });
+    if (res && res.code === 200) {
+      addToast({
+        title: "图标更新成功",
+        color: "success"
       });
-      if (res.code === 200 && !res.msg) {
-        addToast({
-          title: "图标更新成功",
-          color: "success"
-        });
-        loadMenuTree();
-        setIconPickerTargetId(null);
-      }
-    } catch (error) {
-      console.error("Select icon failed:", error);
+      loadMenuTree();
+      setIconPickerTargetId(null);
     }
   };
 
+  /**
+   * 保存当前菜单配置到后端
+   */
   const handleSave = async () => {
-    try {
-      const res = await updateMenuTree(menuTree);
-      if (res.code === 200 && !res.msg) {
-        addToast({
-          title: "配置已保存",
-          color: "success"
-        });
-      }
-    } catch (error) {
-      console.error("Save menu tree failed:", error);
+    const res = await updateMenuTree(menuTree);
+    if (res && res.code === 200) {
+      addToast({
+        title: "配置已保存",
+        color: "success"
+      });
     }
   };
 

@@ -1,5 +1,13 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { Button, Card, Chip, DateRangePicker, Tab, Tooltip } from "@heroui/react";
+// ===== 1. 依赖导入区域 =====
+import React, { useMemo, useState, useEffect, useCallback } from "react";
+import {
+  Button,
+  Card,
+  Chip,
+  DateRangePicker,
+  Tab,
+  Tooltip,
+} from "@heroui/react";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { Loading } from "@/components/Loading";
@@ -8,101 +16,127 @@ import { Line } from "@ant-design/plots";
 import { getLocalTimeZone } from "@internationalized/date";
 import { FiRotateCcw } from "react-icons/fi";
 import { useAppStore } from "../../../store";
-
 import {
-  fetchBehaviorUsers,
-  fetchBehaviorTimeline,
-  fetchBehaviorEvents,
-  BehaviorUser,
-  BehaviorRange,
-  BehaviorPoint,
-  BehaviorEvent
+  getBehaviorFullData,
+  type BehaviorUser,
+  type BehaviorRange,
+  type BehaviorPoint,
+  type BehaviorEvent,
 } from "../../../api/admin/ops";
+import { addToast } from "@heroui/react";
+import { handleDebugOutput } from "@/lib/utils";
 
-function getRiskChipProps(level: BehaviorUser["riskLevel"]) {
-  if (level === "high") {
-    return {
-      color: "danger" as const,
-      label: "高风险",
-      className: "bg-red-500/10 text-red-500"
-    };
-  }
-  if (level === "medium") {
-    return {
-      color: "warning" as const,
-      label: "中风险",
-      className: "bg-orange-500/10 text-orange-500"
-    };
-  }
-  return {
-    color: "success" as const,
-    label: "低风险",
-    className: "bg-emerald-500/10 text-emerald-500"
-  };
-}
+// ===== 2. TODO待处理导入区域 =====
 
+/**
+ * 用户行为分析页面组件
+ * 提供用户操作轨迹分析、风险评估及明细查询功能
+ */
 function UserBehaviorPage() {
+  // ===== 3. 状态控制逻辑区域 =====
+  /** 是否正在加载数据 */
   const [loading, setLoading] = useState(true);
+  /** 当前选中的用户 ID */
   const [activeUserId, setActiveUserId] = useState<string>("6201");
+  /** 时间范围筛选 */
   const [range, setRange] = useState<BehaviorRange>("today");
+  /** 搜索关键字 */
   const [keyword, setKeyword] = useState("");
+  /** 当前视图模式：时序图或明细列表 */
   const [activeView, setActiveView] = useState<"timeline" | "list">("timeline");
+  /** 主题模式 */
   const { themeMode } = useAppStore();
-
+  /** 用户列表数据 */
   const [users, setUsers] = useState<BehaviorUser[]>([]);
+  /** 行为事件明细数据 */
   const [events, setEvents] = useState<BehaviorEvent[]>([]);
+  /** 行为轨迹时序数据 */
   const [timeline, setTimeline] = useState<BehaviorPoint[]>([]);
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const [u, t, e] = await Promise.all([
-          fetchBehaviorUsers(),
-          fetchBehaviorTimeline({ userId: activeUserId, range }),
-          fetchBehaviorEvents({ userId: activeUserId, keyword })
-        ]);
-        if (u) setUsers(u);
-        if (t) setTimeline(t);
-        if (e) setEvents(e);
-      } catch (error) {
-        console.error("Failed to load behavior data:", error);
-      } finally {
-        setLoading(false);
-      }
+  // ===== 4. 通用工具函数区域 =====
+  /**
+   * 打印调试日志
+   * @param message 日志消息
+   */
+  const showDebugLog = useCallback((message: string) => {
+    handleDebugOutput({
+      debugLevel: "info",
+      debugMessage: "[UserBehavior]",
+      debugDetail: message,
+    });
+  }, []);
+
+  /**
+   * 统一错误提示处理
+   * @param error 错误对象
+   * @param prefix 错误前缀描述
+   */
+  const showErrorFn = useCallback(
+    (error: unknown, prefix: string) => {
+      const message = error instanceof Error ? error.message : String(error);
+      addToast({
+        title: `${prefix}失败`,
+        description: message,
+        color: "danger",
+      });
+      showDebugLog(`${prefix}出错: ${message}`);
+    },
+    [showDebugLog]
+  );
+
+  /**
+   * 获取风险等级对应的 UI 属性
+   * @param level 风险等级
+   */
+  const getRiskChipProps = useCallback((level: BehaviorUser["riskLevel"]) => {
+    if (level === "high") {
+      return {
+        color: "danger" as const,
+        label: "高风险",
+        className: "bg-red-500/10 text-red-500",
+      };
     }
-    loadData();
-  }, [activeUserId, range, keyword]);
+    if (level === "medium") {
+      return {
+        color: "warning" as const,
+        label: "中风险",
+        className: "bg-orange-500/10 text-orange-500",
+      };
+    }
+    return {
+      color: "success" as const,
+      label: "低风险",
+      className: "bg-emerald-500/10 text-emerald-500",
+    };
+  }, []);
 
-  const chartTheme =
-    themeMode === "dark"
+  /** 图表主题配置 */
+  const chartTheme = useMemo(() => {
+    if (themeMode === "dark") return "classicDark";
+    if (themeMode === "light") return "classic";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "classicDark"
-      : themeMode === "light"
-        ? "classic"
-        : window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "classicDark"
-          : "classic";
+      : "classic";
+  }, [themeMode]);
 
-  const handleResetFilter = () => {
-    setKeyword("");
-    setActiveUserId("6201");
-    setRange("today");
-  };
-
+  /** 当前选中的用户对象 */
   const activeUser = useMemo(
-    () => users.find(item => item.id === activeUserId) ?? users[0],
+    () => users.find((item) => item.id === activeUserId) ?? users[0],
     [users, activeUserId]
   );
 
-  const filteredEvents = events;
+  /** 过滤后的行为事件列表 */
+  const filteredEvents = useMemo(() => events, [events]);
 
+  /** 转换后的图表数据 */
   const lineData = useMemo(() => {
-    return timeline.map(item => ({
+    return timeline.map((item) => ({
       time: item.time,
-      value: item.count
+      value: item.count,
     }));
   }, [timeline]);
 
+  /** 折线图配置对象 */
   const lineConfig: LineConfig = useMemo(
     () => ({
       data: lineData,
@@ -113,38 +147,130 @@ function UserBehaviorPage() {
         min: 0,
         label: {
           style: {
-            fontSize: 10
-          }
+            fontSize: 10,
+          },
         },
         grid: {
           line: {
             style: {
               stroke: "rgba(148,163,184,0.35)",
-              lineDash: [4, 4]
-            }
-          }
-        }
+              lineDash: [4, 4],
+            },
+          },
+        },
       },
       xAxis: {
         label: {
           style: {
-            fontSize: 10
-          }
-        }
+            fontSize: 10,
+          },
+        },
       },
       point: {
-        size: 3
+        size: 3,
       },
       tooltip: {
         formatter: (datum: { value: number }) => ({
           name: "操作次数",
-          value: `${datum.value} 次`
-        })
+          value: `${datum.value} 次`,
+        }),
       },
-      theme: chartTheme
+      theme: chartTheme,
     }),
     [lineData, chartTheme]
   );
+
+  // ===== 5. 注释代码函数区 =====
+  /**
+   * handleExportBehaviorData
+   * 示例：处理导出用户行为数据的逻辑
+   */
+  // const handleExportBehaviorData = () => {
+  //   console.log("导出数据", filteredEvents);
+  // };
+
+  // ===== 6. 错误处理函数区域 =====
+
+  // ===== 7. 数据处理函数区域 =====
+  /** 加载用户行为相关数据 */
+  const loadData = useCallback(async () => {
+    const result = await getBehaviorFullData({
+      userId: activeUserId,
+      range,
+      keyword,
+      setLoading,
+      onError: (err) => showErrorFn(err, "加载行为分析数据"),
+    });
+
+    if (result) {
+      setUsers(result.users);
+      setTimeline(result.timeline);
+      setEvents(result.events);
+    }
+  }, [activeUserId, range, keyword, showErrorFn]);
+
+  /** 重置所有筛选条件 */
+  const handleResetFilter = useCallback(() => {
+    setKeyword("");
+    setActiveUserId("6201");
+    setRange("today");
+  }, []);
+
+  /** 处理搜索关键字变更 */
+  const handleKeywordChange = useCallback((value: string) => {
+    setKeyword(value);
+  }, []);
+
+  /** 处理用户切换 */
+  const handleUserChange = useCallback((key: React.Key) => {
+    setActiveUserId(key as string);
+  }, []);
+
+  /** 处理视图切换 */
+  const handleViewChange = useCallback((key: React.Key) => {
+    setActiveView(key as "timeline" | "list");
+  }, []);
+
+  /** 处理时间范围变更 */
+  const handleRangeChange = useCallback(
+    (
+      value: {
+        start: { toDate: (tz: string) => Date };
+        end: { toDate: (tz: string) => Date };
+      } | null
+    ) => {
+      if (!value || !value.start || !value.end) {
+      setRange("today");
+      return;
+    }
+    try {
+      const timeZone = getLocalTimeZone();
+      const startDate = value.start.toDate(timeZone);
+      const endDate = value.end.toDate(timeZone);
+      const diffMs = endDate.getTime() - startDate.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+      if (diffDays <= 1) {
+        setRange("today");
+      } else {
+        setRange("7d");
+      }
+    } catch {
+      setRange("today");
+    }
+  }, []);
+
+  // ===== 8. UI渲染逻辑区域 =====
+
+  // ===== 9. 页面初始化与事件绑定 =====
+  /** 初始化及筛选变更时加载数据 */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadData]);
+
+  // ===== 10. TODO任务管理区域 =====
 
   return (
     <div className="space-y-4">
@@ -169,7 +295,7 @@ function UserBehaviorPage() {
                 className="w-64"
                 placeholder="按操作类型、模块或关键字搜索"
                 value={keyword}
-                onValueChange={value => setKeyword(value)}
+                onValueChange={handleKeywordChange}
               />
               <DateRangePicker
                 aria-label="用户行为时间范围"
@@ -185,31 +311,13 @@ function UserBehaviorPage() {
                     "hover:border-[var(--primary-color)]/80!",
                     "group-data-[focus=true]:border-[var(--primary-color)]!",
                     "transition-colors",
-                    "shadow-none"
+                    "shadow-none",
                   ].join(" "),
                   input: "text-xs",
-                  selectorButton: "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors"
+                  selectorButton:
+                    "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors",
                 }}
-                onChange={value => {
-                  if (!value || !value.start || !value.end) {
-                    setRange("today");
-                    return;
-                  }
-                  try {
-                    const timeZone = getLocalTimeZone();
-                    const startDate = value.start.toDate(timeZone);
-                    const endDate = value.end.toDate(timeZone);
-                    const diffMs = endDate.getTime() - startDate.getTime();
-                    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-                    if (diffDays <= 1) {
-                      setRange("today");
-                    } else {
-                      setRange("7d");
-                    }
-                  } catch {
-                    setRange("today");
-                  }
-                }}
+                onChange={handleRangeChange}
               />
               <Tooltip content="重置筛选">
                 <Button
@@ -230,7 +338,7 @@ function UserBehaviorPage() {
                 aria-label="选择用户"
                 size="sm"
                 selectedKey={activeUserId}
-                onSelectionChange={(key) => setActiveUserId(key as string)}
+                onSelectionChange={handleUserChange}
                 classNames={{
                   tabList: "p-0 h-7 gap-0",
                   tab: "h-7 px-4 text-xs",
@@ -253,11 +361,11 @@ function UserBehaviorPage() {
               aria-label="用户行为分析视图"
               size="sm"
               selectedKey={activeView}
-              onSelectionChange={(key: React.Key) => setActiveView(key as "timeline" | "list")}
+              onSelectionChange={handleViewChange}
               className="mt-1"
               classNames={{
                 tabList: "p-0 h-8 gap-0",
-                tab: "h-8 px-3 text-xs"
+                tab: "h-8 px-3 text-xs",
               }}
             >
               <Tab key="timeline" title="行为轨迹时序图">
@@ -276,7 +384,9 @@ function UserBehaviorPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 text-[10px]">
-                          <span className="text-[var(--text-color-secondary)]">当前分析基于上方选择的时间范围</span>
+                          <span className="text-[var(--text-color-secondary)]">
+                            当前分析基于上方选择的时间范围
+                          </span>
                         </div>
                       </div>
                       <div className="h-60">
@@ -306,7 +416,7 @@ function UserBehaviorPage() {
                             未找到匹配的行为记录，可尝试调整关键字或切换用户。
                           </div>
                         ) : (
-                          filteredEvents.map(item => {
+                          filteredEvents.map((item) => {
                             const riskProps = getRiskChipProps(item.riskLevel);
                             return (
                               <div
@@ -315,12 +425,15 @@ function UserBehaviorPage() {
                               >
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-medium">{item.action}</span>
+                                    <span className="font-medium">
+                                      {item.action}
+                                    </span>
                                     <Chip
                                       size="sm"
                                       variant="flat"
                                       className={
-                                        "text-[10px] px-2 h-5 " + riskProps.className
+                                        "text-[10px] px-2 h-5 " +
+                                        riskProps.className
                                       }
                                       color={riskProps.color}
                                     >
@@ -375,7 +488,8 @@ function UserBehaviorPage() {
                     size="sm"
                     variant="flat"
                     className={
-                      "text-xs " + getRiskChipProps(activeUser.riskLevel).className
+                      "text-xs " +
+                      getRiskChipProps(activeUser.riskLevel).className
                     }
                     color={getRiskChipProps(activeUser.riskLevel).color}
                   >
@@ -384,15 +498,21 @@ function UserBehaviorPage() {
                 </div>
                 <div className="space-y-2">
                   <div className="space-y-1">
-                    <div className="text-[var(--text-color-secondary)]">所属部门</div>
+                    <div className="text-[var(--text-color-secondary)]">
+                      所属部门
+                    </div>
                     <div>{activeUser.department}</div>
                   </div>
                   <div className="space-y-1">
-                    <div className="text-[var(--text-color-secondary)]">最近登录时间</div>
+                    <div className="text-[var(--text-color-secondary)]">
+                      最近登录时间
+                    </div>
                     <div>{activeUser.lastLoginAt}</div>
                   </div>
                   <div className="space-y-1">
-                    <div className="text-[var(--text-color-secondary)]">最近登录 IP</div>
+                    <div className="text-[var(--text-color-secondary)]">
+                      最近登录 IP
+                    </div>
                     <div>{activeUser.lastLoginIp}</div>
                   </div>
                 </div>
@@ -401,9 +521,13 @@ function UserBehaviorPage() {
                     安全建议（示例）
                   </div>
                   <ul className="list-disc pl-4 space-y-1 text-xs text-[var(--text-color-secondary)]">
-                    <li>定期检查该用户的高风险操作记录，如批量删除、敏感配置变更。</li>
+                    <li>
+                      定期检查该用户的高风险操作记录，如批量删除、敏感配置变更。
+                    </li>
                     <li>建议开启登录保护策略，如 IP 白名单或多因素认证。</li>
-                    <li>结合系统日志模块，交叉验证该用户操作与系统异常之间的关联。</li>
+                    <li>
+                      结合系统日志模块，交叉验证该用户操作与系统异常之间的关联。
+                    </li>
                   </ul>
                 </div>
               </>
@@ -415,4 +539,6 @@ function UserBehaviorPage() {
   );
 }
 
+// ===== 11. 导出区域 =====
 export default UserBehaviorPage;
+

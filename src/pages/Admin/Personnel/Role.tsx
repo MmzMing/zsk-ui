@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect } from "react";
+// ===== 1. 依赖导入区域 =====
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Button,
   Card,
@@ -17,31 +18,50 @@ import {
 } from "@heroui/react";
 import { FiCopy, FiEdit2, FiKey, FiLayers, FiPlus, FiTrash2, FiX } from "react-icons/fi";
 import { Loading } from "@/components/Loading";
-
 import {
   type RoleItem,
   type PermissionGroup,
   fetchRoleList,
   createRole,
   updateRole,
-  deleteRole
+  deleteRole,
+  batchDeleteRoles,
+  batchCopyRoles
 } from "@/api/admin/personnel";
 import { mockPermissionGroups } from "@/api/mock/admin/personnel";
 
+// ===== 2. TODO待处理导入区域 =====
+
+// ===== 3. 状态控制逻辑区域 =====
+/**
+ * 角色表单状态类型定义
+ */
 type RoleFormState = {
+  /** 角色ID（编辑模式） */
   id?: string;
+  /** 角色名称 */
   name: string;
+  /** 角色描述 */
   description: string;
 };
 
+/**
+ * 权限分配状态类型定义
+ */
 type PermissionAssignState = {
+  /** 角色ID */
   roleId: string;
+  /** 角色名称 */
   name: string;
+  /** 已选权限ID列表 */
   permissions: string[];
 };
 
-const permissionGroups: PermissionGroup[] = mockPermissionGroups;
-
+// ===== 4. 通用工具函数区域 =====
+/**
+ * 创建空的角色表单初始状态
+ * @returns 初始化的表单状态对象
+ */
 function createEmptyRoleForm(): RoleFormState {
   return {
     name: "",
@@ -49,48 +69,90 @@ function createEmptyRoleForm(): RoleFormState {
   };
 }
 
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+/**
+ * 显示角色表单验证错误
+ * @param message 错误信息
+ * @param setError 设置错误状态的函数
+ */
+function showRoleFormError(message: string, setError: (msg: string) => void) {
+  setError(message);
+}
+
+// ===== 7. 数据处理函数区域 =====
+/**
+ * 格式化权限显示文本
+ * @param count 已选数量
+ * @param total 总数量
+ * @returns 格式化后的字符串
+ */
+function formatPermissionLabel(count: number, total: number): string {
+  return `${count} / ${total}`;
+}
+
+// ===== 8. UI渲染逻辑区域 =====
+/**
+ * 角色管理页面组件
+ * @returns 页面JSX元素
+ */
 function RolePage() {
+  // 列表数据与加载状态
   const [roles, setRoles] = useState<RoleItem[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // 表单相关状态
   const [roleForm, setRoleForm] = useState<RoleFormState | null>(null);
   const [roleFormMode, setRoleFormMode] = useState<"create" | "edit">("create");
   const [roleFormError, setRoleFormError] = useState("");
 
-  const [permissionAssign, setPermissionAssign] = useState<PermissionAssignState | null>(
-    null
-  );
+  // 权限分配相关状态
+  const [permissionAssign, setPermissionAssign] = useState<PermissionAssignState | null>(null);
 
+  // 分页状态
   const [page, setPage] = useState(1);
   const pageSize = 6;
 
-  const hasSelection = selectedIds.length > 0;
+  // 权限常量数据
+  const permissionGroups: PermissionGroup[] = mockPermissionGroups;
 
-  // 获取角色列表
-  const loadRoleList = React.useCallback(async () => {
-    setIsLoading(true);
-    const res = await fetchRoleList({ page, pageSize });
-    if (res.code === 200 && !res.msg) {
+  // 是否有选中的项
+  const hasSelection = selectedIds.length > 0;
+  
+  // 总权限数量计算
+  const totalPermissionCount = useMemo(
+    () => new Set(permissionGroups.flatMap(group => group.items.map(item => item.id))).size,
+    [permissionGroups]
+  );
+
+  // 总页数计算
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  /**
+   * 获取角色列表数据
+   */
+  const loadRoleList = useCallback(async () => {
+    const res = await fetchRoleList({ page, pageSize }, setIsLoading);
+    
+    if (res && res.code === 200) {
       setRoles(res.data.list);
       setTotal(res.data.total);
     }
-    setIsLoading(false);
-  }, [page]);
+  }, [page, pageSize]);
 
+  // 初始化与页码变更监听
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRoleList();
   }, [loadRoleList]);
 
-  const totalPermissionCount = useMemo(
-    () => new Set(permissionGroups.flatMap(group => group.items.map(item => item.id))).size,
-    []
-  );
-
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
+  /**
+   * 处理表格选择变更
+   * @param keys 选中的key集合
+   */
   const handleTableSelectionChange = (keys: "all" | Set<React.Key>) => {
     if (keys === "all") {
       setSelectedIds(roles.map(item => item.id));
@@ -99,12 +161,19 @@ function RolePage() {
     setSelectedIds(Array.from(keys).map(String));
   };
 
+  /**
+   * 打开新增角色弹窗
+   */
   const handleOpenCreate = () => {
     setRoleForm(createEmptyRoleForm());
     setRoleFormMode("create");
     setRoleFormError("");
   };
 
+  /**
+   * 打开编辑角色弹窗
+   * @param role 目标角色对象
+   */
   const handleOpenEdit = (role: RoleItem) => {
     setRoleForm({
       id: role.id,
@@ -115,27 +184,34 @@ function RolePage() {
     setRoleFormError("");
   };
 
+  /**
+   * 处理表单字段变更
+   * @param patch 变更的字段对象
+   */
   const handleRoleFormChange = (patch: Partial<RoleFormState>) => {
     setRoleForm(previous => {
-      if (!previous) {
-        return previous;
-      }
+      if (!previous) return previous;
       return { ...previous, ...patch };
     });
   };
 
+  /**
+   * 关闭角色表单弹窗
+   */
   const handleCloseRoleForm = () => {
     setRoleForm(null);
     setRoleFormError("");
   };
 
+  /**
+   * 提交角色表单（新增或更新）
+   */
   const handleSubmitRoleForm = async () => {
-    if (!roleForm) {
-      return;
-    }
+    if (!roleForm) return;
+    
     const trimmedName = roleForm.name.trim();
     if (!trimmedName) {
-      setRoleFormError("角色名称为必填项，请补充后再提交。");
+      showRoleFormError("角色名称为必填项，请补充后再提交。", setRoleFormError);
       return;
     }
 
@@ -145,75 +221,73 @@ function RolePage() {
         description: roleForm.description.trim(),
         permissions: []
       });
-      if (res.code === 200 && !res.msg) {
+      
+      if (res && res.code === 200) {
         addToast({
           title: "角色新增成功",
           description: `已新增角色「${trimmedName}」。`,
           color: "success"
         });
         loadRoleList();
-        setRoleForm(null);
-        setRoleFormError("");
+        handleCloseRoleForm();
       }
     } else if (roleForm.id) {
       const res = await updateRole({
-        id: roleForm.id,
+        id: roleForm.id!,
         name: trimmedName,
         description: roleForm.description.trim(),
-        permissions: [] // 编辑时不改变权限，通常由权限分配功能处理
+        permissions: [] 
       });
-      if (res.code === 200 && !res.msg) {
+      
+      if (res && res.code === 200) {
         addToast({
           title: "角色更新成功",
           description: `已更新角色「${trimmedName}」的信息。`,
           color: "success"
         });
         loadRoleList();
-        setRoleForm(null);
-        setRoleFormError("");
+        handleCloseRoleForm();
       }
     }
   };
 
+  /**
+   * 批量删除角色
+   */
   const handleBatchDeleteRoles = async () => {
-    if (!hasSelection) {
-      return;
-    }
+    if (!hasSelection) return;
+    
     const confirmed = window.confirm(
       `确定要删除选中的 ${selectedIds.length} 个角色吗？删除后对应用户的权限需同步核查。`
     );
-    if (!confirmed) {
-      return;
-    }
-    // 循环删除或调用批量接口（如果API支持）
-    let successCount = 0;
-    for (const id of selectedIds) {
-      const res = await deleteRole(id);
-      if (res.code === 200 && !res.msg) {
-        successCount++;
-      }
-    }
+    if (!confirmed) return;
+
+    const res = await batchDeleteRoles(selectedIds);
     
-    if (successCount > 0) {
+    if (res && res.code === 200) {
       addToast({
-        title: successCount === selectedIds.length ? "批量删除成功" : `部分删除成功 (${successCount}/${selectedIds.length})`,
-        description: `已删除 ${successCount} 个角色。`,
-        color: successCount === selectedIds.length ? "success" : "warning"
+        title: "批量删除成功",
+        description: `已成功删除 ${selectedIds.length} 个角色。`,
+        color: "success"
       });
       setSelectedIds([]);
       loadRoleList();
     }
   };
 
+  /**
+   * 删除单个角色
+   * @param role 目标角色对象
+   */
   const handleDeleteSingleRole = async (role: RoleItem) => {
     const confirmed = window.confirm(
       `确定要删除角色「${role.name}」吗？建议在确认无用户绑定该角色后再执行。`
     );
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
+
     const res = await deleteRole(role.id);
-    if (res.code === 200 && !res.msg) {
+    
+    if (res && res.code === 200) {
       addToast({
         title: "角色删除成功",
         description: `已删除角色「${role.name}」。`,
@@ -224,6 +298,10 @@ function RolePage() {
     }
   };
 
+  /**
+   * 打开权限分配弹窗
+   * @param role 目标角色对象
+   */
   const handleOpenAssignPermission = (role: RoleItem) => {
     setPermissionAssign({
       roleId: role.id,
@@ -232,87 +310,104 @@ function RolePage() {
     });
   };
 
+  /**
+   * 确认并保存权限分配
+   */
   const handleConfirmAssignPermission = async () => {
-    if (!permissionAssign) {
-      return;
-    }
-    // 对接更新接口
-    try {
-      const res = await updateRole({
-        id: permissionAssign.roleId,
-        name: permissionAssign.name,
-        description: roles.find(r => r.id === permissionAssign.roleId)?.description || "",
-        permissions: [...permissionAssign.permissions]
+    if (!permissionAssign) return;
+
+    const targetRole = roles.find(r => r.id === permissionAssign.roleId);
+    
+    const res = await updateRole({
+      id: permissionAssign.roleId,
+      name: permissionAssign.name,
+      description: targetRole?.description || "",
+      permissions: [...permissionAssign.permissions]
+    });
+    
+    if (res && res.code === 200) {
+      addToast({
+        title: "权限更新成功",
+        description: `已更新角色「${permissionAssign.name}」的权限配置。`,
+        color: "success"
       });
-      if (res.code === 200 && !res.msg) {
-        addToast({
-          title: "权限更新成功",
-          description: `已更新角色「${permissionAssign.name}」的权限配置。`,
-          color: "success"
-        });
-        loadRoleList();
-        setPermissionAssign(null);
-      }
-    } catch (error) {
-      console.error("Assign permission failed:", error);
+      loadRoleList();
+      setPermissionAssign(null);
     }
   };
 
+  /**
+   * 复制单个角色
+   * @param role 目标角色对象
+   */
   const handleCopyRole = async (role: RoleItem) => {
     const baseName = `${role.name}（副本）`;
     let name = baseName;
     let index = 1;
+    
     while (roles.some(item => item.name === name)) {
       name = `${baseName}${index}`;
       index += 1;
     }
-    try {
-      const res = await createRole({
-        name,
-        description: role.description,
-        permissions: [...role.permissions]
+
+    const res = await createRole({
+      name,
+      description: role.description,
+      permissions: [...role.permissions]
+    });
+    
+    if (res && res.code === 200) {
+      addToast({
+        title: "角色复制成功",
+        description: `已成功复制角色「${role.name}」并创建新角色「${name}」。`,
+        color: "success"
       });
-      if (res.code === 200 && !res.msg) {
-        addToast({
-          title: "角色复制成功",
-          description: `已成功复制角色「${role.name}」并创建新角色「${name}」。`,
-          color: "success"
-        });
-        loadRoleList();
-      }
-    } catch (error) {
-      console.error("Copy role failed:", error);
+      loadRoleList();
     }
   };
 
-  const handleBatchCopy = () => {
-    if (!hasSelection) {
-      return;
+  /**
+   * 批量复制角色
+   */
+  const handleBatchCopy = async () => {
+    if (!hasSelection) return;
+
+    const confirmed = window.confirm(
+      `确定要复制选中的 ${selectedIds.length} 个角色吗？`
+    );
+    if (!confirmed) return;
+
+    const res = await batchCopyRoles(selectedIds);
+    
+    if (res && res.code === 200) {
+      addToast({
+        title: "批量复制成功",
+        description: `已成功复制 ${selectedIds.length} 个角色。`,
+        color: "success"
+      });
+      loadRoleList();
+      setSelectedIds([]);
     }
-    const target = roles.find(item => item.id === selectedIds[0]);
-    if (!target) {
-      return;
-    }
-    handleCopyRole(target);
   };
 
+  /**
+   * 处理分页切换
+   * @param next 下一页页码
+   */
   const handlePageChange = (next: number) => {
-    if (next < 1 || next > totalPages) {
-      return;
-    }
+    if (next < 1 || next > totalPages) return;
     setPage(next);
     setSelectedIds([]);
   };
 
+  // 已选权限数量计算
   const selectedPermissionCount = useMemo(() => {
-    if (!permissionAssign) {
-      return 0;
-    }
-    return permissionAssign.permissions.length;
+    return permissionAssign?.permissions.length || 0;
   }, [permissionAssign]);
 
   return (
     <div className="space-y-4">
+      {/* 页面头部 */}
       <div className="space-y-1">
         <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] px-3 py-1 text-xs text-[var(--primary-color)]">
           <span>人员管理 · 角色管理</span>
@@ -326,6 +421,7 @@ function RolePage() {
       </div>
 
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+        {/* 工具栏 */}
         <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
@@ -365,6 +461,7 @@ function RolePage() {
           </div>
         </div>
 
+        {/* 角色表格 */}
         <div className="p-3 space-y-3 text-xs">
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
             <Table
@@ -375,21 +472,11 @@ function RolePage() {
               onSelectionChange={handleTableSelectionChange}
             >
               <TableHeader className="bg-[var(--bg-elevated)]/80">
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  角色名称
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  角色描述
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  权限数
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  创建时间
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  操作
-                </TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">角色名称</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">角色描述</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">权限数</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">创建时间</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">操作</TableColumn>
               </TableHeader>
               <TableBody
                 items={roles}
@@ -415,7 +502,7 @@ function RolePage() {
                     </TableCell>
                     <TableCell className="px-3 py-2">
                       <Chip size="sm" variant="flat" color="primary" className="text-xs">
-                        {role.permissions.length} / {totalPermissionCount}
+                        {formatPermissionLabel(role.permissions.length, totalPermissionCount)}
                       </Chip>
                     </TableCell>
                     <TableCell className="px-3 py-2">
@@ -467,6 +554,8 @@ function RolePage() {
               </TableBody>
             </Table>
           </div>
+          
+          {/* 分页 */}
           <div className="mt-3 flex flex-col gap-2 text-xs md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <span>
@@ -483,12 +572,10 @@ function RolePage() {
               />
             </div>
           </div>
-          <div className="mt-1 text-xs text-[var(--text-color-secondary)]">
-            角色与权限采用解耦设计，分页与当前筛选条件可与服务端角色查询接口联动。
-          </div>
         </div>
       </Card>
 
+      {/* 角色编辑弹窗 */}
       {roleForm && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md rounded-[var(--radius-base)] bg-[var(--bg-elevated)] border border-[var(--border-color)] shadow-lg">
@@ -517,6 +604,7 @@ function RolePage() {
                 <Input
                   size="sm"
                   variant="bordered"
+                  placeholder="请输入角色名称"
                   value={roleForm.name}
                   onValueChange={value => handleRoleFormChange({ name: value })}
                   classNames={{
@@ -533,9 +621,6 @@ function RolePage() {
                     input: "text-xs"
                   }}
                 />
-                <div className="text-xs text-[var(--text-color-secondary)]">
-                  角色名称需保证唯一，例如「系统管理员」「内容运营」「审核员」等。
-                </div>
               </div>
               <div className="space-y-1">
                 <div>角色描述</div>
@@ -544,6 +629,7 @@ function RolePage() {
                   maxRows={5}
                   size="sm"
                   variant="bordered"
+                  placeholder="请输入角色职责描述"
                   value={roleForm.description}
                   onValueChange={value => handleRoleFormChange({ description: value })}
                   classNames={{
@@ -559,9 +645,6 @@ function RolePage() {
                     input: "text-xs"
                   }}
                 />
-                <div className="text-xs text-[var(--text-color-secondary)]">
-                  建议简要说明角色的职责边界，便于团队成员理解角色用途。
-                </div>
               </div>
             </div>
             <div className="px-4 py-3 border-t border-[var(--border-color)] flex items-center justify-end gap-2">
@@ -585,13 +668,12 @@ function RolePage() {
         </div>
       )}
 
+      {/* 权限分配弹窗 */}
       {permissionAssign && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-2xl rounded-[var(--radius-base)] bg-[var(--bg-elevated)] border border-[var(--border-color)] shadow-lg">
             <div className="px-4 py-3 border-b border-[var(--border-color)] flex items-center justify-between">
-              <div className="text-sm font-medium">
-                分配权限 · {permissionAssign.name}
-              </div>
+              <div className="text-sm font-medium">分配权限 · {permissionAssign.name}</div>
               <Button
                 isIconOnly
                 size="sm"
@@ -612,18 +694,10 @@ function RolePage() {
                   已选 {selectedPermissionCount} / {totalPermissionCount}
                 </Chip>
               </div>
-              <div className="text-xs text-[var(--text-color-secondary)]">
-                可按模块全选 / 反选权限项，勾选结果会实时统计在右上角，实际项目中可与后端权限树结构同步。
-              </div>
+              
               <div className="space-y-3">
                 {permissionGroups.map(group => {
                   const groupIds = group.items.map(item => item.id);
-                  const allInGroupSelected = groupIds.every(id =>
-                    permissionAssign.permissions.includes(id)
-                  );
-                  const someInGroupSelected =
-                    !allInGroupSelected &&
-                    groupIds.some(id => permissionAssign.permissions.includes(id));
                   return (
                     <Card
                       key={group.id}
@@ -643,81 +717,55 @@ function RolePage() {
                               variant="light"
                               className="h-7 text-xs"
                               onPress={() => {
-                                setPermissionAssign(previous => {
-                                  if (!previous) {
-                                    return previous;
-                                  }
+                                setPermissionAssign(prev => {
+                                  if (!prev) return prev;
                                   return {
-                                    ...previous,
-                                    permissions: Array.from(
-                                      new Set([...previous.permissions, ...groupIds])
-                                    )
+                                    ...prev,
+                                    permissions: Array.from(new Set([...prev.permissions, ...groupIds]))
                                   };
                                 });
                               }}
                             >
-                              全选本模块
+                              全选
                             </Button>
                             <Button
                               size="sm"
                               variant="light"
                               className="h-7 text-xs"
                               onPress={() => {
-                                setPermissionAssign(previous => {
-                                  if (!previous) {
-                                    return previous;
-                                  }
+                                setPermissionAssign(prev => {
+                                  if (!prev) return prev;
                                   return {
-                                    ...previous,
-                                    permissions: previous.permissions.filter(
-                                      id => !groupIds.includes(id)
-                                    )
+                                    ...prev,
+                                    permissions: prev.permissions.filter(id => !groupIds.includes(id))
                                   };
                                 });
                               }}
                             >
-                              反选本模块
+                              清空
                             </Button>
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {group.items.map(item => {
-                            const selected = permissionAssign.permissions.includes(item.id);
-                            return (
-                              <Checkbox
-                                key={item.id}
-                                isSelected={selected}
-                                onValueChange={value => {
-                                  setPermissionAssign(previous => {
-                                    if (!previous) {
-                                      return previous;
-                                    }
-                                    if (value) {
-                                      return {
-                                        ...previous,
-                                        permissions: [...previous.permissions, item.id]
-                                      };
-                                    }
-                                    return {
-                                      ...previous,
-                                      permissions: previous.permissions.filter(
-                                        id => id !== item.id
-                                      )
-                                    };
-                                  });
-                                }}
-                                className="text-xs"
-                              >
-                                {item.name}
-                              </Checkbox>
-                            );
-                          })}
+                          {group.items.map(item => (
+                            <Checkbox
+                              key={item.id}
+                              isSelected={permissionAssign.permissions.includes(item.id)}
+                              onValueChange={value => {
+                                setPermissionAssign(prev => {
+                                  if (!prev) return prev;
+                                  const newPermissions = value
+                                    ? [...prev.permissions, item.id]
+                                    : prev.permissions.filter(id => id !== item.id);
+                                  return { ...prev, permissions: newPermissions };
+                                });
+                              }}
+                              className="text-xs"
+                            >
+                              {item.name}
+                            </Checkbox>
+                          ))}
                         </div>
-                        {someInGroupSelected && !allInGroupSelected && (
-                          <div className="text-xs text-[var(--text-color-secondary)]">
-                            已部分勾选本模块权限。
-                          </div>
-                        )}
                       </div>
                     </Card>
                   );
@@ -748,4 +796,10 @@ function RolePage() {
   );
 }
 
+// ===== 9. 页面初始化与事件绑定 =====
+// (逻辑已包含在组件内部)
+
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====
 export default RolePage;

@@ -1,3 +1,4 @@
+// ===== 1. 依赖导入区域 =====
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
   Button,
@@ -14,12 +15,14 @@ import {
   Textarea,
   Tab,
   Tooltip,
-  SelectItem
+  SelectItem,
+  Listbox,
+  ListboxItem,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  addToast
 } from "@heroui/react";
-import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
-import { AdminTabs } from "@/components/Admin/AdminTabs";
-import { AdminSelect } from "@/components/Admin/AdminSelect";
-import { Loading } from "@/components/Loading";
 import {
   FiFileText,
   FiInfo,
@@ -34,24 +37,34 @@ import {
   FiTag,
   FiImage
 } from "react-icons/fi";
-import { Listbox, ListboxItem, Popover, PopoverContent, PopoverTrigger } from "@heroui/react";
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+import { AdminTabs } from "@/components/Admin/AdminTabs";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
+import { Loading } from "@/components/Loading";
 import {
+  initDocumentUpload,
+  finishDocumentUpload,
   removeDocumentUploadTask,
+  batchRemoveDocumentUploadTasks,
   retryDocumentUploadTask,
   fetchDocumentCategories,
   fetchTagOptions,
   fetchDocumentUploadTaskList,
   fetchDraftList,
+  createDocument,
   type DocumentUploadTaskItem,
   type DocCategory,
   type DocTag,
   type DocumentItem as DraftItem
-} from "../../../api/admin/document";
+} from "@/api/admin/document";
 
+// ===== 2. TODO待处理导入区域 =====
+
+// ===== 3. 状态控制逻辑区域 =====
 type UploadStatus = DocumentUploadTaskItem["status"];
-
 type PermissionType = "public" | "private" | "password";
 
+// ===== 4. 通用工具函数区域 =====
 function formatSize(size: number) {
   if (size <= 0) return "-";
   const gb = 1024 * 1024 * 1024;
@@ -76,9 +89,24 @@ function getStatusColor(status: UploadStatus) {
   return "danger";
 }
 
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+
+// ===== 7. 数据处理函数区域 =====
+
+// ===== 8. UI渲染逻辑区域 =====
+
+// ===== 9. 页面初始化与事件绑定 =====
+/**
+ * 文档上传页面组件
+ * @returns 页面JSX元素
+ */
 function DocumentUploadPage() {
-  const [loading, setLoading] = useState(false);
-  // 基础信息
+  // 全局加载状态
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // 基础信息表单状态
   const [title, setTitle] = useState("");
   const [isTitleTouched, setIsTitleTouched] = useState(false);
   const [category, setCategory] = useState<string>("前端开发");
@@ -86,57 +114,36 @@ function DocumentUploadPage() {
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set([]));
   const [description, setDescription] = useState("");
   
+  // 选项数据
   const [categoryData, setCategoryData] = useState<DocCategory[]>([]);
   const [tagOptions, setTagOptions] = useState<DocTag[]>([]);
 
-  // 消息提示
+  // 消息提示与上传状态
   const [message, setMessage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
-  // 文件上传
+  // 文件上传状态
   const [selectedFileName, setSelectedFileName] = useState("");
   const [selectedFileSize, setSelectedFileSize] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 任务列表
+  // 任务列表状态
   const [tasks, setTasks] = useState<DocumentUploadTaskItem[]>([]);
   const [statusFilter] = useState<"all" | UploadStatus>("all");
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(1);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   
-  // 草稿
+  // 草稿列表状态
   const [drafts, setDrafts] = useState<DraftItem[]>([]);
 
-  useEffect(() => {
-    async function loadInitialData() {
-      setLoading(true);
-      try {
-        const [cats, tags, taskList, draftList] = await Promise.all([
-          fetchDocumentCategories(),
-          fetchTagOptions(),
-          fetchDocumentUploadTaskList({ page: 1, pageSize: 10 }),
-          fetchDraftList({ page: 1, pageSize: 10 })
-        ]);
-        if (cats && cats.length > 0) setCategoryData(cats);
-        if (tags && tags.length > 0) setTagOptions(tags);
-        if (taskList && taskList.list) setTasks(taskList.list);
-        if (draftList && draftList.list) setDrafts(draftList.list);
-      } catch (error) {
-        console.error("加载上传页面初始数据失败", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadInitialData();
-  }, []);
-
-  // 权限设置
+  // 权限设置状态
   const [permissionType, setPermissionType] = useState<PermissionType>("public");
   const [visibleUsers, setVisibleUsers] = useState<string[]>([]);
   const [visibleUserInput, setVisibleUserInput] = useState("");
   const [accessPassword, setAccessPassword] = useState("");
 
-  // 封面图
+  // 封面图状态
   const DEFAULT_COVER = "/DefaultImage/MyDefaultImage.jpg";
   const [coverImage, setCoverImage] = useState(DEFAULT_COVER);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
@@ -155,6 +162,12 @@ function DocumentUploadPage() {
     });
   }, [tasks, statusFilter, keyword]);
 
+  const total = filteredTasks.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const pageItems = filteredTasks.slice(startIndex, startIndex + pageSize);
+
   const isFormValid = useMemo(() => {
     return title.trim() !== "" && 
            category !== "" && 
@@ -163,21 +176,51 @@ function DocumentUploadPage() {
            selectedFileName !== "";
   }, [title, category, selectedTags, selectedFileName]);
 
-  const total = filteredTasks.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const pageItems = filteredTasks.slice(startIndex, startIndex + pageSize);
+  const hasTaskSelection = selectedTaskIds.length > 0;
 
-  const handlePageChange = (next: number) => {
-    if (next < 1 || next > totalPages) return;
-    setPage(next);
+  /**
+   * 加载初始数据
+   */
+  const loadInitialData = async () => {
+    setIsLoading(true);
+    try {
+      const [catsRes, tagsRes, taskListRes, draftListRes] = await Promise.all([
+        fetchDocumentCategories(),
+        fetchTagOptions(),
+        fetchDocumentUploadTaskList({ page: 1, pageSize: 10 }),
+        fetchDraftList({ page: 1, pageSize: 10 })
+      ]);
+      
+      if (catsRes && catsRes.code === 200) setCategoryData(catsRes.data);
+      if (tagsRes && tagsRes.code === 200) setTagOptions(tagsRes.data);
+      if (taskListRes && taskListRes.code === 200) setTasks(taskListRes.data.list);
+      if (draftListRes && draftListRes.code === 200) setDrafts(draftListRes.data.list);
+    } catch (error) {
+      console.error(error);
+      addToast({
+        title: "数据加载失败",
+        description: "页面初始数据加载异常，请刷新重试。",
+        color: "danger"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  /**
+   * 处理文件选择
+   */
   const handleSelectFile = () => {
     fileInputRef.current?.click();
   };
 
+  /**
+   * 处理文件变更
+   */
   const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = event => {
     const file = event.target.files?.[0];
     if (!file) {
@@ -198,7 +241,7 @@ function DocumentUploadPage() {
       return;
     }
 
-    setMessage(""); // 清除错误提示
+    setMessage("");
     setSelectedFileName(file.name);
     setSelectedFileSize(file.size);
     // 自动填充标题
@@ -208,7 +251,10 @@ function DocumentUploadPage() {
     }
   };
 
-  const handleCreateTask = () => {
+  /**
+   * 创建上传任务
+   */
+  const handleCreateTask = async () => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
       setMessage("请填写文档标题");
@@ -219,62 +265,186 @@ function DocumentUploadPage() {
       return;
     }
 
-    const now = new Date();
-    const newTask: DocumentUploadTaskItem = {
-      id: `doc_task_${now.getTime()}`,
-      title: trimmedTitle,
-      fileName: selectedFileName,
-      size: selectedFileSize,
-      status: "uploading",
-      progress: 0,
-      createdAt: now.toISOString().replace("T", " ").slice(0, 19)
-    };
-
-    setTasks(prev => [newTask, ...prev]);
-    setMessage("已创建上传任务");
     setIsUploading(true);
-    
-    // 模拟上传进度
-    setTimeout(() => {
-      setTasks(prev => prev.map(t => 
-        t.id === newTask.id ? { ...t, progress: 45 } : t
-      ));
-    }, 1000);
+    try {
+      // 1. 初始化上传
+      const initRes = await initDocumentUpload({
+        title: trimmedTitle,
+        fileName: selectedFileName,
+        fileSize: selectedFileSize,
+        fileMd5: "mock_md5", // 实际应计算MD5
+        category,
+        tags: Array.from(selectedTags),
+        description,
+        isPublic: permissionType === "public",
+        price: 0
+      });
 
-    setTimeout(() => {
-      setTasks(prev => prev.map(t => 
-        t.id === newTask.id ? { ...t, progress: 100, status: "success" } : t
-      ));
+      if (initRes && initRes.code === 200) {
+        const { uploadId } = initRes.data;
+        setMessage("正在上传文件...");
+        
+        // 模拟添加到任务列表
+        const now = new Date();
+        const newTask: DocumentUploadTaskItem = {
+          id: uploadId,
+          title: trimmedTitle,
+          fileName: selectedFileName,
+          size: selectedFileSize,
+          status: "uploading",
+          progress: 0,
+          createdAt: now.toISOString().replace("T", " ").slice(0, 19)
+        };
+        setTasks(prev => [newTask, ...prev]);
+
+        // 模拟上传进度
+        // 注意：实际项目中应使用 XMLHttpRequest 或 axios 的 onUploadProgress
+        // 这里仅做简单模拟，并最终调用 finish 接口
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setTasks(prev => prev.map(t => t.id === uploadId ? { ...t, progress: 50 } : t));
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // 2. 完成上传
+        const finishRes = await finishDocumentUpload({
+          uploadId,
+          status: "success"
+        });
+
+        if (finishRes && finishRes.code === 200) {
+          setTasks(prev => prev.map(t => 
+            t.id === uploadId ? { ...t, progress: 100, status: "success" } : t
+          ));
+          setMessage("文档上传成功");
+          addToast({
+            title: "上传成功",
+            description: `文档 ${trimmedTitle} 已上传并发布。`,
+            color: "success"
+          });
+          
+          // 重置表单
+          setTitle("");
+          setSelectedFileName("");
+          setSelectedFileSize(0);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("上传失败，请重试");
+      addToast({
+        title: "上传失败",
+        description: "文件上传过程中发生错误。",
+        color: "danger"
+      });
+    } finally {
       setIsUploading(false);
-      setMessage("文档上传成功");
-    }, 3000);
+    }
   };
 
+  /**
+   * 删除上传任务
+   */
   const handleRemoveTask = async (id: string) => {
-    if (!window.confirm("确定要删除该上传任务吗？")) return;
-    try {
-      await removeDocumentUploadTask(id);
+    const confirmed = window.confirm("确定要删除该上传任务吗？");
+    if (!confirmed) return;
+
+    const res = await removeDocumentUploadTask(id);
+    if (res && res.code === 200) {
       setTasks(prev => prev.filter(t => t.id !== id));
-    } catch {
-      // 演示模式下直接删除
-      setTasks(prev => prev.filter(t => t.id !== id));
+      setSelectedTaskIds(prev => prev.filter(tid => tid !== id));
+      addToast({
+        title: "删除成功",
+        description: "上传任务已移除。",
+        color: "success"
+      });
     }
   };
 
+  /**
+   * 批量删除上传任务
+   */
+  const handleBatchRemoveTasks = async () => {
+    if (selectedTaskIds.length === 0) return;
+    const confirmed = window.confirm(`确定要删除选中的 ${selectedTaskIds.length} 个任务吗？`);
+    if (!confirmed) return;
+
+    const res = await batchRemoveDocumentUploadTasks(selectedTaskIds);
+    if (res && res.code === 200) {
+      setTasks(prev => prev.filter(t => !selectedTaskIds.includes(t.id)));
+      setSelectedTaskIds([]);
+      addToast({
+        title: "批量删除成功",
+        description: `已移除 ${selectedTaskIds.length} 个上传任务。`,
+        color: "success"
+      });
+    }
+  };
+
+  /**
+   * 重试上传任务
+   */
   const handleRetryTask = async (id: string) => {
-    try {
-      await retryDocumentUploadTask(id);
+    const res = await retryDocumentUploadTask(id);
+    if (res && res.code === 200) {
       setTasks(prev => prev.map(t => 
         t.id === id ? { ...t, status: "uploading", progress: 0 } : t
       ));
-    } catch {
-      // 演示模式
-      setTasks(prev => prev.map(t => 
-        t.id === id ? { ...t, status: "uploading", progress: 0 } : t
-      ));
+      addToast({
+        title: "重试中",
+        description: "任务已重新开始上传。",
+        color: "primary"
+      });
     }
   };
 
+  /**
+   * 保存草稿
+   */
+  const handleSaveDraft = async () => {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle && !selectedFileName) {
+      setMessage("没有内容可保存");
+      return;
+    }
+
+    const res = await createDocument({
+      title: trimmedTitle || "未命名文档",
+      category,
+      content: description, // 暂存描述为内容
+      status: "draft",
+      tags: Array.from(selectedTags),
+      cover: coverImage
+    });
+
+    if (res && res.code === 200) {
+      setMessage("草稿已保存");
+      addToast({
+        title: "草稿保存成功",
+        description: "文档已保存至草稿箱。",
+        color: "success"
+      });
+      // 刷新草稿列表
+      const draftRes = await fetchDraftList({ page: 1, pageSize: 10 });
+      if (draftRes && draftRes.code === 200) {
+        setDrafts(draftRes.data.list);
+      }
+    }
+  };
+
+  /**
+   * 加载草稿
+   */
+  const handleLoadDraft = (draft: DraftItem) => {
+    setTitle(draft.title);
+    setCategory(draft.category);
+    setDescription(draft.description || "");
+    setMessage("已加载草稿");
+  };
+
+  /**
+   * 封面选择与变更
+   */
   const handleSelectCover = () => {
     coverInputRef.current?.click();
   };
@@ -287,34 +457,23 @@ function DocumentUploadPage() {
     }
   };
 
-  const handleSaveDraft = () => {
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle && !selectedFileName) {
-      setMessage("没有内容可保存");
-      return;
-    }
-    const now = new Date();
-    const newDraft: DraftItem = {
-      id: `${now.getTime()}`,
-      title: trimmedTitle || "未命名文档",
-      category,
-      description,
-      status: "draft",
-      readCount: 0,
-      likeCount: 0,
-      commentCount: 0,
-      createdAt: now.toISOString().replace("T", " ").slice(0, 19),
-      updatedAt: now.toISOString().replace("T", " ").slice(0, 19)
-    };
-    setDrafts(prev => [newDraft, ...prev]);
-    setMessage("草稿已保存");
+  /**
+   * 页码变更
+   */
+  const handlePageChange = (next: number) => {
+    if (next < 1 || next > totalPages) return;
+    setPage(next);
   };
 
-  const handleLoadDraft = (draft: DraftItem) => {
-    setTitle(draft.title);
-    setCategory(draft.category);
-    setDescription(draft.description || "");
-    setMessage("已加载草稿");
+  /**
+   * 表格多选处理
+   */
+  const handleTaskSelectionChange = (keys: "all" | Set<React.Key>) => {
+    if (keys === "all") {
+      setSelectedTaskIds(tasks.map(item => item.id));
+      return;
+    }
+    setSelectedTaskIds(Array.from(keys).map(String));
   };
 
   return (
@@ -399,7 +558,7 @@ function DocumentUploadPage() {
                     aria-label="文档分类"
                     className="w-full justify-between h-10 border-[var(--border-color)] hover:border-[var(--primary-color)] bg-[var(--bg-elevated)]/30 text-xs font-normal px-3"
                     endContent={<FiChevronRight className="text-[var(--text-color-secondary)] rotate-90" />}
-                    isLoading={loading}
+                    isLoading={isLoading}
                   >
                     {category && category !== "未分类" ? (
                       <div className="flex items-center gap-1">
@@ -511,7 +670,7 @@ function DocumentUploadPage() {
                   selectedKeys={selectedTags}
                   onSelectionChange={(keys) => setSelectedTags(keys as Set<string>)}
                   startContent={<FiTag className="text-[var(--text-color-secondary)] text-xs" />}
-                  isLoading={loading}
+                  isLoading={isLoading}
                   classNames={{
                     trigger: [
                       "h-10",
@@ -732,7 +891,7 @@ function DocumentUploadPage() {
                 />
                 {!selectedFileName ? (
                   <div 
-                    className={`border-2 border-dashed border-[var(--border-color)] rounded-xl h-48 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-[var(--primary-color)] hover:bg-[var(--bg-elevated)]/50 transition-colors ${loading ? "opacity-50 pointer-events-none" : ""}`}
+                    className={`border-2 border-dashed border-[var(--border-color)] rounded-xl h-48 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-[var(--primary-color)] hover:bg-[var(--bg-elevated)]/50 transition-colors ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={handleSelectFile}
                   >
                     <div className="h-10 w-10 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center text-[var(--text-color-secondary)]">
@@ -788,8 +947,8 @@ function DocumentUploadPage() {
                    className="font-medium"
                    startContent={<FiUploadCloud className="text-lg" />}
                    onPress={handleCreateTask}
-                   isLoading={isUploading || loading}
-                   isDisabled={!isFormValid || isUploading || loading}
+                   isLoading={isUploading || isLoading}
+                   isDisabled={!isFormValid || isUploading || isLoading}
                  >
                    开始上传并发布
                  </Button>
@@ -799,7 +958,7 @@ function DocumentUploadPage() {
                       variant="flat"
                       className="text-xs"
                       onPress={handleSaveDraft}
-                      isDisabled={loading}
+                      isDisabled={isLoading}
                     >
                       保存草稿
                     </Button>
@@ -807,7 +966,7 @@ function DocumentUploadPage() {
                       fullWidth
                       variant="light"
                       className="text-xs"
-                      isDisabled={loading}
+                      isDisabled={isLoading}
                       onPress={() => {
                         setTitle("");
                         setCategory("未分类");
@@ -837,6 +996,18 @@ function DocumentUploadPage() {
               <div className="text-sm font-medium">上传任务</div>
             </div>
             <div className="flex items-center gap-2">
+               {hasTaskSelection && (
+                 <Button
+                   size="sm"
+                   color="danger"
+                   variant="flat"
+                   className="h-8 text-xs"
+                   startContent={<FiTrash2 />}
+                   onPress={handleBatchRemoveTasks}
+                 >
+                   批量删除 ({selectedTaskIds.length})
+                 </Button>
+               )}
                <AdminSearchInput
                  placeholder="搜索任务..."
                  value={keyword}
@@ -851,7 +1022,10 @@ function DocumentUploadPage() {
                    size="sm"
                    variant="light"
                    className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                   onPress={() => setKeyword("")}
+                   onPress={() => {
+                     setKeyword("");
+                     setSelectedTaskIds([]);
+                   }}
                  >
                    <FiRotateCcw className="text-sm" />
                  </Button>
@@ -862,6 +1036,9 @@ function DocumentUploadPage() {
              <Table
                aria-label="Upload Tasks"
                className="min-w-full text-xs"
+               selectionMode="multiple"
+               selectedKeys={selectedTaskIds.length ? new Set(selectedTaskIds) : new Set()}
+               onSelectionChange={handleTaskSelectionChange}
              >
                <TableHeader>
                  <TableColumn>任务名称</TableColumn>
@@ -870,10 +1047,10 @@ function DocumentUploadPage() {
                </TableHeader>
                <TableBody 
                  emptyContent="暂无上传任务"
-                 isLoading={loading}
+                 isLoading={isLoading}
                  loadingContent={<Loading height={200} text="获取上传任务中..." />}
                >
-                 {(loading ? [] : pageItems).map(item => (
+                 {(isLoading ? [] : pageItems).map(item => (
                    <TableRow key={item.id}>
                      <TableCell>
                        <div className="flex flex-col">
@@ -944,10 +1121,10 @@ function DocumentUploadPage() {
                </TableHeader>
                <TableBody 
                   emptyContent="暂无草稿"
-                  isLoading={loading}
+                  isLoading={isLoading}
                   loadingContent={<Loading height={200} text="获取草稿中..." />}
                 >
-                  {(loading ? [] : drafts).map(draft => (
+                  {(isLoading ? [] : drafts).map(draft => (
                    <TableRow key={draft.id}>
                      <TableCell>
                        <div className="flex flex-col">
@@ -967,11 +1144,6 @@ function DocumentUploadPage() {
                              <FiUpload className="text-xs" />
                            </Button>
                          </Tooltip>
-                         <Tooltip content="删除">
-                           <Button isIconOnly size="sm" variant="light" color="danger" onPress={() => setDrafts(prev => prev.filter(d => d.id !== draft.id))}>
-                             <FiTrash2 className="text-xs" />
-                           </Button>
-                         </Tooltip>
                        </div>
                      </TableCell>
                    </TableRow>
@@ -985,4 +1157,7 @@ function DocumentUploadPage() {
   );
 }
 
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====
 export default DocumentUploadPage;

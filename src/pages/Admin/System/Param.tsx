@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useCallback } from "react";
+// ===== 1. 依赖导入区域 =====
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   Button,
   Card,
@@ -26,39 +27,79 @@ import {
   type ParamScope,
   fetchParamList,
   saveParam,
-  deleteParam
+  deleteParam,
+  batchDeleteParams
 } from "@/api/admin/system";
 
+// ===== 2. TODO待处理导入区域 =====
+
+// ===== 3. 状态控制逻辑区域 =====
+/** 参数表单状态类型 */
 type ParamFormState = {
+  /** 参数ID */
   id?: string;
+  /** 参数键名 */
   key: string;
+  /** 参数名称 */
   name: string;
+  /** 参数值 */
   value: string;
+  /** 作用域 */
   scope: ParamScope;
+  /** 参数说明 */
   description: string;
+  /** 是否敏感参数 */
   sensitive: boolean;
 };
 
-function getScopeLabel(scope: ParamScope) {
-  if (scope === "frontend") {
-    return "前台配置";
-  }
-  if (scope === "backend") {
-    return "后台配置";
-  }
-  if (scope === "task") {
-    return "任务调度";
-  }
-  return "全局配置";
-}
+// ===== 4. 通用工具函数区域 =====
+/**
+ * 获取作用域展示标签
+ * @param scope 作用域代码
+ * @returns 对应的中文标签
+ */
+const getScopeLabel = (scope: ParamScope): string => {
+  const scopeMap: Record<ParamScope, string> = {
+    frontend: "前台配置",
+    backend: "后台配置",
+    task: "任务调度",
+    global: "全局配置"
+  };
+  return scopeMap[scope] || "未知配置";
+};
 
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+
+// ===== 7. 数据处理函数区域 =====
+
+// ===== 8. UI渲染逻辑区域 =====
+
+// ===== 9. 页面初始化与事件绑定 =====
+/**
+ * 参数管理页面组件
+ * @returns 页面渲染内容
+ */
 function ParamPage() {
+  // --- 列表数据与加载状态 ---
+  /** 搜索关键词 */
   const [keyword, setKeyword] = useState("");
+  /** 作用域筛选 */
   const [scopeFilter, setScopeFilter] = useState<ParamScope | "all">("all");
+  /** 当前页码 */
   const [page, setPage] = useState(1);
+  /** 参数列表数据 */
   const [items, setItems] = useState<ParamItem[]>([]);
+  /** 是否正在加载 */
   const [isLoading, setIsLoading] = useState(false);
+  /** 选中项的 ID 集合 */
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+
+  // --- 表单相关状态 ---
+  /** 表单是否可见 */
   const [formVisible, setFormVisible] = useState(false);
+  /** 表单状态数据 */
   const [formState, setFormState] = useState<ParamFormState>({
     key: "",
     name: "",
@@ -67,8 +108,15 @@ function ParamPage() {
     description: "",
     sensitive: false
   });
+  /** 表单错误提示 */
   const [formError, setFormError] = useState("");
 
+  /** 每页条数 */
+  const pageSize = 8;
+
+  /**
+   * 过滤后的列表数据
+   */
   const filteredItems = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
     return items.filter(item => {
@@ -85,35 +133,45 @@ function ParamPage() {
     });
   }, [items, keyword, scopeFilter]);
 
-  const pageSize = 8;
+  /** 总条数 */
   const total = filteredItems.length;
+  /** 总页数 */
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const pageItems = filteredItems.slice((page - 1) * pageSize, page * pageSize);
+  /** 当前页显示的条目 */
+  const pageItems = useMemo(() => {
+    return filteredItems.slice((page - 1) * pageSize, page * pageSize);
+  }, [filteredItems, page, pageSize]);
 
+  /**
+   * 加载参数列表数据
+   */
   const loadParamList = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetchParamList();
-      if (res) {
-        setItems(res);
-      }
-    } catch {
-      // 错误已在 API 层级处理并显示
-    } finally {
-      setIsLoading(false);
+    const res = await fetchParamList(setIsLoading);
+    if (res && res.data) {
+      setItems(res.data);
     }
   }, []);
 
-  React.useEffect(() => {
-    loadParamList();
+  // 页面初始化加载
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadParamList();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadParamList]);
 
+  /**
+   * 重置筛选条件
+   */
   const handleResetFilter = () => {
     setKeyword("");
     setScopeFilter("all");
     setPage(1);
   };
 
+  /**
+   * 打开新建参数弹窗
+   */
   const handleOpenCreate = () => {
     setFormState({
       key: "",
@@ -127,6 +185,10 @@ function ParamPage() {
     setFormVisible(true);
   };
 
+  /**
+   * 打开编辑参数弹窗
+   * @param item 参数项
+   */
   const handleOpenEdit = (item: ParamItem) => {
     setFormState({
       id: item.id,
@@ -141,11 +203,18 @@ function ParamPage() {
     setFormVisible(true);
   };
 
+  /**
+   * 关闭表单弹窗
+   */
   const handleCloseForm = () => {
     setFormVisible(false);
     setFormError("");
   };
 
+  /**
+   * 处理表单字段变更
+   * @param patch 变更的字段
+   */
   const handleFormChange = (patch: Partial<ParamFormState>) => {
     setFormState(previous => ({
       ...previous,
@@ -153,21 +222,43 @@ function ParamPage() {
     }));
   };
 
+  /**
+   * 删除单个参数
+   * @param item 参数项
+   */
   const handleDeleteParam = async (item: ParamItem) => {
-    try {
-      const res = await deleteParam(item.id);
-      if (res) {
-        addToast({
-          title: "参数删除成功",
-          color: "success"
-        });
-        loadParamList();
-      }
-    } catch {
-      // 错误已在 API 层级处理并显示
+    const res = await deleteParam(item.id);
+    if (res && res.data) {
+      addToast({
+        title: "参数删除成功",
+        color: "success"
+      });
+      loadParamList();
     }
   };
 
+  /**
+   * 批量删除参数
+   */
+  const handleBatchDelete = async () => {
+    const ids = Array.from(selectedKeys);
+    if (ids.length === 0) return;
+
+    const res = await batchDeleteParams(ids);
+
+    if (res && res.data) {
+      addToast({
+        title: `成功删除 ${ids.length} 个参数`,
+        color: "success"
+      });
+      setSelectedKeys(new Set());
+      loadParamList();
+    }
+  };
+
+  /**
+   * 提交表单数据
+   */
   const handleSubmitForm = async () => {
     const trimmedKey = formState.key.trim();
     const trimmedName = formState.name.trim();
@@ -176,29 +267,26 @@ function ParamPage() {
       return;
     }
 
-    try {
-      const res = await saveParam({
-        ...formState,
-        key: trimmedKey,
-        name: trimmedName,
-        description: formState.description.trim()
-      });
+    const res = await saveParam({
+      ...formState,
+      key: trimmedKey,
+      name: trimmedName,
+      description: formState.description.trim()
+    });
 
-      if (res) {
-        addToast({
-          title: formState.id ? "参数更新成功" : "参数创建成功",
-          color: "success"
-        });
-        setFormVisible(false);
-        loadParamList();
-      }
-    } catch {
-      // 错误已在 API 层级处理并显示
+    if (res && res.data) {
+      addToast({
+        title: formState.id ? "参数更新成功" : "参数创建成功",
+        color: "success"
+      });
+      setFormVisible(false);
+      loadParamList();
     }
   };
 
   return (
     <div className="space-y-4">
+      {/* 头部标题区域 */}
       <div className="space-y-1">
         <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] px-3 py-1 text-xs text-[var(--primary-color)]">
           <span>系统管理 · 参数管理</span>
@@ -212,6 +300,7 @@ function ParamPage() {
       </div>
 
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+        {/* 筛选与操作工具栏 */}
         <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
@@ -262,6 +351,23 @@ function ParamPage() {
               </Tooltip>
             </div>
             <div className="flex flex-wrap gap-2">
+              {selectedKeys.size > 0 && (
+                <div className="flex items-center gap-2 px-2 border-r border-[var(--border-color)] mr-2">
+                  <span className="text-[var(--text-color-secondary)]">
+                    已选 {selectedKeys.size} 项:
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    color="danger"
+                    className="h-8 text-xs"
+                    startContent={<FiTrash2 className="text-xs" />}
+                    onPress={handleBatchDelete}
+                  >
+                    批量删除
+                  </Button>
+                </div>
+              )}
               <Button
                 size="sm"
                 className="h-8 text-xs"
@@ -277,11 +383,21 @@ function ParamPage() {
           </div>
         </div>
 
+        {/* 表格内容区域 */}
         <div className="p-3">
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
             <Table
               aria-label="参数列表"
               className="min-w-full text-xs"
+              selectionMode="multiple"
+              selectedKeys={selectedKeys}
+              onSelectionChange={keys => {
+                if (keys === "all") {
+                  setSelectedKeys(new Set(items.map(item => item.id)));
+                } else {
+                  setSelectedKeys(keys as Set<string>);
+                }
+              }}
             >
               <TableHeader className="bg-[var(--bg-elevated)]/80">
                 <TableColumn className="px-3 py-2 text-left font-medium">
@@ -380,6 +496,7 @@ function ParamPage() {
             </Table>
           </div>
 
+          {/* 分页工具栏 */}
           <div className="mt-3 flex flex-col gap-2 text-xs md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <span>
@@ -399,6 +516,7 @@ function ParamPage() {
         </div>
       </Card>
 
+      {/* 新增/编辑弹窗 */}
       {formVisible && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md rounded-[var(--radius-base)] bg-[var(--bg-elevated)] border border-[var(--border-color)] shadow-lg">
@@ -518,4 +636,7 @@ function ParamPage() {
   );
 }
 
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====
 export default ParamPage;

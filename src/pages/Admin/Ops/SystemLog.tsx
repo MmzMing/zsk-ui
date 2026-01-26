@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// ===== 1. 依赖导入区域 =====
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Button,
   Card,
@@ -13,78 +14,121 @@ import {
   TableRow,
   TableCell,
   Tab,
-  Tooltip
+  Tooltip,
+  addToast,
 } from "@heroui/react";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { Loading } from "@/components/Loading";
 import { FiDownload, FiRotateCcw } from "react-icons/fi";
-import { SystemLogItem, LogLevel, fetchSystemLogs } from "../../../api/admin/ops";
+import {
+  SystemLogItem,
+  LogLevel,
+  getSystemLogListData,
+} from "../../../api/admin/ops";
 
-const logModules = ["全部模块", "接口网关", "认证中心", "系统监控", "缓存服务", "内容管理", "审核中心", "系统配置"];
-
-function getLevelChipProps(level: LogLevel) {
-  if (level === "ERROR") {
-    return {
-      color: "danger" as const,
-      className: "bg-red-500/10 text-red-500",
-      label: "ERROR"
-    };
-  }
-  if (level === "WARN") {
-    return {
-      color: "warning" as const,
-      className: "bg-orange-500/10 text-orange-500",
-      label: "WARN"
-    };
-  }
-  return {
-    color: "default" as const,
-    className: "bg-sky-500/10 text-sky-500",
-    label: "INFO"
-  };
-}
+// ===== 2. TODO待处理导入区域 =====
 
 function SystemLogPage() {
+  // ===== 3. 状态控制逻辑区域 =====
+  /** 是否正在加载日志 */
   const [loading, setLoading] = useState(false);
+  /** 当前选中的日志级别 */
   const [activeLevel, setActiveLevel] = useState<LogLevel | "all">("all");
+  /** 当前选中的模块 */
   const [activeModule, setActiveModule] = useState("全部模块");
+  /** 搜索关键字 */
   const [keyword, setKeyword] = useState("");
+  /** 当前页码 */
   const [page, setPage] = useState(1);
+  /** 日志列表数据 */
   const [logs, setLogs] = useState<SystemLogItem[]>([]);
+  /** 总记录数 */
   const [total, setTotal] = useState(0);
+  /** 顶部提示消息 */
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const res = await fetchSystemLogs({
-          page,
-          pageSize: 6,
-          keyword,
-          module: activeModule === "全部模块" ? undefined : activeModule,
-          level: activeLevel === "all" ? undefined : activeLevel
-        });
-        if (res) {
-          setLogs(res.list);
-          setTotal(res.total);
-        }
-      } catch (error) {
-        console.error("Failed to load logs:", error);
-      } finally {
-        setLoading(false);
-      }
+  // ===== 4. 通用工具函数区域 =====
+  /** 日志模块列表 */
+  const logModules = [
+    "全部模块",
+    "接口网关",
+    "认证中心",
+    "系统监控",
+    "缓存服务",
+    "内容管理",
+    "审核中心",
+    "系统配置",
+  ];
+
+  /** 每页条数 */
+  const pageSize = 6;
+
+  /**
+   * 根据日志级别获取对应的 UI 属性
+   * @param level 日志级别
+   * @returns UI 属性对象
+   */
+  const getLevelChipProps = (level: LogLevel) => {
+    if (level === "ERROR") {
+      return {
+        color: "danger" as const,
+        className: "bg-red-500/10 text-red-500",
+        label: "ERROR",
+      };
     }
-    loadData();
+    if (level === "WARN") {
+      return {
+        color: "warning" as const,
+        className: "bg-orange-500/10 text-orange-500",
+        label: "WARN",
+      };
+    }
+    return {
+      color: "default" as const,
+      className: "bg-sky-500/10 text-sky-500",
+      label: "INFO",
+    };
+  };
+
+  // ===== 5. 注释代码函数区 =====
+
+  // ===== 6. 错误处理函数区域 =====
+  /**
+   * 统一错误提示处理
+   * @param error 错误对象
+   * @param prefix 错误前缀描述
+   */
+  const showErrorFn = (error: unknown, prefix: string) => {
+    const message = error instanceof Error ? error.message : String(error);
+    addToast({
+      title: `${prefix}失败`,
+      description: message,
+      color: "danger",
+    });
+  };
+
+  // ===== 7. 数据处理函数区域 =====
+  /** 加载系统日志列表 */
+  const loadData = useCallback(async () => {
+    const data = await getSystemLogListData({
+      page,
+      pageSize,
+      keyword,
+      module: activeModule === "全部模块" ? undefined : activeModule,
+      level: activeLevel === "all" ? undefined : activeLevel,
+      setLoading,
+      onError: (err) => showErrorFn(err, "加载系统日志"),
+    });
+
+    if (data) {
+      setLogs(data.list);
+      setTotal(data.total);
+    }
   }, [activeLevel, activeModule, keyword, page]);
 
-  const pageSize = 6;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const pageItems = logs;
-
+  /** 重置筛选条件 */
   const handleResetFilter = () => {
     setActiveLevel("all");
     setActiveModule("全部模块");
@@ -93,18 +137,21 @@ function SystemLogPage() {
     setMessage("");
   };
 
+  /** 处理导出当前筛选结果 */
   const handleExportCurrent = () => {
     setMessage(
       `已提交导出当前筛选结果的日志文件，共 ${logs.length} 条记录。实际导出逻辑待接入 /api/admin/ops/logs/export 接口。`
     );
   };
 
+  /** 处理导出全部日志 */
   const handleExportAll = () => {
     setMessage(
       "已提交导出全部日志的任务，建议在实际环境中限制导出时间范围与最大条数，避免影响系统性能。"
     );
   };
 
+  /** 处理页码切换 */
   const handlePageChange = (next: number) => {
     if (next < 1 || next > totalPages) {
       return;
@@ -112,6 +159,23 @@ function SystemLogPage() {
     setPage(next);
   };
 
+  /** 总页数 */
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  /** 当前显示页码 */
+  const currentPage = Math.min(page, totalPages);
+  /** 当前页显示的数据 */
+  const pageItems = logs;
+
+  // ===== 9. 页面初始化与事件绑定 =====
+  /** 监听筛选条件变化并加载数据 */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadData]);
+
+  // ===== 8. UI渲染逻辑区域 =====
   return (
     <div className="space-y-4">
       <div className="space-y-1">
@@ -134,7 +198,7 @@ function SystemLogPage() {
               className="w-64"
               placeholder="按关键字、traceId 搜索日志"
               value={keyword}
-              onValueChange={value => {
+              onValueChange={(value) => {
                 setKeyword(value);
                 setPage(1);
               }}
@@ -145,21 +209,19 @@ function SystemLogPage() {
               size="sm"
               className="w-40"
               selectedKeys={[activeModule]}
-              onSelectionChange={keys => {
+              onSelectionChange={(keys) => {
                 const key = Array.from(keys)[0];
                 setActiveModule(key ? String(key) : "全部模块");
                 setPage(1);
               }}
-              items={logModules.map(item => ({
+              items={logModules.map((item) => ({
                 label: item,
-                value: item
+                value: item,
               }))}
               isClearable
             >
               {(item: { label: string; value: string }) => (
-                <SelectItem key={item.value}>
-                  {item.label}
-                </SelectItem>
+                <SelectItem key={item.value}>{item.label}</SelectItem>
               )}
             </AdminSelect>
 
@@ -177,10 +239,11 @@ function SystemLogPage() {
                   "hover:border-[var(--primary-color)]/80!",
                   "group-data-[focus=true]:border-[var(--primary-color)]!",
                   "transition-colors",
-                  "shadow-none"
+                  "shadow-none",
                 ].join(" "),
                 input: "text-xs",
-                selectorButton: "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors"
+                selectorButton:
+                  "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors",
               }}
             />
 
@@ -203,10 +266,12 @@ function SystemLogPage() {
               aria-label="日志级别"
               size="sm"
               selectedKey={activeLevel}
-              onSelectionChange={(key: React.Key) => setActiveLevel(key as LogLevel | "all")}
+              onSelectionChange={(key: React.Key) =>
+                setActiveLevel(key as LogLevel | "all")
+              }
               classNames={{
                 tabList: "p-0 h-7 gap-0",
-                tab: "h-7 px-4 text-xs"
+                tab: "h-7 px-4 text-xs",
               }}
             >
               <Tab key="all" title="全部级别" />
@@ -259,10 +324,7 @@ function SystemLogPage() {
 
         <div className="p-3">
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
-            <Table
-              aria-label="系统日志列表"
-              className="min-w-full text-xs"
-            >
+            <Table aria-label="系统日志列表" className="min-w-full text-xs">
               <TableHeader className="bg-[var(--bg-elevated)]/80">
                 <TableColumn className="px-3 py-2 text-left font-medium w-40">
                   时间
@@ -284,9 +346,11 @@ function SystemLogPage() {
                 items={loading ? [] : pageItems}
                 emptyContent="未找到匹配的日志记录，可调整筛选条件或关键字后重试。"
                 isLoading={loading}
-                loadingContent={<Loading height={200} text="获取系统日志数据中..." />}
+                loadingContent={
+                  <Loading height={200} text="获取系统日志数据中..." />
+                }
               >
-                {item => {
+                {(item) => {
                   const levelProps = getLevelChipProps(item.level);
                   return (
                     <TableRow
@@ -349,4 +413,5 @@ function SystemLogPage() {
   );
 }
 
+// ===== 11. 导出区域 =====
 export default SystemLogPage;

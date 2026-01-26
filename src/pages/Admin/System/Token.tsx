@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
+// ===== 1. 依赖导入区域 =====
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   Button,
   SelectItem,
@@ -14,7 +15,7 @@ import {
   Tooltip,
   addToast
 } from "@heroui/react";
-import { FiCopy, FiRefreshCw, FiRotateCcw, FiTrash2 } from "react-icons/fi";
+import { FiCopy, FiRefreshCw, FiRotateCcw, FiTrash2, FiXCircle } from "react-icons/fi";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { Loading } from "@/components/Loading";
@@ -22,118 +23,198 @@ import {
   type TokenItem,
   type TokenStatus,
   fetchTokenList,
-  revokeToken
+  revokeToken,
+  batchRevokeTokens,
+  batchDeleteTokens
 } from "@/api/admin/system";
 
+// ===== 2. TODO待处理导入区域 =====
+
+// ===== 3. 状态控制逻辑区域 =====
+/** 状态筛选类型 */
 type StatusFilter = "all" | "active" | "no_active";
 
-function getTokenTypeLabel(type: TokenItem["type"]) {
-  if (type === "api") {
-    return "公共 API 令牌";
-  }
-  if (type === "personal") {
-    return "个人访问令牌";
-  }
-  return "内部系统令牌";
-}
-
-function getStatusChipProps(status: TokenStatus) {
-  if (status === "active") {
-    return {
-      color: "success" as const,
-      label: "有效"
-    };
-  }
-  if (status === "expired") {
-    return {
-      color: "warning" as const,
-      label: "已过期"
-    };
-  }
-  return {
-    color: "danger" as const,
-    label: "已吊销"
+// ===== 4. 通用工具函数区域 =====
+/**
+ * 获取令牌类型标签
+ * @param type 令牌类型
+ * @returns 对应的中文标签
+ */
+const getTokenTypeLabel = (type: TokenItem["type"]): string => {
+  const typeMap: Record<TokenItem["type"], string> = {
+    api: "公共 API 令牌",
+    personal: "个人访问令牌",
+    internal: "内部系统令牌"
   };
-}
+  return typeMap[type] || "未知类型";
+};
 
+/**
+ * 获取状态标签属性
+ * @param status 令牌状态
+ * @returns 状态标签的颜色和文字
+ */
+const getStatusChipProps = (status: TokenStatus) => {
+  const statusMap: Record<TokenStatus, { color: "success" | "warning" | "danger"; label: string }> = {
+    active: { color: "success", label: "有效" },
+    expired: { color: "warning", label: "已过期" },
+    revoked: { color: "danger", label: "已吊销" }
+  };
+  return statusMap[status] || { color: "danger", label: "未知" };
+};
+
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+
+// ===== 7. 数据处理函数区域 =====
+
+// ===== 8. UI渲染逻辑区域 =====
+
+// ===== 9. 页面初始化与事件绑定 =====
+/**
+ * 令牌管理页面组件
+ * @returns 页面渲染内容
+ */
 function TokenPage() {
+  // --- 状态定义 ---
+  /** 搜索关键词 */
   const [keyword, setKeyword] = useState("");
+  /** 状态筛选值 */
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  /** 当前页码 */
   const [page, setPage] = useState(1);
+  /** 令牌原始数据列表 */
   const [items, setItems] = useState<TokenItem[]>([]);
+  /** 是否正在加载 */
   const [isLoading, setIsLoading] = useState(false);
+  /** 选中项的 ID 集合 */
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
+  // --- 常量定义 ---
+  /** 每页显示条数 */
+  const pageSize = 6;
+
+  // --- 数据计算逻辑 ---
+  /**
+   * 过滤后的列表数据
+   */
   const filteredItems = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
     return items.filter(item => {
+      // 关键词搜索：名称、令牌片段、绑定账号
       if (trimmed) {
         const content = `${item.name} ${item.token} ${item.boundUser}`.toLowerCase();
-        if (!content.includes(trimmed)) {
-          return false;
-        }
+        if (!content.includes(trimmed)) return false;
       }
-      if (statusFilter === "active" && item.status !== "active") {
-        return false;
-      }
-      if (statusFilter === "no_active" && item.status === "active") {
-        return false;
-      }
+      // 状态筛选
+      if (statusFilter === "active" && item.status !== "active") return false;
+      if (statusFilter === "no_active" && item.status === "active") return false;
       return true;
     });
   }, [items, keyword, statusFilter]);
 
-  const pageSize = 6;
+  /** 数据总条数 */
   const total = filteredItems.length;
+  /** 总页数 */
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const pageItems = filteredItems.slice((page - 1) * pageSize, page * pageSize);
+  /** 当前页显示的数据 */
+  const pageItems = useMemo(() => {
+    return filteredItems.slice((page - 1) * pageSize, page * pageSize);
+  }, [filteredItems, page, pageSize]);
 
+  // --- 业务操作逻辑 ---
+  /**
+   * 加载令牌列表数据
+   */
   const loadTokenList = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetchTokenList();
-      if (res) {
-        setItems(res);
-      }
-    } catch {
-      // 错误已在 API 层级处理并显示
-    } finally {
-      setIsLoading(false);
+    const res = await fetchTokenList(setIsLoading);
+    if (res && res.data) {
+      setItems(res.data);
     }
   }, []);
 
-  React.useEffect(() => {
-    loadTokenList();
-  }, [loadTokenList]);
-
+  /**
+   * 重置筛选条件
+   */
   const handleResetFilter = () => {
     setKeyword("");
     setStatusFilter("all");
     setPage(1);
   };
 
+  /**
+   * 复制令牌内容到剪贴板
+   * @param item 令牌项
+   */
   const handleCopyToken = (item: TokenItem) => {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(item.token);
-        addToast({
-          title: "复制成功",
-          description: `已复制令牌 ${item.name} 到剪贴板，请妥善保管。`,
-          color: "success"
-        });
-      } 
-  };
-
-  const handleRevokeToken = async (item: TokenItem) => {
-    if (item.status === "revoked") {
-      return;
-    }
-      await revokeToken(item.id);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(item.token);
       addToast({
-        title: "操作成功",
+        title: "复制成功",
+        description: `已复制令牌 ${item.name} 到剪贴板，请妥善保管。`,
         color: "success"
       });
-      loadTokenList();
+    }
   };
 
+  /**
+   * 吊销单个令牌
+   * @param item 令牌项
+   */
+  const handleRevokeToken = async (item: TokenItem) => {
+    if (item.status === "revoked") return;
+
+    const res = await revokeToken(item.id, setIsLoading);
+
+    if (res && res.data) {
+      addToast({ title: "操作成功", color: "success" });
+      loadTokenList();
+    }
+  };
+
+  /**
+   * 批量吊销选中的令牌
+   */
+  const handleBatchRevoke = async () => {
+    const ids = Array.from(selectedKeys);
+    if (ids.length === 0) return;
+
+    const res = await batchRevokeTokens(ids, setIsLoading);
+
+    if (res && res.data) {
+      addToast({
+        title: `成功吊销 ${ids.length} 个令牌`,
+        color: "success"
+      });
+      setSelectedKeys(new Set());
+      loadTokenList();
+    }
+  };
+
+  /**
+   * 批量删除选中的令牌
+   */
+  const handleBatchDelete = async () => {
+    const ids = Array.from(selectedKeys);
+    if (ids.length === 0) return;
+
+    const res = await batchDeleteTokens(ids, setIsLoading);
+
+    if (res && res.data) {
+      addToast({
+        title: `成功删除 ${ids.length} 个令牌`,
+        color: "success"
+      });
+      setSelectedKeys(new Set());
+      loadTokenList();
+    }
+  };
+
+  /**
+   * 令牌续期逻辑（演示）
+   * @param item 令牌项
+   */
   const handleRefreshToken = (item: TokenItem) => {
     addToast({
       title: "申请成功",
@@ -142,8 +223,18 @@ function TokenPage() {
     });
   };
 
+  // --- 生命周期钩子 ---
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadTokenList();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadTokenList]);
+
+  // --- UI 渲染逻辑 ---
   return (
     <div className="space-y-4">
+      {/* 顶部标题与面包屑 */}
       <div className="space-y-1">
         <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] px-3 py-1 text-[11px] text-[var(--primary-color)]">
           <span>系统管理 · 令牌管理</span>
@@ -157,6 +248,7 @@ function TokenPage() {
       </div>
 
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+        {/* 工具栏区域 */}
         <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
@@ -203,6 +295,35 @@ function TokenPage() {
                   <FiRotateCcw className="text-sm" />
                 </Button>
               </Tooltip>
+
+              {/* 批量操作区域 */}
+              {selectedKeys.size > 0 && (
+                <div className="flex items-center gap-2 px-2 border-l border-[var(--border-color)] ml-2">
+                  <span className="text-[var(--text-color-secondary)]">
+                    已选 {selectedKeys.size} 项:
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    color="warning"
+                    className="h-8 text-xs"
+                    startContent={<FiXCircle className="text-xs" />}
+                    onPress={handleBatchRevoke}
+                  >
+                    批量吊销
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    color="danger"
+                    className="h-8 text-xs"
+                    startContent={<FiTrash2 className="text-xs" />}
+                    onPress={handleBatchDelete}
+                  >
+                    批量删除
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -219,40 +340,32 @@ function TokenPage() {
           </div>
         </div>
 
+        {/* 表格内容区域 */}
         <div className="p-3">
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
             <Table
               aria-label="令牌列表"
               className="min-w-full text-xs"
+              selectionMode="multiple"
+              selectedKeys={selectedKeys}
+              onSelectionChange={keys => {
+                if (keys === "all") {
+                  setSelectedKeys(new Set(items.map(item => item.id)));
+                } else {
+                  setSelectedKeys(keys as Set<string>);
+                }
+              }}
             >
               <TableHeader className="bg-[var(--bg-elevated)]/80">
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  令牌名称
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  令牌片段
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  类型
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  绑定账号
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  创建时间
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  过期时间
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  最近使用时间
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  状态
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  操作
-                </TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">令牌名称</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">令牌片段</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">类型</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">绑定账号</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">创建时间</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">过期时间</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">最近使用时间</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">状态</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">操作</TableColumn>
               </TableHeader>
               <TableBody
                 items={pageItems}
@@ -348,6 +461,7 @@ function TokenPage() {
             </Table>
           </div>
 
+          {/* 分页控制区域 */}
           <div className="mt-3 flex flex-col gap-2 text-[11px] md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <span>
@@ -370,5 +484,7 @@ function TokenPage() {
   );
 }
 
-export default TokenPage;
+// ===== 10. TODO任务管理区域 =====
 
+// ===== 11. 导出区域 =====
+export default TokenPage;

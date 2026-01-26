@@ -1,3 +1,4 @@
+// ===== 1. 依赖导入区域 =====
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
@@ -23,55 +24,89 @@ import {
 import { getToolboxDetail, type ToolboxDetail } from "../../api/front/toolbox";
 import { routes } from "../../router/routes";
 import { useTitle } from "react-use";
+import { useCallback } from "react";
 
+// ===== 2. TODO待处理导入区域 =====
+
+// ===== 3. 状态控制逻辑区域 =====
+/**
+ * 工具详情页面组件
+ */
 export default function ToolboxDetailPage() {
+  /** 路由参数ID */
   const { id } = useParams<{ id: string }>();
+  /** 路由导航 */
   const navigate = useNavigate();
+  
+  /** 工具详情数据 */
   const [data, setData] = useState<ToolboxDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  /** 页面加载状态 */
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchData() {
-      if (!id) return;
-      setLoading(true);
-      try {
-        const res = await getToolboxDetail(id);
-        setData(res);
-      } catch (error) {
-        console.error("Failed to fetch toolbox detail:", error);
-      } finally {
-        setLoading(false);
-      }
+  // ===== 4. 通用工具函数区域 =====
+
+  // ===== 5. 注释代码函数区 =====
+
+  // ===== 6. 错误处理函数区域 =====
+
+  // ===== 7. 数据处理函数区域 =====
+  /**
+   * 获取工具详情数据
+   */
+  const handleFetchData = useCallback(async () => {
+    if (!id) return;
+    setIsLoading(true);
+    try {
+      const res = await getToolboxDetail(id);
+      setData(res);
+    } finally {
+      setIsLoading(false);
     }
-    fetchData();
   }, [id]);
 
+  // ===== 8. UI渲染逻辑区域 =====
+  // 设置页面标题
   useTitle(data ? `${data.title} - 百宝袋` : "加载中...");
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
-        <Skeleton className="h-12 w-1/3 rounded-lg" />
-        <div className="flex gap-8">
-          <Skeleton className="h-96 w-2/3 rounded-lg" />
-          <Skeleton className="h-96 w-1/3 rounded-lg" />
-        </div>
+  /**
+   * 渲染加载骨架屏
+   */
+  const renderSkeleton = () => (
+    <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
+      <Skeleton className="h-12 w-1/3 rounded-lg" />
+      <div className="flex gap-8">
+        <Skeleton className="h-96 w-2/3 rounded-lg" />
+        <Skeleton className="h-96 w-1/3 rounded-lg" />
       </div>
-    );
+    </div>
+  );
+
+  /**
+   * 渲染未找到状态
+   */
+  const renderNotFound = () => (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+      <h2 className="text-2xl font-bold">未找到该工具</h2>
+      <Button onPress={() => navigate(routes.allSearch)}>返回搜索</Button>
+    </div>
+  );
+
+  // ===== 9. 页面初始化与事件绑定 =====
+  useEffect(() => {
+    handleFetchData();
+  }, [handleFetchData]);
+
+  if (isLoading) {
+    return renderSkeleton();
   }
 
   if (!data) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-        <h2 className="text-2xl font-bold">未找到该工具</h2>
-        <Button onPress={() => navigate(routes.allSearch)}>返回搜索</Button>
-      </div>
-    );
+    return renderNotFound();
   }
 
   return (
     <div className="min-h-screen pb-20">
-      {/* Back Button */}
+      {/* 返回按钮 */}
       <div className="sticky top-20 z-10 px-6 py-4 bg-[var(--bg-color)]/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto">
           <Button 
@@ -85,7 +120,7 @@ export default function ToolboxDetailPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 space-y-10">
-        {/* Header Section */}
+        {/* 头部区域 */}
         <div className="flex flex-col md:flex-row gap-8 items-start">
           <div className="w-32 h-32 shrink-0 bg-white dark:bg-zinc-800 rounded-2xl p-4 shadow-sm border border-[var(--border-color)]">
             <Image
@@ -157,9 +192,9 @@ export default function ToolboxDetailPage() {
         <Divider />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Content */}
+          {/* 左侧：内容 */}
           <div className="lg:col-span-2 space-y-10">
-            {/* Features */}
+            {/* 核心功能 */}
             {data.features.length > 0 && (
               <section className="space-y-4">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -181,7 +216,7 @@ export default function ToolboxDetailPage() {
               </section>
             )}
 
-            {/* Screenshots */}
+            {/* 应用截图 */}
             {data.images.length > 0 && (
               <section className="space-y-4">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -204,9 +239,9 @@ export default function ToolboxDetailPage() {
             )}
           </div>
 
-          {/* Right Column: Sidebar */}
+          {/* 右侧：侧边栏 */}
           <div className="space-y-8">
-            {/* Author/Source Info */}
+            {/* 作者/来源信息 */}
             {data.author && (
               <Card className="bg-[var(--bg-elevated)]">
                 <CardHeader className="font-bold text-lg">关于开发者</CardHeader>
@@ -222,7 +257,7 @@ export default function ToolboxDetailPage() {
               </Card>
             )}
 
-            {/* Related Tools */}
+            {/* 相关工具 */}
             {data.relatedTools && data.relatedTools.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-xl font-bold">相关推荐</h3>
@@ -237,7 +272,6 @@ export default function ToolboxDetailPage() {
                       <CardBody className="p-4">
                         <div className="flex gap-3">
                           <div className="w-12 h-12 bg-gray-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center shrink-0">
-                            {/* Placeholder for tool icon if not available in search result */}
                             <FiBox className="w-6 h-6 text-gray-500" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -259,3 +293,7 @@ export default function ToolboxDetailPage() {
     </div>
   );
 }
+
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====

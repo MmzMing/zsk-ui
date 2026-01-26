@@ -1,7 +1,26 @@
-import React from "react";
-import { Accordion, AccordionItem, Card, Button, Avatar } from "@heroui/react";
-import { FiMail, FiPhone, FiMapPin, FiGithub, FiTwitter } from "react-icons/fi";
-import { FaJava, FaReact, FaDocker, FaQq, FaDiscord } from "react-icons/fa6";
+// ===== 1. 依赖导入区域 =====
+import React, { useEffect, useState, useCallback } from "react";
+import { 
+  Accordion, 
+  AccordionItem, 
+  Card, 
+  Button, 
+  Avatar
+} from "@heroui/react";
+import { 
+  FiMail, 
+  FiPhone, 
+  FiMapPin, 
+  FiGithub, 
+  FiTwitter 
+} from "react-icons/fi";
+import { 
+  FaJava, 
+  FaReact, 
+  FaDocker, 
+  FaQq, 
+  FaDiscord 
+} from "react-icons/fa6";
 import { 
   SiSpring, 
   SiTypescript, 
@@ -10,65 +29,151 @@ import {
   SiApacherocketmq 
 } from "react-icons/si";
 import LogoLoop from "../../components/Motion/LogoLoop";
+import Loading from "../../components/Loading";
+import { 
+  fetchTechStack, 
+  fetchFAQ, 
+  type TechStackItem, 
+  type FAQCategory 
+} from "../../api/front/about";
 
+// ===== 2. TODO待处理导入区域 =====
+
+// ===== 3. 状态控制逻辑区域 =====
+/**
+ * 关于页面组件
+ */
 function AboutPage() {
-  const techStack = [
-    {
-      id: "java",
-      name: "JAVA",
-      description: "后端核心开发语言",
-      icon: <FaJava className="text-[#5382a1]" />
-    },
-    {
-      id: "mysql",
-      name: "MYSQL",
-      description: "关系型数据库管理系统",
-      icon: <SiMysql className="text-[#4479a1]" />
-    },
-    {
-      id: "redis",
-      name: "REDIS",
-      description: "高性能键值对数据库",
-      icon: <SiRedis className="text-[#dc382d]" />
-    },
-    {
-      id: "spring",
-      name: "SPRING",
-      description: "企业级应用开发框架",
-      icon: <SiSpring className="text-[#6db33f]" />
-    },
-    {
-      id: "docker",
-      name: "DOCKER",
-      description: "容器化部署与管理",
-      icon: <FaDocker className="text-[#2496ed]" />
-    },
-    {
-      id: "rocketmq",
-      name: "ROCKETMQ",
-      description: "分布式消息中间件",
-      icon: <SiApacherocketmq className="text-[#d42029]" />
-    },
-    {
-      id: "react",
-      name: "REACT",
-      description: "构建用户界面的前端库",
-      icon: <FaReact className="text-[#61dafb]" />
-    },
-    {
-      id: "ts",
-      name: "TS",
-      description: "JavaScript 的超集",
-      icon: <SiTypescript className="text-[#3178c6]" />
+  /** 技术栈列表 */
+  const [techStack, setTechStack] = useState<TechStackItem[]>([]);
+  /** FAQ 列表 */
+  const [faqList, setFaqList] = useState<FAQCategory[]>([]);
+  /** 页面加载状态 */
+  const [isLoading, setIsLoading] = useState(true);
+
+  // ===== 4. 通用工具函数区域 =====
+
+  /**
+   * 获取技术栈图标
+   * @param id 技术栈ID
+   * @returns 图标组件
+   */
+  const getTechIcon = (id: string) => {
+    const iconMap: Record<string, React.ReactNode> = {
+      java: <FaJava className="text-[#5382a1]" />,
+      mysql: <SiMysql className="text-[#4479a1]" />,
+      redis: <SiRedis className="text-[#dc382d]" />,
+      spring: <SiSpring className="text-[#6db33f]" />,
+      docker: <FaDocker className="text-[#2496ed]" />,
+      rocketmq: <SiApacherocketmq className="text-[#d42029]" />,
+      react: <FaReact className="text-[#61dafb]" />,
+      ts: <SiTypescript className="text-[#3178c6]" />
+    };
+    return iconMap[id] || null;
+  };
+
+  // ===== 5. 注释代码函数区 =====
+
+  // ===== 6. 错误处理函数区域 =====
+
+  // ===== 7. 数据处理函数区域 =====
+  /**
+   * 获取页面初始化数据
+   */
+  const handleFetchInitData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [techRes, faqRes] = await Promise.all([
+        fetchTechStack(),
+        fetchFAQ()
+      ]);
+      setTechStack(techRes);
+      setFaqList(faqRes);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  }, []);
+
+  // ===== 8. UI渲染逻辑区域 =====
+  /**
+   * 渲染技术栈区域
+   */
+  const renderTechStack = () => {
+    const itemsWithIcons = techStack.map(item => ({
+      ...item,
+      icon: getTechIcon(item.id)
+    }));
+
+    return (
+      <section className="space-y-6">
+        <h2 className="text-2xl font-bold tracking-tight border-b pb-2 border-[var(--border-color)]">
+          技术栈一览
+        </h2>
+        <div className="py-4 min-h-[100px] flex items-center justify-center">
+          {isLoading ? (
+            <Loading />
+          ) : techStack.length > 0 ? (
+            <LogoLoop items={itemsWithIcons} />
+          ) : (
+            <div className="text-sm text-[var(--text-color-secondary)]">暂无技术栈信息</div>
+          )}
+        </div>
+      </section>
+    );
+  };
+
+  /**
+   * 渲染 FAQ 区域
+   */
+  const renderFAQ = () => {
+    return (
+      <section className="space-y-6">
+        <h2 className="text-2xl font-bold tracking-tight border-b pb-2 border-[var(--border-color)]">
+          常见问题
+        </h2>
+        <div className="min-h-[200px] flex items-center justify-center">
+          {isLoading ? (
+            <Loading />
+          ) : faqList.length > 0 ? (
+            <div className="w-full space-y-6">
+              {faqList.map((category, index) => (
+                <div key={index} className="w-full">
+                  <h3 className="text-sm font-semibold text-[var(--primary-color)] mb-3 uppercase tracking-wider">
+                    {category.title}
+                  </h3>
+                  <Accordion variant="splitted">
+                    {category.items.map(faq => (
+                      <AccordionItem 
+                        key={faq.id} 
+                        aria-label={faq.question} 
+                        title={faq.question}
+                      >
+                        {faq.answer}
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-[var(--text-color-secondary)]">暂无常见问题</div>
+          )}
+        </div>
+      </section>
+    );
+  };
+
+  // ===== 9. 页面初始化与事件绑定 =====
+  useEffect(() => {
+    handleFetchInitData();
+  }, [handleFetchInitData]);
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12 overflow-x-hidden">
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Left Content */}
+        {/* 左侧内容 */}
         <div className="lg:flex-1 min-w-0 space-y-12 order-2 lg:order-1">
-          {/* Product Intro */}
+          {/* 产品介绍 */}
           <section className="space-y-6">
             <h2 className="text-2xl font-bold tracking-tight border-b pb-2 border-[var(--border-color)]">
               关于知识库小破站
@@ -97,54 +202,14 @@ function AboutPage() {
             </div>
           </section>
 
-          {/* Tech Stack */}
-          <section className="space-y-6">
-            <h2 className="text-2xl font-bold tracking-tight border-b pb-2 border-[var(--border-color)]">
-              技术栈一览
-            </h2>
-            <div className="py-4">
-              <LogoLoop items={techStack} />
-            </div>
-          </section>
+          {/* 技术栈 */}
+          {renderTechStack()}
 
           {/* FAQ */}
-          <section className="space-y-6">
-            <h2 className="text-2xl font-bold tracking-tight border-b pb-2 border-[var(--border-color)]">
-              常见问题
-            </h2>
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-sm font-semibold text-[var(--primary-color)] mb-3 uppercase tracking-wider">
-                  使用操作类
-                </h3>
-                <Accordion variant="splitted">
-                  <AccordionItem key="1" aria-label="如何导入本地 Markdown 文件？" title="如何导入本地 Markdown 文件？">
-                    在文档编辑器页面，直接将本地 .md 文件拖拽至编辑区域即可自动解析并导入内容。目前支持标准 Markdown 语法及部分扩展语法。
-                  </AccordionItem>
-                  <AccordionItem key="2" aria-label="支持哪些视频格式上传？" title="支持哪些视频格式上传？">
-                    目前支持 MP4、WebM、MOV 等主流视频格式。上传后系统会自动进行转码处理，以适配不同终端的播放需求。
-                  </AccordionItem>
-                </Accordion>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-semibold text-[var(--primary-color)] mb-3 uppercase tracking-wider">
-                  功能适配类
-                </h3>
-                <Accordion variant="splitted">
-                  <AccordionItem key="3" aria-label="移动端可以使用编辑器吗？" title="移动端可以使用编辑器吗？">
-                    可以。移动端编辑器针对触屏操作进行了优化，支持快捷工具栏和手势操作，但在复杂排版场景下，建议优先使用桌面端。
-                  </AccordionItem>
-                  <AccordionItem key="4" aria-label="如何开启深色模式？" title="如何开启深色模式？">
-                    点击右上角的系统设置图标，在“主题风格”中选择“深色”或“跟随系统”。系统会自动记住您的偏好设置。
-                  </AccordionItem>
-                </Accordion>
-              </div>
-            </div>
-          </section>
+          {renderFAQ()}
         </div>
 
-        {/* Right Info */}
+        {/* 右侧信息 */}
         <div className="w-full lg:w-[320px] lg:flex-none order-1 lg:order-2">
           <div className="sticky top-24 space-y-6">
             <Card className="p-6 space-y-6 bg-[var(--bg-elevated)] border border-[var(--border-color)]">
@@ -228,4 +293,7 @@ function AboutPage() {
   );
 }
 
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====
 export default AboutPage;

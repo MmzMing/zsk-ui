@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from "react";
+// ===== 1. 依赖导入区域 =====
+import React, { useState, useCallback, useEffect } from "react";
 import {
   SelectItem,
   Button,
@@ -24,72 +25,110 @@ import { Loading } from "@/components/Loading";
 import {
   type DictItem,
   type DictStatus,
+  type SaveDictRequest,
   fetchDictList,
   saveDict,
-  toggleDictStatus
+  toggleDictStatus,
+  batchToggleDictStatus
 } from "@/api/admin/system";
 
-type DictFormState = {
-  id?: string;
-  code: string;
-  name: string;
-  category: string;
-  description: string;
-  status: DictStatus;
-};
+// ===== 2. TODO待处理导入区域 =====
 
+// ===== 3. 状态控制逻辑区域 =====
+/** 状态筛选类型 */
 type StatusFilter = "all" | "enabled" | "disabled";
 
+// ===== 4. 通用工具函数区域 =====
+
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+
+// ===== 7. 数据处理函数区域 =====
+
+// ===== 8. UI渲染逻辑区域 =====
+
+// ===== 9. 页面初始化与事件绑定 =====
+/**
+ * 字典管理页面组件
+ * @returns 页面渲染内容
+ */
 function DictPage() {
+  // --- 列表数据与加载状态 ---
+  /** 搜索关键词 */
   const [keyword, setKeyword] = useState("");
+  /** 状态筛选 */
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  /** 当前页码 */
   const [page, setPage] = useState(1);
+  /** 字典列表数据 */
   const [items, setItems] = useState<DictItem[]>([]);
+  /** 总条数 */
   const [total, setTotal] = useState(0);
+  /** 是否正在加载 */
   const [isLoading, setIsLoading] = useState(false);
+  /** 选中项的 ID 集合 */
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+
+  // --- 表单相关状态 ---
+  /** 表单是否可见 */
   const [formVisible, setFormVisible] = useState(false);
-  const [formState, setFormState] = useState<DictFormState>({
+  /** 表单状态数据 */
+  const [formState, setFormState] = useState<SaveDictRequest>({
     code: "",
     name: "",
     category: "",
     description: "",
     status: "enabled"
   });
+  /** 表单错误提示 */
   const [formError, setFormError] = useState("");
 
+  /** 每页条数 */
   const pageSize = 8;
+  /** 总页数 */
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+  /**
+   * 加载字典列表数据
+   */
   const loadDictList = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetchDictList({
+    const res = await fetchDictList(
+      {
         page,
         pageSize,
         keyword: keyword.trim() || undefined,
         status: statusFilter === "all" ? undefined : statusFilter
-      });
-      if (res) {
-        setItems(res.list);
-        setTotal(res.total);
-      }
-    } catch {
-      // 错误已在 API 层级处理并显示
-    } finally {
-      setIsLoading(false);
+      },
+      setIsLoading
+    );
+    if (res && res.data) {
+      setItems(res.data.list);
+      setTotal(res.data.total);
     }
   }, [page, pageSize, keyword, statusFilter]);
 
-  React.useEffect(() => {
-    loadDictList();
+  // --- 生命周期钩子 ---
+  // 初始化加载
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadDictList();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadDictList]);
 
+  /**
+   * 重置筛选条件
+   */
   const handleResetFilter = () => {
     setKeyword("");
     setStatusFilter("all");
     setPage(1);
   };
 
+  /**
+   * 打开新建字典弹窗
+   */
   const handleOpenCreate = () => {
     setFormState({
       code: "",
@@ -102,6 +141,10 @@ function DictPage() {
     setFormVisible(true);
   };
 
+  /**
+   * 打开编辑字典弹窗
+   * @param item 字典项
+   */
   const handleOpenEdit = (item: DictItem) => {
     setFormState({
       id: item.id,
@@ -115,18 +158,28 @@ function DictPage() {
     setFormVisible(true);
   };
 
+  /**
+   * 关闭表单弹窗
+   */
   const handleCloseForm = () => {
     setFormVisible(false);
     setFormError("");
   };
 
-  const handleFormChange = (patch: Partial<DictFormState>) => {
+  /**
+   * 处理表单字段变更
+   * @param patch 变更的字段
+   */
+  const handleFormChange = (patch: Partial<SaveDictRequest>) => {
     setFormState(previous => ({
       ...previous,
       ...patch
     }));
   };
 
+  /**
+   * 提交表单数据
+   */
   const handleSubmitForm = async () => {
     const trimmedCode = formState.code.trim();
     const trimmedName = formState.name.trim();
@@ -135,46 +188,63 @@ function DictPage() {
       return;
     }
 
-    try {
-      const res = await saveDict({
-        ...formState,
-        code: trimmedCode,
-        name: trimmedName,
-        category: formState.category.trim() || "未分组",
-        description: formState.description.trim()
-      });
+    const res = await saveDict({
+      ...formState,
+      code: trimmedCode,
+      name: trimmedName,
+      category: formState.category.trim() || "未分组",
+      description: formState.description.trim()
+    });
 
-      if (res) {
-        addToast({
-          title: formState.id ? "字典更新成功" : "字典新增成功",
-          color: "success"
-        });
-        setFormVisible(false);
-        loadDictList();
-      }
-    } catch {
-      // 错误已在 API 层级处理并显示
+    if (res && res.data) {
+      addToast({
+        title: formState.id ? "字典更新成功" : "字典新增成功",
+        color: "success"
+      });
+      setFormVisible(false);
+      loadDictList();
     }
   };
 
+  /**
+   * 切换字典启用状态
+   * @param item 字典项
+   */
   const handleToggleStatus = async (item: DictItem) => {
     const nextStatus: DictStatus = item.status === "enabled" ? "disabled" : "enabled";
-    try {
-      const res = await toggleDictStatus(item.id, nextStatus);
-      if (res) {
-        addToast({
-          title: "状态更新成功",
-          color: "success"
-        });
-        loadDictList();
-      }
-    } catch {
-      // 错误已在 API 层级处理并显示
+    const res = await toggleDictStatus(item.id, nextStatus);
+    if (res && res.data) {
+      addToast({
+        title: "状态更新成功",
+        color: "success"
+      });
+      loadDictList();
+    }
+  };
+
+  /**
+   * 批量切换字典状态
+   * @param status 目标状态
+   */
+  const handleBatchToggleStatus = async (status: DictStatus) => {
+    const ids = Array.from(selectedKeys);
+    if (ids.length === 0) return;
+
+    const res = await batchToggleDictStatus(ids, status);
+
+    if (res && res.data) {
+      addToast({
+        title: `成功批量${status === "enabled" ? "启用" : "停用"} ${ids.length} 项`,
+        color: "success"
+      });
+      setSelectedKeys(new Set());
+      loadDictList();
     }
   };
 
   return (
     <div className="space-y-4">
+      {/* 头部标题区域 */}
       <div className="space-y-1">
         <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] px-3 py-1 text-xs text-[var(--primary-color)]">
           <span>系统管理 · 字典管理</span>
@@ -188,6 +258,7 @@ function DictPage() {
       </div>
 
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+        {/* 筛选与操作工具栏 */}
         <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
@@ -236,6 +307,31 @@ function DictPage() {
               </Tooltip>
             </div>
             <div className="flex flex-wrap gap-2">
+              {selectedKeys.size > 0 && (
+                <div className="flex items-center gap-2 px-2 border-r border-[var(--border-color)] mr-2">
+                  <span className="text-[var(--text-color-secondary)]">
+                    已选 {selectedKeys.size} 项:
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    color="success"
+                    className="h-8 text-xs"
+                    onPress={() => handleBatchToggleStatus("enabled")}
+                  >
+                    批量启用
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    color="default"
+                    className="h-8 text-xs"
+                    onPress={() => handleBatchToggleStatus("disabled")}
+                  >
+                    批量停用
+                  </Button>
+                </div>
+              )}
               <Button
                 size="sm"
                 className="h-8 text-xs"
@@ -251,11 +347,21 @@ function DictPage() {
           </div>
         </div>
 
+        {/* 表格内容区域 */}
         <div className="p-3">
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
             <Table
               aria-label="字典列表"
               className="min-w-full text-xs"
+              selectionMode="multiple"
+              selectedKeys={selectedKeys}
+              onSelectionChange={keys => {
+                if (keys === "all") {
+                  setSelectedKeys(new Set(items.map(item => item.id)));
+                } else {
+                  setSelectedKeys(keys as Set<string>);
+                }
+              }}
             >
               <TableHeader className="bg-[var(--bg-elevated)]/80">
                 <TableColumn className="px-3 py-2 text-left font-medium">
@@ -350,6 +456,7 @@ function DictPage() {
             </Table>
           </div>
 
+          {/* 分页工具栏 */}
           <div className="mt-3 flex flex-col gap-2 text-xs md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <span>
@@ -369,6 +476,7 @@ function DictPage() {
         </div>
       </Card>
 
+      {/* 新增/编辑弹窗 */}
       {formVisible && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md rounded-[var(--radius-base)] bg-[var(--bg-elevated)] border border-[var(--border-color)] shadow-lg">
@@ -461,4 +569,7 @@ function DictPage() {
   );
 }
 
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====
 export default DictPage;

@@ -114,10 +114,10 @@ function VideoUploadPage() {
           fetchUploadTaskList({ page: 1, pageSize: 10 }),
           fetchDraftList({ page: 1, pageSize: 10 })
         ]);
-        if (cats) setCategoryData(cats);
-        if (tags) setTagOptions(tags);
-        if (taskList && taskList.list) setTasks(taskList.list);
-        if (draftList && draftList.list) setDrafts(draftList.list);
+        if (cats.data) setCategoryData(cats.data);
+        if (tags.data) setTagOptions(tags.data);
+        if (taskList.data && taskList.data.list) setTasks(taskList.data.list);
+        if (draftList.data && draftList.data.list) setDrafts(draftList.data.list);
       } catch (error) {
         console.error("加载上传页面初始数据失败", error);
       } finally {
@@ -247,7 +247,7 @@ function VideoUploadPage() {
       });
 
       // 如果后端返回无需上传（秒传）
-      if (initRes && !initRes.needUpload) {
+      if (initRes.data && !initRes.data.needUpload) {
         setUploadProgress(100);
         setIsUploading(false);
         setLoading(false);
@@ -255,12 +255,12 @@ function VideoUploadPage() {
         return;
       }
 
-      const uploadId = initRes?.uploadId;
+      const uploadId = initRes.data?.uploadId;
       if (!uploadId) {
         throw new Error("未能获取到上传 ID");
       }
 
-      const uploadedChunks = initRes.uploadedChunks || [];
+      const uploadedChunks = initRes.data?.uploadedChunks || [];
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
       
       // 2. 分块上传
@@ -1235,7 +1235,6 @@ function VideoUploadPage() {
                       startContent={<FiUploadCloud className="text-lg" />}
                       onPress={handleCreateTask}
                       isDisabled={isUploading || !selectedFileName || !isFormValid || loading}
-                      isLoading={loading}
                     >
                       开始上传并发布
                     </Button>

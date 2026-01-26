@@ -1,3 +1,4 @@
+// ===== 1. 依赖导入区域 =====
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Avatar, Textarea, Accordion, AccordionItem, addToast } from "@heroui/react";
@@ -17,172 +18,104 @@ import {
 } from "../../api/front/video";
 import { toggleFollowUser } from "../../api/front/user";
 import VideoPlayer from "../../components/VideoPlayer";
-import { mockVideoData, mockVideoComments } from "../../api/mock/front/videoDetail";
+import { useCallback } from "react";
+// ===== 2. TODO待处理导入区域 =====
 
-// --- Sub-components for responsive layout ---
-
-const EpisodesList = ({ 
-  episodes, 
-  currentId, 
-  onEpisodeClick 
-}: { 
-  episodes: VideoDetail['episodes']; 
-  currentId: string | undefined; 
-  onEpisodeClick: (id: string) => void;
-}) => (
-  <Accordion variant="splitted" defaultExpandedKeys={["1"]} className="px-0">
-    <AccordionItem 
-      key="1" 
-      aria-label="视频选集" 
-      title={<span className="font-bold">视频选集</span>}
-      classNames={{
-        base: "bg-[var(--bg-elevated)] shadow-none border border-[var(--border-color)]",
-        title: "text-sm"
-      }}
-    >
-      <div className="space-y-1 max-h-80 overflow-y-auto custom-scrollbar">
-        {episodes && episodes.length > 0 ? (
-          episodes.map((ep, index) => (
-            <div 
-              key={ep.id}
-              className={`flex items-center justify-between p-2.5 rounded-lg text-sm cursor-pointer transition-all ${
-                ep.id === currentId 
-                  ? "bg-[var(--primary-color)]/20 text-[var(--primary-color)] shadow-sm font-medium" 
-                  : "hover:bg-[var(--bg-color)] text-[var(--text-color-secondary)] hover:text-[var(--text-color)]"
-              }`}
-              onClick={() => onEpisodeClick(ep.id)}
-            >
-              <span className="truncate pr-2">P{index + 1}. {ep.title}</span>
-              <span className={`text-xs shrink-0 ${ep.id === currentId ? "opacity-100" : "opacity-60"}`}>
-                {ep.duration}
-              </span>
-            </div>
-          ))
-        ) : (
-          <div className="p-4 text-center text-sm text-[var(--text-color-secondary)]">暂无选集</div>
-        )}
-      </div>
-    </AccordionItem>
-  </Accordion>
-);
-
-const RecommendationsList = ({ 
-  recommendations, 
-  onRecommendationClick 
-}: { 
-  recommendations: VideoDetail['recommendations']; 
-  onRecommendationClick: (id: string) => void;
-}) => (
-  <div className="space-y-4">
-    <h3 className="text-base font-bold px-1">相关推荐</h3>
-    <div className="space-y-4">
-      {recommendations.map(item => (
-        <div
-          key={item.id}
-          className="flex gap-3 group cursor-pointer"
-          onClick={() => onRecommendationClick(item.id)}
-        >
-          <div className="relative w-40 h-24 bg-slate-800 rounded-xl overflow-hidden shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
-            <img 
-              src={item.coverUrl || "/DefaultImage/MyDefaultHomeVodie.png"} 
-              alt={item.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "/DefaultImage/MyDefaultHomeVodie.png";
-              }}
-            />
-            <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
-              {item.duration}
-            </div>
-          </div>
-          <div className="flex-1 min-w-0 flex flex-col gap-1 py-0.5">
-            <div className="text-sm font-medium line-clamp-2 group-hover:text-[var(--primary-color)] transition-colors leading-snug">
-              {item.title}
-            </div>
-            <div className="space-y-0.5">
-              <div className="text-[11px] text-[var(--text-color-secondary)] truncate">
-                {item.authorName || "未知作者"}
-              </div>
-              <div className="text-[11px] text-[var(--text-color-secondary)] line-clamp-1 opacity-70">
-                {item.description || "暂无简介"}
-              </div>
-              <div className="text-[11px] text-[var(--text-color-secondary)] flex items-center gap-2">
-                <span>{item.views} 播放</span>
-                {item.date && (
-                  <>
-                    <span className="w-0.5 h-0.5 rounded-full bg-current opacity-40"></span>
-                    <span>{item.date}</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
+// ===== 3. 状态控制逻辑区域 =====
 function VideoDetail() {
+  /** 导航钩子 */
   const navigate = useNavigate();
+  /** 路径参数 */
   const { id } = useParams();
+  /** 用户信息 */
   const { token } = useUserStore();
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  /** 简介展开状态 */
+  const [isExpanded, setIsExpanded] = useState(false);
+  /** 视频详情数据 */
   const [video, setVideo] = useState<VideoDetail | null>(null);
+  /** 加载状态 */
   const [loading, setLoading] = useState(true);
+  /** 评论列表 */
   const [comments, setComments] = useState<CommentItem[]>([]);
+  /** 评论输入内容 */
   const [commentText, setCommentText] = useState("");
+  /** 评论排序方式 */
   const [commentSort, setCommentSort] = useState<"hot" | "new">("hot");
+  /** 正在回复的对象 */
   const [replyingTo, setReplyingTo] = useState<{ id: string; name: string; parentId?: string } | null>(null);
 
-  const checkLogin = () => {
+  // ===== 4. 通用工具函数区域 =====
+
+
+  /**
+   * 检查登录状态
+   */
+  const handleCheckLogin = useCallback(() => {
     if (!token) {
       addToast({ title: "请先登录", color: "warning" });
       return false;
     }
     return true;
-  };
+  }, [token]);
 
-  const handleLike = async () => {
-    if (!checkLogin() || !video) return;
+  // ===== 5. 注释代码函数区 =====
+  /**
+   * 页面初始化代码容器 (不实际执行)
+   */
+  // const showPageInit = () => {
+  //   console.log("Page Initializing...");
+  // };
+
+  // ===== 6. 错误处理函数区域 =====
+
+  // ===== 7. 数据处理函数区域 =====
+  /**
+   * 处理点赞
+   */
+  const handleLike = useCallback(async () => {
+    if (!handleCheckLogin() || !video) return;
     const newIsLiked = !video.stats.isLiked;
     const newCount = video.stats.likes + (newIsLiked ? 1 : -1);
     
-    try { 
-      await toggleVideoLike(video.id); 
-      // Update UI after success
-      setVideo(prev => prev ? { ...prev, stats: { ...prev.stats, isLiked: newIsLiked, likes: newCount } } : null);
-      if (newIsLiked) {
-        addToast({ title: "点赞成功", color: "success" });
-      } else {
-        addToast({ title: "取消点赞", color: "warning" });
-      }
-    } catch (err) { 
-      console.error(err);
-    }
-  };
+    await toggleVideoLike(video.id);
+    
+    setVideo(prev => prev ? { 
+      ...prev, 
+      stats: { ...prev.stats, isLiked: newIsLiked, likes: newCount } 
+    } : null);
+    
+    addToast({ 
+      title: newIsLiked ? "点赞成功" : "取消点赞", 
+      color: newIsLiked ? "success" : "warning" 
+    });
+  }, [video, handleCheckLogin]);
 
-  const handleFavorite = async () => {
-    if (!checkLogin() || !video) return;
+  /**
+   * 处理收藏
+   */
+  const handleFavorite = useCallback(async () => {
+    if (!handleCheckLogin() || !video) return;
     const newIsFavorited = !video.stats.isFavorited;
     const newCount = video.stats.favorites + (newIsFavorited ? 1 : -1);
     
-    try { 
-      await toggleVideoFavorite(video.id); 
-      // Update UI after success
-      setVideo(prev => prev ? { ...prev, stats: { ...prev.stats, isFavorited: newIsFavorited, favorites: newCount } } : null);
-      if (newIsFavorited) {
-        addToast({ title: "收藏成功", color: "success" });
-      } else {
-        addToast({ title: "取消收藏", color: "warning" });
-      }
-    } catch (err) { 
-      console.error(err);
-    }
-  };
+    await toggleVideoFavorite(video.id);
+    
+    setVideo(prev => prev ? { 
+      ...prev, 
+      stats: { ...prev.stats, isFavorited: newIsFavorited, favorites: newCount } 
+    } : null);
+    
+    addToast({ 
+      title: newIsFavorited ? "收藏成功" : "取消收藏", 
+      color: newIsFavorited ? "success" : "warning" 
+    });
+  }, [video, handleCheckLogin]);
 
-  const handleCommentLike = async (commentId: string, isReply = false, parentId?: string) => {
-    if (!checkLogin()) return;
+  /**
+   * 处理评论点赞
+   */
+  const handleCommentLike = useCallback(async (commentId: string, isReply = false, parentId?: string) => {
+    if (!handleCheckLogin()) return;
 
     let targetComment: CommentItem | undefined;
     if (isReply && parentId) {
@@ -212,135 +145,204 @@ function VideoDetail() {
       });
     };
 
-    try {
-      await toggleCommentLike(commentId);
-      // Update UI after success
-      setComments(prev => updateComments(prev));
-      if (newIsLiked) {
-        addToast({ title: "点赞成功", color: "success" });
-      }
-    } catch (err) {
-      console.error(err);
+    await toggleCommentLike(commentId);
+    setComments(prev => updateComments(prev));
+    if (newIsLiked) {
+      addToast({ title: "点赞成功", color: "success" });
     }
-  };
+  }, [comments, handleCheckLogin]);
 
-  const handleShare = () => {
+  /**
+   * 处理分享
+   */
+  const handleShare = useCallback(() => {
     navigator.clipboard.writeText(window.location.href);
     addToast({ title: "链接已复制", color: "success" });
-  };
+  }, []);
 
-  const handleFollow = async () => {
-    if (!checkLogin() || !video) return;
-    
+  /**
+   * 处理关注
+   */
+  const handleFollow = useCallback(async () => {
+    if (!handleCheckLogin() || !video) return;
     const newIsFollowing = !video.author.isFollowing;
     
-    try { 
-      await toggleFollowUser(video.author.id); 
-      // Update UI after success
-      setVideo(prev => prev ? { 
-        ...prev, 
-        author: { ...prev.author, isFollowing: newIsFollowing } 
-      } : null);
-      if (newIsFollowing) {
-        addToast({ title: "关注成功", color: "success" });
-      } else {
-        addToast({ title: "已取消关注", color: "warning" });
-      }
-    } catch (err) { 
-      console.error(err);
-    }
-  };
+    await toggleFollowUser(video.author.id);
+    
+    setVideo(prev => prev ? { 
+      ...prev, 
+      author: { ...prev.author, isFollowing: newIsFollowing } 
+    } : null);
+    
+    addToast({ 
+      title: newIsFollowing ? "关注成功" : "已取消关注", 
+      color: newIsFollowing ? "success" : "warning" 
+    });
+  }, [video, handleCheckLogin]);
 
-  const handleCommentSubmit = async () => {
-    if (!checkLogin()) return;
+  /**
+   * 处理评论提交
+   */
+  const handleCommentSubmit = useCallback(async () => {
+    if (!handleCheckLogin()) return;
     
     if (!commentText.trim()) {
       addToast({ title: "评论内容不能为空", color: "warning" });
       return;
     }
 
-    try {
-      const data = {
-        videoId: id!,
-        content: commentText.trim(),
-        parentId: replyingTo?.parentId || replyingTo?.id,
-        replyToId: replyingTo?.id
-      };
+    const newComment = await postVideoComment({
+      videoId: id!,
+      content: commentText.trim(),
+      parentId: replyingTo?.parentId || replyingTo?.id,
+      replyToId: replyingTo?.id
+    });
 
-      const newComment = await postVideoComment(data);
-
+    if (newComment) {
       if (replyingTo?.parentId) {
-        // Reply to a reply or comment
-        setComments(comments.map(c => {
+        setComments(prev => prev.map(c => {
           if (c.id === replyingTo.parentId) {
-            return {
-              ...c,
-              replies: [...(c.replies || []), newComment]
-            };
+            return { ...c, replies: [...(c.replies || []), newComment] };
           }
           return c;
         }));
       } else if (replyingTo) {
-        // Reply to a top-level comment
-        setComments(comments.map(c => {
+        setComments(prev => prev.map(c => {
           if (c.id === replyingTo.id) {
-            return {
-              ...c,
-              replies: [...(c.replies || []), newComment]
-            };
+            return { ...c, replies: [...(c.replies || []), newComment] };
           }
           return c;
         }));
       } else {
-        // Top-level comment
-        setComments([newComment, ...comments]);
+        setComments(prev => [newComment, ...prev]);
       }
       
       setCommentText("");
       setReplyingTo(null);
       addToast({ title: "评论发布成功", color: "success" });
-    } catch (err) {
-      console.error(err);
     }
-  };
+  }, [id, commentText, replyingTo, handleCheckLogin]);
+
+  /**
+   * 处理路由跳转
+   */
+  const handleNavigate = useCallback((newId: string) => {
+    navigate(routes.videoDetail.replace(":id", newId));
+  }, [navigate]);
+
+  // ===== 8. UI渲染逻辑区域 =====
+  /**
+   * 选集列表组件
+   */
+  const renderEpisodesList = () => (
+    <Accordion variant="splitted" defaultExpandedKeys={["1"]} className="px-0">
+      <AccordionItem 
+        key="1" 
+        aria-label="视频选集" 
+        title={<span className="font-bold">视频选集</span>}
+        classNames={{
+          base: "bg-[var(--bg-elevated)] shadow-none border border-[var(--border-color)]",
+          title: "text-sm"
+        }}
+      >
+        <div className="space-y-1 max-h-80 overflow-y-auto custom-scrollbar">
+          {video?.episodes && video.episodes.length > 0 ? (
+            video.episodes.map((ep, index) => (
+              <div 
+                key={ep.id}
+                className={`flex items-center justify-between p-2.5 rounded-lg text-sm cursor-pointer transition-all ${
+                  ep.id === id 
+                    ? "bg-[var(--primary-color)]/20 text-[var(--primary-color)] shadow-sm font-medium" 
+                    : "hover:bg-[var(--bg-color)] text-[var(--text-color-secondary)] hover:text-[var(--text-color)]"
+                }`}
+                onClick={() => handleNavigate(ep.id)}
+              >
+                <span className="truncate pr-2">P{index + 1}. {ep.title}</span>
+                <span className={`text-xs shrink-0 ${ep.id === id ? "opacity-100" : "opacity-60"}`}>
+                  {ep.duration}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="p-4 text-center text-sm text-[var(--text-color-secondary)]">暂无选集</div>
+          )}
+        </div>
+      </AccordionItem>
+    </Accordion>
+  );
+
+  /**
+   * 推荐列表组件
+   */
+  const renderRecommendationsList = () => (
+    <div className="space-y-4">
+      <h3 className="text-base font-bold px-1">相关推荐</h3>
+      <div className="space-y-4">
+        {video?.recommendations.map(item => (
+          <div
+            key={item.id}
+            className="flex gap-3 group cursor-pointer"
+            onClick={() => handleNavigate(item.id)}
+          >
+            <div className="relative w-40 h-24 bg-slate-800 rounded-xl overflow-hidden shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
+              <img 
+                src={item.coverUrl || "/DefaultImage/MyDefaultHomeVodie.png"} 
+                alt={item.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/DefaultImage/MyDefaultHomeVodie.png";
+                }}
+              />
+              <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                {item.duration}
+              </div>
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col gap-1 py-0.5">
+              <div className="text-sm font-medium line-clamp-2 group-hover:text-[var(--primary-color)] transition-colors leading-snug">
+                {item.title}
+              </div>
+              <div className="space-y-0.5">
+                <div className="text-[11px] text-[var(--text-color-secondary)] truncate">
+                  {item.authorName || "未知作者"}
+                </div>
+                <div className="text-[11px] text-[var(--text-color-secondary)] line-clamp-1 opacity-70">
+                  {item.description || "暂无简介"}
+                </div>
+                <div className="text-[11px] text-[var(--text-color-secondary)] flex items-center gap-2">
+                  <span>{item.views} 播放</span>
+                  {item.date && (
+                    <>
+                      <span className="w-0.5 h-0.5 rounded-full bg-current opacity-40"></span>
+                      <span>{item.date}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // ===== 9. 页面初始化与事件绑定 =====
+  const handleFetchInitData = useCallback(async () => {
+    if (!id) return;
+
+      const res = await fetchVideoDetail(id, setLoading);
+      if (res) setVideo(res);
+
+      const commentsRes = await fetchVideoComments(id, { page: 1, pageSize: 20, sort: commentSort });
+      if (commentsRes?.list) setComments(commentsRes.list);
+
+  }, [id, commentSort]);
 
   useEffect(() => {
-    if (id) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(true);
-      fetchVideoDetail(id)
-        .then((res) => {
-          // 如果返回 200 但数据为空，或者根据用户要求回退到 mock
-          if (!res || !res.id) {
-            setVideo(mockVideoData);
-          } else {
-            setVideo(res);
-          }
-
-          // 获取评论列表
-          fetchVideoComments(id, { page: 1, pageSize: 20, sort: commentSort })
-            .then(commentsRes => {
-              if (!commentsRes || !commentsRes.list || commentsRes.list.length === 0) {
-                setComments(mockVideoComments);
-              } else {
-                setComments(commentsRes.list);
-              }
-            })
-            .catch(err => {
-              console.error("Fetch video comments failed, using mock:", err);
-              setComments(mockVideoComments);
-            });
-        })
-        .catch((err) => {
-          console.error("Failed to fetch video detail, using mock:", err);
-          setVideo(mockVideoData);
-          setComments(mockVideoComments);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    }
-  }, [id, commentSort]);
+    const timer = setTimeout(() => {
+      handleFetchInitData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [handleFetchInitData]);
 
   if (loading) {
     return <Loading height="calc(100vh - 200px)" />;
@@ -353,10 +355,6 @@ function VideoDetail() {
       </div>
     );
   }
-
-  const handleNavigate = (newId: string) => {
-    navigate(routes.videoDetail.replace(":id", newId));
-  };
 
   return (
     <div className="w-full py-4">
@@ -464,11 +462,7 @@ function VideoDetail() {
 
           {/* Mobile Only: Episodes Section */}
           <div className="lg:hidden">
-            <EpisodesList 
-              episodes={video.episodes} 
-              currentId={id} 
-              onEpisodeClick={handleNavigate} 
-            />
+            {renderEpisodesList()}
           </div>
 
           {/* Comments Section */}
@@ -542,70 +536,61 @@ function VideoDetail() {
               {comments.map(comment => (
                 <div key={comment.id} className="flex gap-4 group">
                   <Avatar src={comment.author.avatar} name={comment.author.name.charAt(0)} className="w-10 h-10 shrink-0" />
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-[var(--text-color-secondary)]">{comment.author.name}</span>
-                      <span className="text-xs text-[var(--text-color-secondary)] opacity-60">{comment.createdAt}</span>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm">{comment.author.name}</span>
+                        <span className="text-xs text-[var(--text-color-secondary)]">{comment.createdAt}</span>
+                      </div>
                     </div>
-                    <div className="text-sm leading-relaxed text-[var(--text-color)]">
-                      {comment.content}
-                    </div>
-                    
-                    {/* Comment Actions */}
-                    <div className="flex items-center gap-6 text-xs text-[var(--text-color-secondary)] pt-1">
+                    <p className="text-sm leading-relaxed">{comment.content}</p>
+                    <div className="flex items-center gap-6">
                       <div 
-                        className="flex items-center gap-1.5 cursor-pointer hover:text-[var(--primary-color)] transition-colors"
+                        className={`flex items-center gap-1.5 cursor-pointer text-xs transition-colors ${comment.isLiked ? "text-[var(--primary-color)]" : "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]"}`}
                         onClick={() => handleCommentLike(comment.id)}
                       >
-                        <FiThumbsUp className={comment.isLiked ? "text-[var(--primary-color)] fill-current" : ""} />
+                        <FiThumbsUp className={comment.isLiked ? "fill-current" : ""} />
                         <span>{comment.likes}</span>
                       </div>
-                      <div 
-                        className="cursor-pointer hover:text-[var(--primary-color)] transition-colors"
-                        onClick={() => {
-                          if (!checkLogin()) return;
-                          setReplyingTo({ id: comment.id, name: comment.author.name });
-                          // Optional: focus textarea
-                        }}
+                      <span 
+                        className="text-xs text-[var(--text-color-secondary)] cursor-pointer hover:text-[var(--primary-color)]"
+                        onClick={() => setReplyingTo({ id: comment.id, name: comment.author.name })}
                       >
                         回复
-                      </div>
+                      </span>
                     </div>
 
                     {/* Replies */}
                     {comment.replies && comment.replies.length > 0 && (
-                      <div className="mt-3 pl-4 border-l-2 border-[var(--border-color)] space-y-4">
+                      <div className="mt-4 space-y-4 bg-[var(--bg-color)]/50 p-3 rounded-lg">
                         {comment.replies.map(reply => (
                           <div key={reply.id} className="flex gap-3">
                             <Avatar src={reply.author.avatar} name={reply.author.name.charAt(0)} className="w-6 h-6 shrink-0" />
-                            <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex-1 space-y-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-[var(--text-color-secondary)]">{reply.author.name}</span>
-                                <span className="text-xs text-[var(--text-color-secondary)] opacity-60">{reply.createdAt}</span>
-                              </div>
-                              <div className="text-sm text-[var(--text-color)]">
+                                <span className="font-bold text-xs">{reply.author.name}</span>
                                 {reply.replyTo && (
-                                  <span className="text-[var(--primary-color)] mr-1">@{reply.replyTo.name}</span>
+                                  <span className="text-xs text-[var(--text-color-secondary)]">
+                                    回复 <span className="text-[var(--primary-color)]">@{reply.replyTo.name}</span>
+                                  </span>
                                 )}
-                                {reply.content}
+                                <span className="text-[10px] text-[var(--text-color-secondary)]">{reply.createdAt}</span>
                               </div>
-                              <div className="flex items-center gap-4 text-xs text-[var(--text-color-secondary)] pt-0.5">
+                              <p className="text-xs leading-relaxed">{reply.content}</p>
+                              <div className="flex items-center gap-4">
                                 <div 
-                                  className="flex items-center gap-1 cursor-pointer hover:text-[var(--primary-color)]"
+                                  className={`flex items-center gap-1 cursor-pointer text-[10px] transition-colors ${reply.isLiked ? "text-[var(--primary-color)]" : "text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]"}`}
                                   onClick={() => handleCommentLike(reply.id, true, comment.id)}
                                 >
-                                  <FiThumbsUp className={reply.isLiked ? "text-[var(--primary-color)] fill-current" : ""} />
+                                  <FiThumbsUp className={reply.isLiked ? "fill-current" : ""} />
                                   <span>{reply.likes}</span>
                                 </div>
-                                <div 
-                                  className="cursor-pointer hover:text-[var(--primary-color)]"
-                                  onClick={() => {
-                                    if (!checkLogin()) return;
-                                    setReplyingTo({ id: reply.id, name: reply.author.name, parentId: comment.id });
-                                  }}
+                                <span 
+                                  className="text-[10px] text-[var(--text-color-secondary)] cursor-pointer hover:text-[var(--primary-color)]"
+                                  onClick={() => setReplyingTo({ id: reply.id, name: reply.author.name, parentId: comment.id })}
                                 >
                                   回复
-                                </div>
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -615,37 +600,20 @@ function VideoDetail() {
                   </div>
                 </div>
               ))}
-              
-              {comments.length === 0 && (
-                <div className="text-center py-12 text-[var(--text-color-secondary)]">
-                  <div className="text-4xl mb-3 opacity-20">💬</div>
-                  <div className="text-sm">暂无评论，快来抢沙发吧~</div>
-                </div>
-              )}
             </div>
-          </div>
-
-          {/* Mobile Only: Recommendations Section */}
-          <div className="lg:hidden">
-            <RecommendationsList 
-              recommendations={video.recommendations} 
-              onRecommendationClick={handleNavigate} 
-            />
           </div>
         </div>
 
-        {/* Right Sidebar (Episodes & Recommendations) - Desktop Only */}
-        <div className="hidden lg:block lg:w-[400px] shrink-0 space-y-6">
-          <div className="sticky top-24 space-y-6">
-            <EpisodesList 
-              episodes={video.episodes} 
-              currentId={id} 
-              onEpisodeClick={handleNavigate} 
-            />
-            <RecommendationsList 
-              recommendations={video.recommendations} 
-              onRecommendationClick={handleNavigate} 
-            />
+        {/* Right Sidebar */}
+        <div className="w-full lg:w-80 space-y-6">
+          <div className="lg:sticky lg:top-4 space-y-6">
+            {/* Desktop Only: Episodes Section */}
+            <div className="hidden lg:block">
+              {renderEpisodesList()}
+            </div>
+
+            {/* Recommendations Section */}
+            {renderRecommendationsList()}
           </div>
         </div>
       </div>
@@ -653,4 +621,13 @@ function VideoDetail() {
   );
 }
 
+// ===== 10. TODO任务管理区域 =====
+/**
+ * 待处理任务清单
+ * 1. 优化视频播放器加载体验
+ * 2. 增加评论分页加载功能
+ * 3. 完善举报及黑名单功能
+ */
+
+// ===== 11. 导出区域 =====
 export default VideoDetail;

@@ -1,111 +1,132 @@
-import React, { useMemo, useState, useEffect } from "react";
+// ===== 1. 依赖导入区域 =====
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Card, Chip, Button, Tab, addToast } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { Loading } from "@/components/Loading";
 import type { ColumnConfig, LineConfig } from "@ant-design/plots";
 import { Column, Line } from "@ant-design/plots";
 import { useAppStore } from "../../../store";
+import {
+  CacheInstanceItem as CacheInstance,
+  getCacheMonitorInitialData,
+  getCacheInstanceDetailData,
+  clearCacheInstanceData,
+  CacheLogItem,
+} from "../../../api/admin/ops";
 
-import { CacheInstanceItem as CacheInstance, fetchCacheInstances, fetchCacheHitRateTrend, fetchCacheQpsTrend, fetchCacheLogs, CacheLogItem } from "../../../api/admin/ops";
+// ===== 2. TODO待处理导入区域 =====
 
 function CacheMonitorPage() {
+  // ===== 3. 状态控制逻辑区域 =====
+  /** 是否正在加载实例列表 */
   const [loading, setLoading] = useState(false);
+  /** 是否正在加载趋势数据 */
   const [loadingTrend, setLoadingTrend] = useState(false);
+  /** 实例排序顺序 */
   const [order, setOrder] = useState<"asc" | "desc">("desc");
+  /** 当前选中的实例 ID */
   const [activeInstanceId, setActiveInstanceId] = useState("");
+  /** 缓存实例列表 */
   const [instances, setInstances] = useState<CacheInstance[]>([]);
-  const [hitRateTrendData, setHitRateTrendData] = useState<LineConfig["data"]>([]);
+  /** 命中率趋势数据 */
+  const [hitRateTrendData, setHitRateTrendData] = useState<LineConfig["data"]>(
+    []
+  );
+  /** QPS 趋势数据 */
   const [qpsTrendData, setQpsTrendData] = useState<ColumnConfig["data"]>([]);
+  /** 缓存操作日志 */
   const [cacheLogs, setCacheLogs] = useState<CacheLogItem[]>([]);
+  /** 应用主题模式 */
   const { themeMode } = useAppStore();
 
-  // 初始加载实例列表
-  useEffect(() => {
-    async function loadInitialData() {
-      setLoading(true);
-      // 同时开启趋势数据的 loading，防止内容闪烁
-      setLoadingTrend(true);
-      try {
-        const instRes = await fetchCacheInstances();
-        if (instRes && instRes.length > 0) {
-          setInstances(instRes);
-          const defaultInstance = instRes.find(i => i.id === "redis-main") || instRes[0];
-          setActiveInstanceId(defaultInstance.id);
-          
-          // 立即加载第一个实例的数据，避免触发第二个 useEffect 的延迟
-          const [hitRes, qpsRes, logRes] = await Promise.all([
-            fetchCacheHitRateTrend({ instanceId: defaultInstance.id }),
-            fetchCacheQpsTrend({ instanceId: defaultInstance.id }),
-            fetchCacheLogs({ instanceId: defaultInstance.id })
-          ]);
-          
-          if (hitRes) setHitRateTrendData(hitRes);
-          if (qpsRes) setQpsTrendData(qpsRes);
-          if (logRes) setCacheLogs(logRes);
-        }
-      } catch (error) {
-        console.error("Failed to load initial cache data:", error);
-      } finally {
-        setLoading(false);
-        setLoadingTrend(false);
-      }
-    }
-    loadInitialData();
-  }, []);
-
-  // 当手动切换选中实例时，加载对应的趋势数据和日志
-  useEffect(() => {
-    // 只有当 activeInstanceId 存在且不是初始加载（即 loading 为 false）时才执行
-    if (!activeInstanceId || loading) return;
-
-    async function loadDetailData() {
-      setLoadingTrend(true);
-      try {
-        const [hitRes, qpsRes, logRes] = await Promise.all([
-          fetchCacheHitRateTrend({ instanceId: activeInstanceId }),
-          fetchCacheQpsTrend({ instanceId: activeInstanceId }),
-          fetchCacheLogs({ instanceId: activeInstanceId })
-        ]);
-        
-        if (hitRes) setHitRateTrendData(hitRes);
-        if (qpsRes) setQpsTrendData(qpsRes);
-        if (logRes) setCacheLogs(logRes);
-      } catch (error) {
-        console.error("Failed to load detail data:", error);
-      } finally {
-        setLoadingTrend(false);
-      }
-    }
-    loadDetailData();
-  }, [activeInstanceId, loading]);
-
-  const handleClearCache = async () => {
-    if (!activeInstanceId) return;
-    
-    try {
-      setLoadingTrend(true);
-      await import("../../../api/admin/ops").then(m => m.clearCacheInstance({ instanceId: activeInstanceId }));
-      addToast({
-        title: "清理成功",
-        description: `已清理实例 ${activeInstanceId} 的所有缓存数据。`,
-        color: "success"
-      });
-    } catch (error) {
-      console.error("handleClearCache error:", error);
-    } finally {
-      setLoadingTrend(false);
-    }
-  };
-
+  // ===== 4. 通用工具函数区域 =====
+  /** 获取图表主题配置 */
   const chartTheme =
     themeMode === "dark"
       ? "classicDark"
       : themeMode === "light"
-        ? "classic"
-        : window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "classicDark"
-          : "classic";
+      ? "classic"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "classicDark"
+      : "classic";
 
+  // ===== 5. 注释代码函数区 =====
+
+  // ===== 6. 错误处理函数区域 =====
+  /**
+   * 统一错误提示处理
+   * @param error 错误对象
+   * @param prefix 错误前缀描述
+   */
+  const showErrorFn = (error: unknown, prefix: string) => {
+    const message = error instanceof Error ? error.message : String(error);
+    addToast({
+      title: `${prefix}失败`,
+      description: message,
+      color: "danger",
+    });
+  };
+
+  // ===== 7. 数据处理函数区域 =====
+  /** 加载初始实例列表及默认详情 */
+  const loadInitialData = useCallback(async () => {
+    const result = await getCacheMonitorInitialData({
+      setLoading,
+      setLoadingTrend,
+      onError: (err) => showErrorFn(err, "加载实例列表"),
+    });
+
+    if (result && result.instances.length > 0) {
+      setInstances(result.instances);
+      setActiveInstanceId(result.defaultInstance?.id || "");
+
+      if (result.detail) {
+        setHitRateTrendData(result.detail.hitRateTrendData || []);
+        setQpsTrendData(result.detail.qpsTrendData || []);
+        setCacheLogs(result.detail.cacheLogs || []);
+      }
+    }
+  }, []);
+
+  /** 加载选中实例的详情数据 */
+  const loadDetailData = useCallback(async (instanceId: string) => {
+    if (!instanceId) return;
+
+    const result = await getCacheInstanceDetailData({
+      instanceId,
+      setLoading: setLoadingTrend,
+      onError: (err) => showErrorFn(err, "加载详情数据"),
+    });
+
+    if (result) {
+      setHitRateTrendData(result.hitRateTrendData || []);
+      setQpsTrendData(result.qpsTrendData || []);
+      setCacheLogs(result.cacheLogs || []);
+    }
+  }, []);
+
+  /** 处理清空缓存操作 */
+  const handleClearCache = async () => {
+    if (!activeInstanceId) return;
+
+    const success = await clearCacheInstanceData({
+      instanceId: activeInstanceId,
+      setLoading: setLoadingTrend,
+      onError: (err) => showErrorFn(err, "清理缓存"),
+    });
+
+    if (success) {
+      addToast({
+        title: "清理成功",
+        description: `已清理实例 ${activeInstanceId} 的所有缓存数据。`,
+        color: "success",
+      });
+      // 清理后重新加载详情
+      loadDetailData(activeInstanceId);
+    }
+  };
+
+  /** 排序后的实例列表 */
   const sortedInstances = useMemo(() => {
     const list = [...instances];
     list.sort((a, b) =>
@@ -114,11 +135,15 @@ function CacheMonitorPage() {
     return list;
   }, [order, instances]);
 
+  /** 当前活动的实例对象 */
   const activeInstance = useMemo(
-    () => sortedInstances.find(item => item.id === activeInstanceId) ?? sortedInstances[0],
+    () =>
+      sortedInstances.find((item) => item.id === activeInstanceId) ??
+      sortedInstances[0],
     [sortedInstances, activeInstanceId]
   );
 
+  /** 命中率趋势图表配置 */
   const hitLineConfig: LineConfig = useMemo(
     () => ({
       data: hitRateTrendData,
@@ -131,33 +156,34 @@ function CacheMonitorPage() {
         label: {
           formatter: (value: number | string) => `${value}%`,
           style: {
-            fontSize: 10
-          }
+            fontSize: 10,
+          },
         },
         grid: {
           line: {
             style: {
               stroke: "rgba(148,163,184,0.35)",
-              lineDash: [4, 4]
-            }
-          }
-        }
+              lineDash: [4, 4],
+            },
+          },
+        },
       },
       xAxis: {
         label: {
           style: {
-            fontSize: 10
-          }
-        }
+            fontSize: 10,
+          },
+        },
       },
       legend: {
-        position: "top"
+        position: "top",
       },
-      theme: chartTheme
+      theme: chartTheme,
     }),
     [hitRateTrendData, chartTheme]
   );
 
+  /** QPS 趋势图表配置 */
   const qpsColumnConfig: ColumnConfig = useMemo(
     () => ({
       data: qpsTrendData,
@@ -165,30 +191,53 @@ function CacheMonitorPage() {
       yField: "value",
       seriesField: "type",
       columnStyle: {
-        radius: [4, 4, 0, 0]
+        radius: [4, 4, 0, 0],
       },
       xAxis: {
         label: {
           style: {
-            fontSize: 10
-          }
-        }
+            fontSize: 10,
+          },
+        },
       },
       yAxis: {
         label: {
           style: {
-            fontSize: 10
-          }
-        }
+            fontSize: 10,
+          },
+        },
       },
       legend: {
-        position: "top"
+        position: "top",
       },
-      theme: chartTheme
+      theme: chartTheme,
     }),
     [qpsTrendData, chartTheme]
   );
 
+    // ===== 9. 页面初始化与事件绑定 =====
+  /** 初始化加载实例列表 */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadInitialData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadInitialData]);
+
+  /** 当手动切换选中实例时，加载对应的趋势数据和日志 */
+  useEffect(() => {
+    // 只有当 activeInstanceId 存在且不是初始加载（即 loading 为 false）时才执行
+    if (!activeInstanceId || loading) return;
+
+    const timer = setTimeout(() => {
+      loadDetailData(activeInstanceId);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [activeInstanceId, loading, loadDetailData]);
+
+  // ===== 10. TODO任务管理区域 =====
+
+  // ===== 8. UI渲染逻辑区域 =====
   return (
     <div className="space-y-4">
       <div className="space-y-1">
@@ -230,7 +279,7 @@ function CacheMonitorPage() {
             {loading ? (
               <Loading height={200} />
             ) : (
-              sortedInstances.map(item => {
+              sortedInstances.map((item) => {
                 const percent = Math.round(item.usage * 100);
                 const critical = percent >= 90;
                 return (
@@ -246,14 +295,22 @@ function CacheMonitorPage() {
                     onClick={() => setActiveInstanceId(item.id)}
                   >
                     <div className="flex flex-col">
-                      <span className="text-[var(--text-color)]">{item.name}</span>
+                      <span className="text-[var(--text-color)]">
+                        {item.name}
+                      </span>
                       <span className="text-xs text-[var(--text-color-secondary)]">
-                        节点数：{item.nodes} · 命中率 {Math.round(item.hitRate * 100)}%
+                        节点数：{item.nodes} · 命中率{" "}
+                        {Math.round(item.hitRate * 100)}%
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       {critical && (
-                        <Chip size="sm" color="danger" variant="flat" className="text-xs">
+                        <Chip
+                          size="sm"
+                          color="danger"
+                          variant="flat"
+                          className="text-xs"
+                        >
                           即将满
                         </Chip>
                       )}
@@ -268,7 +325,7 @@ function CacheMonitorPage() {
 
         <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 min-h-[400px]">
           <div className="p-4 space-y-3 text-xs relative">
-            {(loading || loadingTrend) ? (
+            {loading || loadingTrend ? (
               <Loading height={320} />
             ) : (
               <>
@@ -279,8 +336,8 @@ function CacheMonitorPage() {
                     </span>
                     {activeInstance && (
                       <span className="text-[11px] text-[var(--text-color-secondary)]">
-                        当前使用率 {Math.round(activeInstance.usage * 100)}%，命中率{" "}
-                        {Math.round(activeInstance.hitRate * 100)}%
+                        当前使用率 {Math.round(activeInstance.usage * 100)}%
+                        ，命中率 {Math.round(activeInstance.hitRate * 100)}%
                       </span>
                     )}
                   </div>
@@ -298,15 +355,23 @@ function CacheMonitorPage() {
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1">
-                    <div className="text-[var(--text-color-secondary)]">内存占用</div>
+                    <div className="text-[var(--text-color-secondary)]">
+                      内存占用
+                    </div>
                     <div className="text-sm font-medium">
-                      {activeInstance ? `${Math.round(activeInstance.usage * 100)}%` : "-"}
+                      {activeInstance
+                        ? `${Math.round(activeInstance.usage * 100)}%`
+                        : "-"}
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <div className="text-[var(--text-color-secondary)]">命中率</div>
+                    <div className="text-[var(--text-color-secondary)]">
+                      命中率
+                    </div>
                     <div className="text-sm font-medium">
-                      {activeInstance ? `${Math.round(activeInstance.hitRate * 100)}%` : "-"}
+                      {activeInstance
+                        ? `${Math.round(activeInstance.hitRate * 100)}%`
+                        : "-"}
                     </div>
                   </div>
                 </div>
@@ -315,11 +380,7 @@ function CacheMonitorPage() {
                     命中率低于 90%，建议检查缓存键粒度、过期策略与热点数据是否合理。
                   </div>
                 )}
-                <AdminTabs
-                  aria-label="缓存监控图表"
-                  size="sm"
-                  className="mt-1"
-                >
+                <AdminTabs aria-label="缓存监控图表" size="sm" className="mt-1">
                   <Tab key="hit" title="命中率趋势">
                     <div className="h-56 mt-2">
                       <Line {...hitLineConfig} />
@@ -348,8 +409,11 @@ function CacheMonitorPage() {
               </div>
               <div className="space-y-1">
                 {cacheLogs.length > 0 ? (
-                  cacheLogs.map(log => (
-                    <div key={log.id} className="flex items-center justify-between px-2 py-1 rounded-md bg-[var(--bg-elevated)]/80">
+                  cacheLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="flex items-center justify-between px-2 py-1 rounded-md bg-[var(--bg-elevated)]/80"
+                    >
                       <span>{log.time}</span>
                       <span className="text-xs text-[var(--text-color-secondary)]">
                         [{log.instanceId}] {log.message}
@@ -370,4 +434,7 @@ function CacheMonitorPage() {
   );
 }
 
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====
 export default CacheMonitorPage;

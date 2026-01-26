@@ -1,28 +1,46 @@
-import React, { useMemo } from "react";
+// ===== 1. 依赖导入区域 =====
+import React, { useMemo, useEffect, useState, useCallback } from "react";
 import { Card, Chip } from "@heroui/react";
-import {
-  FiBarChart2
-} from "react-icons/fi";
+import { FiBarChart2 } from "react-icons/fi";
 import type { ColumnConfig } from "@ant-design/plots";
 import { Column } from "@ant-design/plots";
 import { useAppStore } from "../../store";
-import { mockMetricCards, mockBigScreenData } from "../../api/mock/admin/dashboard";
+import { 
+  fetchAnalysisMetrics, 
+  fetchAnalysisTimeDistribution,
+  type AnalysisMetricItem,
+  type AnalysisTimeDistributionItem
+} from "../../api/admin/dashboard";
+import Loading from "../../components/Loading";
 
-const metricCards = mockMetricCards;
+// ===== 2. TODO待处理导入区域 =====
 
-const bigScreenData: ColumnConfig["data"] = mockBigScreenData;
-
+// ===== 3. 状态控制逻辑区域 =====
+/**
+ * 仪表盘分析页面
+ */
 function AnalysisPage() {
   const { themeMode } = useAppStore();
-  const chartTheme =
-    themeMode === "dark"
+  
+  /** 指标卡片数据 */
+  const [metricCards, setMetricCards] = useState<AnalysisMetricItem[]>([]);
+  /** 大屏图表数据 */
+  const [bigScreenData, setBigScreenData] = useState<AnalysisTimeDistributionItem[]>([]);
+  /** 加载状态 */
+  const [isLoading, setIsLoading] = useState(true);
+
+  /** 图表主题配置 */
+  const chartTheme = useMemo(() => {
+    return themeMode === "dark"
       ? "classicDark"
       : themeMode === "light"
         ? "classic"
         : window.matchMedia("(prefers-color-scheme: dark)").matches
           ? "classicDark"
           : "classic";
+  }, [themeMode]);
 
+  /** 图表配置项 */
   const columnConfig: ColumnConfig = useMemo(
     () => ({
       data: bigScreenData,
@@ -60,9 +78,40 @@ function AnalysisPage() {
       },
       theme: chartTheme
     }),
-    [chartTheme]
+    [bigScreenData, chartTheme]
   );
 
+  // ===== 4. 通用工具函数区域 =====
+
+
+  // ===== 5. 注释代码函数区 =====
+
+  // ===== 6. 错误处理函数区域 =====
+
+  // ===== 7. 数据处理函数区域 =====
+  /**
+   * 获取分析页面初始化数据
+   */
+  const handleFetchAnalysisData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [metricsRes, distributionRes] = await Promise.all([
+        fetchAnalysisMetrics(),
+        fetchAnalysisTimeDistribution({})
+      ]);
+      setMetricCards(metricsRes);
+      setBigScreenData(distributionRes);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // ===== 8. UI渲染逻辑区域 =====
+  /**
+   * 渲染指标变化趋势
+   * @param delta 变化值
+   * @param tone 趋势基调 (up/down/stable)
+   */
   const renderMetricDelta = (delta: string, tone: string) => {
     if (tone === "stable") {
       return (
@@ -71,13 +120,17 @@ function AnalysisPage() {
         </span>
       );
     }
+    const colorClass = tone === "down" ? "text-rose-400" : "text-emerald-400";
     return (
-      <span className="text-xs text-emerald-400">
+      <span className={`text-xs ${colorClass}`}>
         {delta}
       </span>
     );
   };
 
+  /**
+   * 渲染大屏核心内容
+   */
   const renderScreenContent = () => (
     <div className="flex flex-col gap-6 h-full">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -96,32 +149,46 @@ function AnalysisPage() {
         </div>
       </div>
 
+      {/* 指标卡片网格 */}
       <div className="grid gap-4 lg:grid-cols-4">
-        {metricCards.map(item => (
-          <Card
-            key={item.key}
-            className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95"
-          >
-            <div className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-[var(--text-color-secondary)]">
-                  {item.label}
+        {isLoading ? (
+          // 加载状态下渲染占位卡片
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card
+              key={i}
+              className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95 min-h-[120px] flex items-center justify-center"
+            >
+              <Loading />
+            </Card>
+          ))
+        ) : (
+          metricCards.map(item => (
+            <Card
+              key={item.key}
+              className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95"
+            >
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-[var(--text-color-secondary)]">
+                    {item.label}
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <div className="text-2xl font-semibold">
+                    {item.value}
+                  </div>
+                  {renderMetricDelta(item.delta, item.tone)}
+                </div>
+                <div className="text-[11px] text-[var(--text-color-secondary)]">
+                  {item.description}
                 </div>
               </div>
-              <div className="flex items-baseline gap-2">
-                <div className="text-2xl font-semibold">
-                  {item.value}
-                </div>
-                {renderMetricDelta(item.delta, item.tone)}
-              </div>
-              <div className="text-[11px] text-[var(--text-color-secondary)]">
-                {item.description}
-              </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          ))
+        )}
       </div>
 
+      {/* 图表卡片 */}
       <Card className="flex-1 border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
@@ -133,17 +200,30 @@ function AnalysisPage() {
                 用于在展示场景中突出一天内不同时间段的访问高峰
               </div>
             </div>
-            <Chip size="sm" variant="flat" className="text-xs">
-              数据来自 mock · 待接入接口
-            </Chip>
+            {!isLoading && (
+              <Chip size="sm" variant="flat" className="text-xs">
+                数据来自 API
+              </Chip>
+            )}
           </div>
-          <div className="h-72">
-            <Column {...columnConfig} />
+          <div className="h-72 flex items-center justify-center">
+            {isLoading ? (
+              <Loading />
+            ) : (
+              <div className="w-full h-full">
+                <Column {...columnConfig} />
+              </div>
+            )}
           </div>
         </div>
       </Card>
     </div>
   );
+
+  // ===== 9. 页面初始化与事件绑定 =====
+  useEffect(() => {
+    handleFetchAnalysisData();
+  }, [handleFetchAnalysisData]);
 
   return (
     <div className="relative">
@@ -154,5 +234,9 @@ function AnalysisPage() {
   );
 }
 
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====
 export default AnalysisPage;
+
 

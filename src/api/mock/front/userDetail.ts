@@ -5,7 +5,6 @@ export const mockUserProfile: UserProfile = {
   username: "zhiku_master",
   name: "知库小站长",
   avatar: "",
-  banner: "https://i0.hdslb.com/bfs/space/cb1c3ef50e22b6096fde67febe863494caefebad.png", // Bilibili style banner
   bio: "个人知识库长期建设实践者，专注前端工程化与知识管理。分享技术，记录生活。",
   level: 6,
   tags: ["前端架构", "全栈开发", "知识管理"],

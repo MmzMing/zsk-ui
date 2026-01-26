@@ -1,3 +1,4 @@
+// ===== 1. 依赖导入区域 =====
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Avatar, Chip, Textarea, addToast } from "@heroui/react";
@@ -13,20 +14,64 @@ import {
   toggleDocCommentLike,
   fetchDocComments,
   postDocComment,
-  type DocDetail,
-  type CommentItem
+  type DocDetail as DocDetailType,
+  type CommentItem,
+  type TocItem
 } from "../../api/front/document";
 import { toggleFollowUser } from "../../api/front/user";
-import { mockDocData, mockDocComments } from "../../api/mock/front/docDetail";
+// ===== 2. TODO待处理导入区域 =====
 
-interface TocItem {
-  id: string;
-  text: string;
-  level: number;
-  children: TocItem[];
-}
+// ===== 3. 状态控制逻辑区域 =====
 
-// Recursive TOC Item Component
+// ===== 4. 通用工具函数区域 =====
+
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+
+
+// ===== 7. 数据处理函数区域 =====
+/**
+ * 递归构建目录树
+ * @param headers 标题元素数组
+ * @returns 目录树结构
+ */
+const getTocTree = (headers: NodeListOf<Element>): TocItem[] => {
+  const root: TocItem[] = [];
+  const stack: TocItem[] = [];
+
+  headers.forEach((header, index) => {
+    if (!header.id) {
+      header.id = `heading-${index}`;
+    }
+    header.classList.add("scroll-mt-24");
+
+    const newItem: TocItem = {
+      id: header.id,
+      text: header.textContent || "",
+      level: parseInt(header.tagName.substring(1)),
+      children: []
+    };
+
+    while (stack.length > 0 && stack[stack.length - 1].level >= newItem.level) {
+      stack.pop();
+    }
+
+    if (stack.length === 0) {
+      root.push(newItem);
+    } else {
+      stack[stack.length - 1].children.push(newItem);
+    }
+    stack.push(newItem);
+  });
+
+  return root;
+};
+
+// ===== 8. UI渲染逻辑区域 =====
+/**
+ * 递归目录项组件
+ */
 const TocNode = ({ 
   item, 
   activeId, 
@@ -56,14 +101,11 @@ const TocNode = ({
         onClick={(e) => {
           e.stopPropagation();
           onScrollTo(item.id);
-          
-          // If clicking the already active item, or if it has children, toggle it
           if (isActive || hasChildren) {
             onToggle(item.id);
           }
         }}
       >
-        {/* Active Indicator Line */}
         {isActive && (
           <motion.div
             layoutId="active-toc-indicator"
@@ -76,7 +118,6 @@ const TocNode = ({
           />
         )}
 
-        {/* Expand/Collapse Icon */}
         {hasChildren && (
           <div 
             className="absolute right-2 p-1 rounded-sm hover:bg-[var(--bg-color-hover)] transition-colors z-20"
@@ -123,336 +164,285 @@ const TocNode = ({
   );
 };
 
+// ===== 9. 页面初始化与事件绑定 =====
+/**
+ * 文档详情页面组件
+ */
 function DocDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { token } = useUserStore();
-  const [doc, setDoc] = useState<DocDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  // 状态变量
+  const [doc, setDoc] = useState<DocDetailType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [commentText, setCommentText] = useState("");
   const [commentSort, setCommentSort] = useState<"hot" | "new">("hot");
   const [replyingTo, setReplyingTo] = useState<{ id: string; name: string; parentId?: string } | null>(null);
-  const [toc, setToc] = useState<TocItem[]>([]);
-  const [activeId, setActiveId] = useState<string>("");
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const [tocList, setTocList] = useState<TocItem[]>([]);
+  const [activeTocId, setActiveTocId] = useState<string>("");
+  const [expandedTocKeys, setExpandedTocKeys] = useState<Set<string>>(new Set());
+  
+  // 引用变量
   const contentRef = useRef<HTMLDivElement>(null);
   const sidebarScrollRef = useRef<HTMLDivElement>(null);
   const isManualScrolling = useRef(false);
+  const targetScrollPos = useRef<number | null>(null);
 
-  const checkLogin = () => {
+  /**
+   * 检查登录状态
+   * @returns 是否已登录
+   */
+  const handleCheckLogin = useCallback(() => {
     if (!token) {
       addToast({ title: "请先登录", color: "warning" });
       return false;
     }
     return true;
-  };
+  }, [token]);
 
-  const handleLike = async () => {
-    if (!checkLogin() || !doc) return;
-    const newIsLiked = !doc.stats.isLiked;
-    const newCount = doc.stats.likes + (newIsLiked ? 1 : -1);
+  /**
+   * 处理关注
+   */
+  const handleFollow = useCallback(async () => {
+    if (!handleCheckLogin() || !doc) return;
+    const isFollowing = !doc.author.isFollowing;
     
-    try { 
-      await toggleDocLike(doc.id); 
-      // Update UI after success
-      setDoc(prev => prev ? { ...prev, stats: { ...prev.stats, isLiked: newIsLiked, likes: newCount } } : null);
-      
-      if (newIsLiked) {
-        addToast({ title: "点赞成功", color: "success" });
-      } else {
-        addToast({ title: "取消点赞", color: "warning" });
-      }
-    } catch (err) { 
-      console.error(err);
-    }
-  };
+    await toggleFollowUser(doc.author.id);
 
-  const handleFavorite = async () => {
-    if (!checkLogin() || !doc) return;
-    const newIsFavorited = !doc.stats.isFavorited;
-    const newCount = doc.stats.favorites + (newIsFavorited ? 1 : -1);
+    setDoc(prev => prev ? { 
+      ...prev, 
+      author: { ...prev.author, isFollowing } 
+    } : null);
+
+    addToast({ 
+      title: isFollowing ? "关注成功" : "已取消关注", 
+      color: isFollowing ? "success" : "warning" 
+    });
+  }, [doc, handleCheckLogin]);
+
+  /**
+   * 处理点赞
+   */
+  const handleLike = useCallback(async () => {
+    if (!handleCheckLogin() || !doc) return;
+    const isLiked = !doc.stats.isLiked;
+    const likesCount = doc.stats.likes + (isLiked ? 1 : -1);
     
-    try { 
-      await toggleDocFavorite(doc.id); 
-      // Update UI after success
-      setDoc(prev => prev ? { ...prev, stats: { ...prev.stats, isFavorited: newIsFavorited, favorites: newCount } } : null);
-      
-      if (newIsFavorited) {
-        addToast({ title: "收藏成功", color: "success" });
-      } else {
-        addToast({ title: "取消收藏", color: "warning" });
-      }
-    } catch (err) { 
-      console.error(err);
-    }
-  };
+    await toggleDocLike(doc.id);
 
-  const handleCommentLike = async (commentId: string, isReply = false, parentId?: string) => {
-    if (!checkLogin()) return;
+    setDoc(prev => prev ? { ...prev, stats: { ...prev.stats, isLiked, likes: likesCount } } : null);
+    addToast({ 
+      title: isLiked ? "点赞成功" : "取消点赞", 
+      color: isLiked ? "success" : "warning" 
+    });
+  }, [doc, handleCheckLogin]);
 
-    let targetComment: CommentItem | undefined;
-    if (isReply && parentId) {
-      const parent = comments.find(c => c.id === parentId);
-      targetComment = parent?.replies?.find(r => r.id === commentId);
-    } else {
-      targetComment = comments.find(c => c.id === commentId);
-    }
+  /**
+   * 处理收藏
+   */
+  const handleFavorite = useCallback(async () => {
+    if (!handleCheckLogin() || !doc) return;
+    const isFavorited = !doc.stats.isFavorited;
+    const favoritesCount = doc.stats.favorites + (isFavorited ? 1 : -1);
+    
+    await toggleDocFavorite(doc.id);
 
-    if (!targetComment) return;
+    setDoc(prev => prev ? { ...prev, stats: { ...prev.stats, isFavorited, favorites: favoritesCount } } : null);
+    addToast({ 
+      title: isFavorited ? "收藏成功" : "取消收藏", 
+      color: isFavorited ? "success" : "warning" 
+    });
+  }, [doc, handleCheckLogin]);
 
-    const newIsLiked = !targetComment.isLiked;
-    const newLikes = targetComment.likes + (newIsLiked ? 1 : -1);
+  /**
+   * 处理评论点赞
+   * @param commentId 评论ID
+   * @param isReply 是否为回复
+   * @param parentId 父级评论ID
+   */
+  const handleCommentLike = useCallback(async (commentId: string, isReply = false, parentId?: string) => {
+    if (!handleCheckLogin()) return;
 
-    const updateComments = (list: CommentItem[]): CommentItem[] => {
-      return list.map(c => {
-        if (c.id === (isReply ? parentId : commentId)) {
-          if (isReply) {
-            return {
-              ...c,
-              replies: c.replies?.map(r => r.id === commentId ? { ...r, isLiked: newIsLiked, likes: newLikes } : r)
-            };
-          }
-          return { ...c, isLiked: newIsLiked, likes: newLikes };
+    await toggleDocCommentLike(commentId);
+
+    setComments(prev => prev.map(c => {
+      if (c.id === (isReply ? parentId : commentId)) {
+        if (isReply) {
+          return {
+            ...c,
+            replies: c.replies?.map(r => {
+              if (r.id === commentId) {
+                const isLiked = !r.isLiked;
+                return { ...r, isLiked, likes: r.likes + (isLiked ? 1 : -1) };
+              }
+              return r;
+            })
+          };
         }
-        return c;
-      });
-    };
-
-    try {
-      await toggleDocCommentLike(commentId);
-      // Update UI after success
-      setComments(prev => updateComments(prev));
-      
-      if (newIsLiked) {
-        addToast({ title: "点赞成功", color: "success" });
+        const isLiked = !c.isLiked;
+        return { ...c, isLiked, likes: c.likes + (isLiked ? 1 : -1) };
       }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+      return c;
+    }));
+    
+    addToast({ title: "点赞成功", color: "success" });
+  }, [handleCheckLogin]);
 
-  const handleShare = () => {
+  /**
+   * 处理分享
+   */
+  const handleShare = useCallback(() => {
     navigator.clipboard.writeText(window.location.href);
     addToast({ title: "链接已复制", color: "success" });
-  };
+  }, []);
 
-  const handleFollow = async () => {
-    if (!checkLogin() || !doc) return;
-    
-    const newIsFollowing = !doc.author.isFollowing;
-    
-    try { 
-      await toggleFollowUser(doc.author.id); 
-      // Update UI after success
-      setDoc(prev => prev ? { 
-        ...prev, 
-        author: { ...prev.author, isFollowing: newIsFollowing } 
-      } : null);
-
-      if (newIsFollowing) {
-        addToast({ title: "关注成功", color: "success" });
-      } else {
-        addToast({ title: "已取消关注", color: "warning" });
-      }
-    } catch (err) { 
-      console.error(err);
-    }
-  };
-
-  const handleCommentSubmit = async () => {
-    if (!checkLogin()) return;
-    
+  /**
+   * 处理评论提交
+   */
+  const handleCommentSubmit = useCallback(async () => {
+    if (!handleCheckLogin()) return;
     if (!commentText.trim()) {
       addToast({ title: "评论内容不能为空", color: "warning" });
       return;
     }
 
-    try {
-      const data = {
-        docId: id!,
-        content: commentText.trim(),
-        parentId: replyingTo?.parentId || replyingTo?.id,
-        replyToId: replyingTo?.id
-      };
+    const result = await postDocComment({
+      docId: id!,
+      content: commentText.trim(),
+      parentId: replyingTo?.parentId || replyingTo?.id,
+      replyToId: replyingTo?.id
+    });
 
-      const newComment = await postDocComment(data);
-
+    if (result) {
       if (replyingTo?.parentId) {
-        // Reply to a reply or comment
-        setComments(comments.map(c => {
-          if (c.id === replyingTo.parentId) {
-            return {
-              ...c,
-              replies: [...(c.replies || []), newComment]
-            };
-          }
-          return c;
-        }));
+        setComments(prev => prev.map(c => c.id === replyingTo.parentId ? { ...c, replies: [...(c.replies || []), result] } : c));
       } else if (replyingTo) {
-        // Reply to a top-level comment
-        setComments(comments.map(c => {
-          if (c.id === replyingTo.id) {
-            return {
-              ...c,
-              replies: [...(c.replies || []), newComment]
-            };
-          }
-          return c;
-        }));
+        setComments(prev => prev.map(c => c.id === replyingTo.id ? { ...c, replies: [...(c.replies || []), result] } : c));
       } else {
-        // Top-level comment
-        setComments([newComment, ...comments]);
+        setComments(prev => [result, ...prev]);
       }
       
       setCommentText("");
       setReplyingTo(null);
       addToast({ title: "评论发布成功", color: "success" });
-    } catch (err) {
-      console.error(err);
     }
-  };
+  }, [id, commentText, replyingTo, handleCheckLogin]);
 
-  useEffect(() => {
-    if (id) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(true);
-      fetchDocDetail(id)
-        .then((res) => {
-          // 如果返回 200 但数据为空，或者根据用户要求回退到 mock
-          if (!res || !res.id) {
-            setDoc(mockDocData);
-          } else {
-            setDoc(res);
-          }
+  /**
+   * 滚动到指定锚点
+   * @param id 锚点ID
+   */
+  const handleScrollToHeading = useCallback((id: string) => {
+    const element = document.getElementById(id);
+    if (!element) return;
 
-          // 获取评论列表
-          fetchDocComments(id, { page: 1, pageSize: 20 })
-            .then(commentsRes => {
-              if (!commentsRes || !commentsRes.list || commentsRes.list.length === 0) {
-                setComments(mockDocComments);
-              } else {
-                setComments(commentsRes.list);
-              }
-            })
-            .catch(err => {
-              console.error("Fetch doc comments failed, using mock:", err);
-              setComments(mockDocComments);
-            });
-        })
-        .catch((err) => {
-          console.error("Failed to fetch doc detail, using mock:", err);
-          setDoc(mockDocData);
-          setComments(mockDocComments);
-        })
-        .finally(() => setLoading(false));
-    }
+    isManualScrolling.current = true;
+    setActiveTocId(id);
+
+    const headerOffset = 100;
+    const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+    const offsetPosition = Math.max(0, elementPosition - headerOffset);
+    
+    targetScrollPos.current = offsetPosition;
+
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: "smooth"
+    });
+
+    setTimeout(() => {
+      if (isManualScrolling.current && targetScrollPos.current === offsetPosition) {
+        isManualScrolling.current = false;
+        targetScrollPos.current = null;
+      }
+    }, 3000);
+  }, []);
+
+  // 数据映射
+  const parentMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const traverse = (items: TocItem[], pId: string | null) => {
+      items.forEach(item => {
+        if (pId) map.set(item.id, pId);
+        traverse(item.children, item.id);
+      });
+    };
+    traverse(tocList, null);
+    return map;
+  }, [tocList]);
+
+  /**
+   * 切换目录展开状态
+   * @param tocId 目录ID
+   */
+  const handleToggleExpand = useCallback((tocId: string) => {
+    setExpandedTocKeys(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tocId)) {
+        newSet.delete(tocId);
+      } else {
+        newSet.add(tocId);
+        let current = parentMap.get(tocId);
+        while (current) {
+          newSet.add(current);
+          current = parentMap.get(current);
+        }
+      }
+      return newSet;
+    });
+  }, [parentMap]);
+
+  // 获取文档详情及评论
+  const handleFetchInitData = useCallback(async () => {
+    if (!id) return;
+      const docResult = await fetchDocDetail(id, setIsLoading);
+      if (docResult) setDoc(docResult);
+
+      const commentsResult = await fetchDocComments(id, { page: 1, pageSize: 20 });
+      if (commentsResult?.list) setComments(commentsResult.list);
   }, [id]);
 
-  // Generate Tree TOC
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleFetchInitData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [handleFetchInitData]);
+
+  // 生成目录树
   useEffect(() => {
     if (!doc || !contentRef.current) return;
 
     const headers = contentRef.current.querySelectorAll("h1, h2, h3, h4, h5");
-    const root: TocItem[] = [];
-    const stack: TocItem[] = [];
-
-    headers.forEach((header, index) => {
-      if (!header.id) {
-        header.id = `heading-${index}`;
-      }
-      header.classList.add("scroll-mt-24");
-
-      const newItem: TocItem = {
-        id: header.id,
-        text: header.textContent || "",
-        level: parseInt(header.tagName.substring(1)),
-        children: []
-      };
-
-      while (stack.length > 0 && stack[stack.length - 1].level >= newItem.level) {
-        stack.pop();
-      }
-
-      if (stack.length === 0) {
-        root.push(newItem);
-      } else {
-        stack[stack.length - 1].children.push(newItem);
-      }
-      stack.push(newItem);
-    });
+    const root = getTocTree(headers);
 
     const timer = setTimeout(() => {
-      setToc(root);
-      
+      setTocList(root);
       const initialExpanded = new Set<string>();
       root.forEach(item => initialExpanded.add(item.id));
-      setExpandedKeys(initialExpanded);
-  
+      setExpandedTocKeys(initialExpanded);
       if (root.length > 0) {
-        setActiveId(prev => prev || root[0].id);
+        setActiveTocId(prev => prev || root[0].id);
       }
     }, 0);
 
     return () => clearTimeout(timer);
   }, [doc]);
 
-  // Build a map of id -> parentId for quick lookup
-  const parentMap = useMemo(() => {
-    const map = new Map<string, string>();
-    const traverse = (items: TocItem[], parentId: string | null) => {
-      items.forEach(item => {
-        if (parentId) map.set(item.id, parentId);
-        traverse(item.children, item.id);
-      });
-    };
-    traverse(toc, null);
-    return map;
-  }, [toc]);
-
-  const targetScrollPos = useRef<number | null>(null);
-
-  // Handle manual scroll flag cleanup
-  useEffect(() => {
-    const handleScrollCheck = () => {
-      if (isManualScrolling.current && targetScrollPos.current !== null) {
-        const currentScroll = window.scrollY;
-        // If we are within 5px of target, or if we stopped scrolling
-        if (Math.abs(currentScroll - targetScrollPos.current) < 5) {
-          isManualScrolling.current = false;
-          targetScrollPos.current = null;
-        }
-      }
-    };
-
-    const handleScrollEnd = () => {
-      if (isManualScrolling.current) {
-        isManualScrolling.current = false;
-        targetScrollPos.current = null;
-      }
-    };
-
-    window.addEventListener('scroll', handleScrollCheck, { passive: true });
-    window.addEventListener('scrollend', handleScrollEnd);
-    return () => {
-      window.removeEventListener('scroll', handleScrollCheck);
-      window.removeEventListener('scrollend', handleScrollEnd);
-    };
-  }, []);
-
+  // 滚动监听处理
   const handleScroll = useCallback(() => {
-    // If we are manually scrolling, or very close to target, don't update anything
     if (isManualScrolling.current) {
       if (targetScrollPos.current !== null) {
         const diff = Math.abs(window.scrollY - targetScrollPos.current);
-        if (diff > 10) return; // Still scrolling to target
+        if (diff > 10) return;
       } else {
         return;
       }
     }
 
     if (!contentRef.current) return;
-
     const headers = Array.from(contentRef.current.querySelectorAll("h1, h2, h3, h4, h5"));
     if (headers.length === 0) return;
 
@@ -460,7 +450,7 @@ function DocDetail() {
     const windowHeight = window.innerHeight;
     const documentHeight = document.documentElement.scrollHeight;
     
-    let currentId = activeId;
+    let currentId = activeTocId;
 
     if (scrollY < 100) {
       currentId = headers[0].id;
@@ -480,9 +470,9 @@ function DocDetail() {
       }
     }
 
-    if (currentId !== activeId) {
-      setActiveId(currentId);
-      const newExpanded = new Set(expandedKeys);
+    if (currentId !== activeTocId) {
+      setActiveTocId(currentId);
+      const newExpanded = new Set(expandedTocKeys);
       let tempId = currentId;
       while (parentMap.has(tempId)) {
         const parentId = parentMap.get(tempId)!;
@@ -504,22 +494,23 @@ function DocDetail() {
           newExpanded.delete(k);
         }
       });
-      setExpandedKeys(newExpanded);
+      setExpandedTocKeys(newExpanded);
     }
-  }, [activeId, expandedKeys, parentMap]);
+  }, [activeTocId, expandedTocKeys, parentMap]);
 
+  // 绑定滚动事件
   useEffect(() => {
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
-  // Sync Sidebar Scroll with Active Item
+  // 侧边栏同步滚动
   useEffect(() => {
-    if (!activeId || !sidebarScrollRef.current) return;
+    if (!activeTocId || !sidebarScrollRef.current) return;
 
-    const scrollSidebar = () => {
-      const activeItem = sidebarScrollRef.current?.querySelector(`[data-toc-id="${activeId}"]`);
+    const handleSidebarSync = () => {
+      const activeItem = sidebarScrollRef.current?.querySelector(`[data-toc-id="${activeTocId}"]`);
       if (activeItem) {
         const container = sidebarScrollRef.current!;
         const containerRect = container.getBoundingClientRect();
@@ -542,56 +533,12 @@ function DocDetail() {
       }
     };
 
-    const timer = setTimeout(scrollSidebar, 150);
+    const timer = setTimeout(handleSidebarSync, 150);
     return () => clearTimeout(timer);
-  }, [activeId]);
+  }, [activeTocId]);
 
-  const toggleExpand = (id: string) => {
-    setExpandedKeys(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-        // Also ensure parents are expanded
-        let current = parentMap.get(id);
-        while (current) {
-          newSet.add(current);
-          current = parentMap.get(current);
-        }
-      }
-      return newSet;
-    });
-  };
-
-  const scrollToHeading = (id: string) => {
-    const element = document.getElementById(id);
-    if (!element) return;
-
-    isManualScrolling.current = true;
-    setActiveId(id);
-
-    const headerOffset = 100;
-    const elementPosition = element.getBoundingClientRect().top + window.scrollY;
-    const offsetPosition = Math.max(0, elementPosition - headerOffset);
-    
-    targetScrollPos.current = offsetPosition;
-
-    window.scrollTo({
-      top: offsetPosition,
-      behavior: "smooth"
-    });
-
-    // Fallback: reset manual scroll flag after a delay if scrollend/scroll events fail
-    setTimeout(() => {
-      if (isManualScrolling.current && targetScrollPos.current === offsetPosition) {
-        isManualScrolling.current = false;
-        targetScrollPos.current = null;
-      }
-    }, 3000);
-  };
-
-  if (loading) {
+  // 渲染逻辑
+  if (isLoading) {
     return <Loading height="calc(100vh - 200px)" />;
   }
 
@@ -606,9 +553,9 @@ function DocDetail() {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col lg:flex-row gap-8 relative">
-        {/* Left Content (75%) */}
+        {/* 左侧内容区 (75%) */}
         <div className="lg:w-3/4 space-y-8 min-w-0">
-          {/* Header */}
+          {/* 文档头部 */}
           <div className="space-y-4 border-b border-[var(--border-color)] pb-6">
             <div className="flex items-center gap-2 mb-2">
               <Chip size="sm" color="primary" variant="flat">
@@ -680,16 +627,14 @@ function DocDetail() {
             </div>
           </div>
 
-          {/* Content (Prose) */}
+          {/* 正文内容 */}
           <div 
             ref={contentRef}
             className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-[var(--text-color)]"
             dangerouslySetInnerHTML={{ __html: doc.content }}
           />
 
-          {/* Actions - Removed as moved to header */}
-
-          {/* Comments */}
+          {/* 评论区 */}
           <div className="space-y-6 pt-6 border-t border-[var(--border-color)]">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold flex items-center gap-2">
@@ -713,7 +658,7 @@ function DocDetail() {
               </div>
             </div>
 
-            {/* Comment Input */}
+            {/* 评论输入框 */}
             <div className="flex gap-4">
               <Avatar className="w-10 h-10 shrink-0" />
               <div className="flex-1 space-y-2">
@@ -755,7 +700,7 @@ function DocDetail() {
               </div>
             </div>
 
-            {/* Comment List */}
+            {/* 评论列表 */}
             <div className="space-y-6">
               {comments.map(comment => (
                 <div key={comment.id} className="flex gap-4 group">
@@ -769,7 +714,7 @@ function DocDetail() {
                       {comment.content}
                     </div>
                     
-                    {/* Comment Actions */}
+                    {/* 评论操作 */}
                     <div className="flex items-center gap-6 text-xs text-[var(--text-color-secondary)] pt-1">
                       <div 
                         className="flex items-center gap-1.5 cursor-pointer hover:text-[var(--primary-color)] transition-colors"
@@ -781,7 +726,7 @@ function DocDetail() {
                       <div 
                         className="cursor-pointer hover:text-[var(--primary-color)] transition-colors"
                         onClick={() => {
-                          if (!checkLogin()) return;
+                          if (!handleCheckLogin()) return;
                           setReplyingTo({ id: comment.id, name: comment.author.name });
                         }}
                       >
@@ -789,7 +734,7 @@ function DocDetail() {
                       </div>
                     </div>
 
-                    {/* Replies */}
+                    {/* 回复列表 */}
                     {comment.replies && comment.replies.length > 0 && (
                       <div className="mt-3 pl-4 border-l-2 border-[var(--border-color)] space-y-4">
                         {comment.replies.map(reply => (
@@ -817,7 +762,7 @@ function DocDetail() {
                                 <div 
                                   className="cursor-pointer hover:text-[var(--primary-color)]"
                                   onClick={() => {
-                                    if (!checkLogin()) return;
+                                    if (!handleCheckLogin()) return;
                                     setReplyingTo({ id: reply.id, name: reply.author.name, parentId: comment.id });
                                   }}
                                 >
@@ -843,10 +788,10 @@ function DocDetail() {
           </div>
         </div>
 
-        {/* Right Sidebar (25%) */}
+        {/* 右侧侧边栏 (25%) */}
         <div className="hidden lg:block lg:w-1/4 relative">
           <div className="sticky top-24 space-y-6">
-            {/* CSDN Style TOC with Accordion */}
+            {/* 目录 */}
             <div className="bg-[var(--bg-elevated)]/50 backdrop-blur-sm rounded-xl p-2">
               <div className="flex items-center gap-2 mb-2 font-bold text-sm px-2 py-2 border-b border-[var(--border-color)]/50">
                 <FiBookOpen /> 目录
@@ -856,16 +801,16 @@ function DocDetail() {
                 ref={sidebarScrollRef}
                 className="relative max-h-[calc(100vh-200px)] overflow-y-auto pr-2 custom-scrollbar"
               >
-                {toc.length > 0 ? (
+                {tocList.length > 0 ? (
                   <div className="flex flex-col">
-                    {toc.map((item) => (
+                    {tocList.map((item) => (
                       <TocNode 
                         key={item.id} 
                         item={item} 
-                        activeId={activeId} 
-                        expandedKeys={expandedKeys}
-                        onToggle={toggleExpand}
-                        onScrollTo={scrollToHeading}
+                        activeId={activeTocId} 
+                        expandedKeys={expandedTocKeys}
+                        onToggle={handleToggleExpand}
+                        onScrollTo={handleScrollToHeading}
                       />
                     ))}
                   </div>
@@ -877,7 +822,7 @@ function DocDetail() {
               </div>
             </div>
 
-            {/* Recommendations */}
+            {/* 相关推荐 */}
             <div className="pl-2">
               <h3 className="text-base font-bold mb-4 px-2">相关阅读</h3>
               <div className="space-y-2">
@@ -906,4 +851,7 @@ function DocDetail() {
   );
 }
 
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====
 export default DocDetail;

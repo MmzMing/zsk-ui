@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useCallback } from "react";
+// ===== 1. 依赖导入区域 =====
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   SelectItem,
   Button,
@@ -13,6 +14,8 @@ import {
   TableCell
 } from "@heroui/react";
 import { FiKey } from "react-icons/fi";
+import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { Loading } from "@/components/Loading";
 import {
   type PermissionItem,
@@ -20,50 +23,85 @@ import {
   fetchPermissionList
 } from "@/api/admin/system";
 
+// ===== 2. TODO待处理导入区域 =====
+
+// ===== 3. 状态控制逻辑区域 =====
+/** 模块筛选类型 */
 type ModuleFilter = "all" | "dashboard" | "ops" | "personnel" | "system" | "content";
 
-function getTypeLabel(type: PermissionItem["type"]) {
-  if (type === "menu") {
-    return "菜单权限";
-  }
-  if (type === "action") {
-    return "操作权限";
-  }
-  return "数据权限";
-}
+// ===== 4. 通用工具函数区域 =====
+/**
+ * 获取权限类型标签
+ * @param type 权限类型
+ * @returns 对应的中文标签
+ */
+const getTypeLabel = (type: PermissionItem["type"]): string => {
+  const typeMap: Record<PermissionItem["type"], string> = {
+    menu: "菜单权限",
+    action: "操作权限",
+    data: "数据权限"
+  };
+  return typeMap[type] || "未知权限";
+};
 
-import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
-import { AdminSelect } from "@/components/Admin/AdminSelect";
+// ===== 5. 注释代码函数区 =====
 
+// ===== 6. 错误处理函数区域 =====
+
+// ===== 7. 数据处理函数区域 =====
+
+// ===== 8. UI渲染逻辑区域 =====
+
+// ===== 9. 页面初始化与事件绑定 =====
+/**
+ * 权限管理页面组件
+ * @returns 页面渲染内容
+ */
 function PermissionPage() {
+  // --- 列表数据与加载状态 ---
+  /** 搜索关键词 */
   const [keyword, setKeyword] = useState("");
+  /** 模块筛选 */
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
+  /** 当前页码 */
   const [page, setPage] = useState(1);
+  /** 权限分组数据 */
   const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
+  /** 是否正在加载 */
   const [isLoading, setIsLoading] = useState(false);
 
+  /** 每页条数 */
+  const pageSize = 8;
+
+  /**
+   * 加载权限列表数据
+   */
   const loadPermissions = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetchPermissionList();
-      if (res) {
-        setPermissionGroups(res);
-      }
-    } catch {
-      // 错误已在 API 层级处理并显示
-    } finally {
-      setIsLoading(false);
+    const res = await fetchPermissionList(setIsLoading);
+    if (res && res.data) {
+      setPermissionGroups(res.data);
     }
   }, []);
 
-  React.useEffect(() => {
-    loadPermissions();
+  // --- 生命周期钩子 ---
+  // 初始化加载
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadPermissions();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadPermissions]);
 
+  /**
+   * 扁平化后的权限列表
+   */
   const flatPermissions = useMemo(() => {
     return (permissionGroups || []).flatMap(group => group.items);
   }, [permissionGroups]);
 
+  /**
+   * 过滤后的列表数据
+   */
   const filteredItems = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
     return flatPermissions.filter(item => {
@@ -94,23 +132,27 @@ function PermissionPage() {
     });
   }, [flatPermissions, keyword, moduleFilter]);
 
-  const pageSize = 8;
+  /** 总条数 */
   const total = filteredItems.length;
+  /** 总页数 */
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const pageItems = filteredItems.slice(startIndex, endIndex);
+  /** 当前页显示的条目 */
+  const pageItems = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    return filteredItems.slice(startIndex, startIndex + pageSize);
+  }, [filteredItems, page, pageSize]);
 
+  /**
+   * 处理分页变更
+   * @param next 下一页页码
+   */
   const handlePageChange = (next: number) => {
-    if (next < 1 || next > totalPages) {
-      return;
-    }
     setPage(next);
   };
 
   return (
     <div className="space-y-4">
+      {/* 头部标题区域 */}
       <div className="space-y-1">
         <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] px-3 py-1 text-xs text-[var(--primary-color)]">
           <span>系统管理 · 权限管理</span>
@@ -124,6 +166,7 @@ function PermissionPage() {
       </div>
 
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
+        {/* 筛选与操作工具栏 */}
         <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
@@ -131,7 +174,10 @@ function PermissionPage() {
                 className="w-56"
                 placeholder="按权限标识 / 名称 / 模块搜索"
                 value={keyword}
-                onValueChange={value => setKeyword(value)}
+                onValueChange={value => {
+                  setKeyword(value);
+                  setPage(1);
+                }}
               />
               <AdminSelect
                 aria-label="模块筛选"
@@ -141,6 +187,7 @@ function PermissionPage() {
                 onSelectionChange={keys => {
                   const key = Array.from(keys)[0];
                   setModuleFilter(key ? (String(key) as ModuleFilter) : "all");
+                  setPage(1);
                 }}
                 items={[
                   { label: "全部模块", value: "all" },
@@ -175,6 +222,7 @@ function PermissionPage() {
           </div>
         </div>
 
+        {/* 表格内容区域 */}
         <div className="p-3">
           <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
             <Table
@@ -259,17 +307,19 @@ function PermissionPage() {
               </TableBody>
             </Table>
           </div>
+
+          {/* 分页工具栏 */}
           <div className="mt-3 flex flex-col gap-2 text-xs md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
               <span>
-                共 {total} 条记录，当前第 {currentPage} / {totalPages} 页
+                共 {total} 条记录，当前第 {page} / {totalPages} 页
               </span>
             </div>
             <div className="flex items-center gap-2">
               <Pagination
                 size="sm"
                 total={totalPages}
-                page={currentPage}
+                page={page}
                 onChange={handlePageChange}
                 showControls
               />
@@ -281,4 +331,7 @@ function PermissionPage() {
   );
 }
 
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====
 export default PermissionPage;

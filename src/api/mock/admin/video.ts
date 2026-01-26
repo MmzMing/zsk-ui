@@ -1,4 +1,4 @@
-import { ReviewQueueItem, ReviewLogItem, UploadTaskItem, VideoItem } from "../../admin/video";
+import type { ReviewQueueItem, ReviewLogItem, UploadTaskItem, VideoItem } from "../../admin/video";
 
 export const mockVideoUploadTasks: UploadTaskItem[] = [
   {
@@ -167,6 +167,100 @@ export const mockInitialManualQueueItems: ReviewQueueItem[] = [
   }
 ];
 
+// Combine existing items and add more to reach 13 items
+export const mockReviewQueueItems: ReviewQueueItem[] = [
+  {
+    id: "4005",
+    title: "Vue 3 源码解析 - 响应式原理",
+    uploader: "tech_guru",
+    category: "前端开发",
+    status: "pending",
+    riskLevel: "low",
+    isAiChecked: true,
+    createdAt: "2026-01-18 09:30:00"
+  },
+  {
+    id: "4006",
+    title: "Rust 语言入门指南",
+    uploader: "rust_fan",
+    category: "后端开发",
+    status: "pending",
+    riskLevel: "low",
+    isAiChecked: true,
+    createdAt: "2026-01-18 09:15:00"
+  },
+  {
+    id: "4007",
+    title: "Kubernetes 集群部署实战",
+    uploader: "devops_expert",
+    category: "运维部署",
+    status: "pending",
+    riskLevel: "medium",
+    isAiChecked: true,
+    createdAt: "2026-01-18 09:00:00"
+  },
+  {
+    id: "4008",
+    title: "Figma 插件开发教程",
+    uploader: "design_pro",
+    category: "设计美工",
+    status: "pending",
+    riskLevel: "low",
+    isAiChecked: true,
+    createdAt: "2026-01-18 08:45:00"
+  },
+  {
+    id: "4009",
+    title: "Midjourney 提示词工程",
+    uploader: "ai_artist",
+    category: "人工智能",
+    status: "pending",
+    riskLevel: "high",
+    isAiChecked: true,
+    createdAt: "2026-01-18 08:30:00"
+  },
+  {
+    id: "4010",
+    title: "Python 数据分析实战",
+    uploader: "data_scientist",
+    category: "数据分析",
+    status: "pending",
+    riskLevel: "low",
+    isAiChecked: true,
+    createdAt: "2026-01-18 08:15:00"
+  },
+  {
+    id: "4011",
+    title: "Go 语言高并发编程",
+    uploader: "go_master",
+    category: "后端开发",
+    status: "pending",
+    riskLevel: "low",
+    isAiChecked: true,
+    createdAt: "2026-01-18 08:00:00"
+  },
+  {
+    id: "4012",
+    title: "Unity 游戏开发入门",
+    uploader: "game_dev",
+    category: "游戏开发",
+    status: "pending",
+    riskLevel: "low",
+    isAiChecked: true,
+    createdAt: "2026-01-18 07:45:00"
+  },
+  {
+    id: "4013",
+    title: "Docker 容器化部署",
+    uploader: "docker_user",
+    category: "运维部署",
+    status: "pending",
+    riskLevel: "low",
+    isAiChecked: true,
+    createdAt: "2026-01-18 07:30:00"
+  }
+];
+
 export const mockReviewLogs: ReviewLogItem[] = [
   {
     id: "5001",
@@ -204,6 +298,16 @@ export const mockReviewLogs: ReviewLogItem[] = [
     result: "rejected",
     remark: "AI 检测发现大量违规画面（置信度 98%）。"
   }
+];
+
+export const mockViolationReasons = [
+  { id: "v1", label: "色情低俗" },
+  { id: "v2", label: "政治敏感" },
+  { id: "v3", label: "暴力血腥" },
+  { id: "v4", label: "版权争议" },
+  { id: "v5", label: "广告营销" },
+  { id: "v6", label: "不实信息" },
+  { id: "v7", label: "其他违规" }
 ];
 
 export const mockVideos: VideoItem[] = [
