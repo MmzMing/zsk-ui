@@ -293,7 +293,7 @@ export async function handleApiCall<T>(options: ApiCallOptions<T>): Promise<T> {
  * 通用请求封装：开发环境下真实请求失败/无数据时，自动兜底返回 Mock 数据
  * @param requestFn 真实接口请求函数
  * @param mockData 兜底的Mock数据
- * @param apiName 接口名称
+ * @param apiName 接口唯一标识
  * @returns 最终返回值
  */
 export async function handleRequestWithMock<T>(
@@ -302,50 +302,43 @@ export async function handleRequestWithMock<T>(
   apiName: string
 ): Promise<ApiResponse<T>> {
   try {
-    const realResponse = await requestFn();
+    const response = await requestFn();
 
-    if (realResponse.code === 200 && realResponse.data) {
-      return realResponse;
+    // 检查数据是否有效 (200 且有内容)
+    if (response.code === 200 && response.data) {
+      return response;
     }
 
+    // 数据无效时尝试 Mock 兜底
     if (mockEnabled) {
-      const mockResponse: ApiResponse<T> = {
-        code: 200,
-        data: mockData,
-        msg: `[MOCK兜底] 接口${apiName}返回无数据，已使用Mock数据`,
-      };
       handleDebugOutput({
         debugLevel: "warn",
         debugMessage: `[Mock兜底] ${apiName}`,
-        debugDetail: {
-          reason: "真实接口返回无数据",
-          realResponse,
-          mockData,
-        },
+        debugDetail: { reason: "接口返回数据为空", response, mockData },
       });
-      return mockResponse;
-    }
-
-    return realResponse;
-  } catch (error) {
-    if (mockEnabled) {
-      const mockResponse: ApiResponse<T> = {
+      return {
         code: 200,
         data: mockData,
-        msg: `[MOCK兜底] 接口${apiName}请求失败，已使用Mock数据`,
+        msg: `[MOCK兜底] 接口 ${apiName} 返回空数据，已使用 Mock`,
       };
+    }
+    return response;
+  } catch (error) {
+    // 请求失败时尝试 Mock 兜底
+    if (mockEnabled) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       handleDebugOutput({
         debugLevel: "error",
         debugMessage: `[Mock兜底] ${apiName}`,
-        debugDetail: {
-          reason: "请求失败",
-          errorMsg: (error as Error).message,
-          mockData,
-        },
+        debugDetail: { reason: "接口请求异常", errorMsg, mockData },
       });
-      return mockResponse;
+      return {
+        code: 200,
+        data: mockData,
+        msg: `[MOCK兜底] 接口 ${apiName} 请求失败，已使用 Mock`,
+      };
     }
-
+    // 非开发环境且未启用 Mock 时抛出原始错误
     throw error;
   }
 }

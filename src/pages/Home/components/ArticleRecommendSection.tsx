@@ -1,81 +1,161 @@
-import React, { useEffect, useRef } from "react";
+// ===== 1. 依赖导入区域 =====
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@heroui/react";
+import { useNavigate } from "react-router-dom";
+import { routes } from "../../../router/routes";
 import AnimatedContent from "../../../components/Motion/AnimatedContent";
 import AnimatedList from "../../../components/Motion/AnimatedList";
-import type { HomeArticle } from "../../../api/front/home";
+import { fetchHomeArticles, mockHomeArticles, type HomeArticle, DEFAULT_ARTICLE_COVER } from "../../../api/front/home";
 
-const DEFAULT_COVER = "/DefaultImage/MyDefaultImage.jpg";
+// ===== 2. TODO待处理导入区域 =====
 
-type Props = {
-  articles: HomeArticle[];
-  activeArticle: HomeArticle;
-  onArticleChange: (id: string) => void;
-  onArticleNavigate: (id: string) => void;
+// ===== 3. 状态控制逻辑区域 =====
+
+// ===== 4. 通用工具函数区域 =====
+
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+
+// ===== 7. 数据处理函数区域 =====
+/**
+ * 格式化文章摘要，超出长度显示省略号
+ * @param summary 文章摘要
+ * @param maxLength 最大长度
+ * @returns 格式化后的摘要
+ */
+const formatSummary = (summary: string, maxLength: number = 100): string => {
+  if (!summary) return "";
+  return summary.length > maxLength
+    ? `${summary.slice(0, maxLength)}...`
+    : summary;
 };
 
-export default function ArticleRecommendSection({
-  articles,
-  activeArticle,
-  onArticleChange,
-  onArticleNavigate
-}: Props) {
+// ===== 8. UI渲染逻辑区域 =====
+
+// ===== 9. 页面初始化与事件绑定 =====
+/**
+ * 首页文章推荐区域组件
+ */
+export default function ArticleRecommendSection() {
+  // --- 导航钩子 ---
+  const navigate = useNavigate();
+
+  // --- 状态与引用 ---
+  /** 文章列表状态 */
+  const [articles, setArticles] = useState<HomeArticle[]>(() => mockHomeArticles);
+  /** 当前选中的文章ID */
+  const [activeArticleId, setActiveArticleId] = useState<string | undefined>(() => mockHomeArticles[0]?.id);
+  /** 容器 DOM 引用 */
   const containerRef = useRef<HTMLDivElement | null>(null);
+  /** 左侧容器 DOM 引用 */
   const leftContainerRef = useRef<HTMLDivElement | null>(null);
+  /** 倒数第二个元素的引用，用于滚动计算哨兵 */
   const secondLastRef = useRef<HTMLDivElement | null>(null);
 
+  // --- 数据获取 ---
+  /**
+   * 加载文章列表数据
+   */
+  const loadArticles = React.useCallback(async () => {
+    const data = await fetchHomeArticles();
+    if (data) {
+      setArticles(data);
+      // 使用函数式更新，避免依赖 activeArticleId
+      setActiveArticleId(prevId => {
+        if (!prevId && data.length > 0) {
+          return data[0].id;
+        }
+        return prevId;
+      });
+    }
+  }, []);
+
+  // 初始化加载
   useEffect(() => {
-    const handleScroll = () => {
-      if (
-        !leftContainerRef.current ||
-        !secondLastRef.current ||
-        !containerRef.current
-      ) {
-        return;
-      }
+    const timer = setTimeout(() => {
+      loadArticles();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadArticles]); // 仅在挂载时获取一次，移除 activeArticleId 依赖以避免点击切换时重复请求
 
-      // 仅在桌面端应用此逻辑 (md 也就是 768px 以上)
-      if (window.innerWidth < 768) {
-        // 移动端重置 top 样式，依靠 CSS 类控制
-        leftContainerRef.current.style.top = "";
-        return;
-      }
+  // --- 数据计算 ---
+  /** 当前激活的文章对象 */
+  const activeArticle = useMemo(() => {
+    return articles.find(item => item.id === activeArticleId) || articles[0];
+  }, [articles, activeArticleId]);
 
-      const leftRect = leftContainerRef.current.getBoundingClientRect();
-      const sentinelRect = secondLastRef.current.getBoundingClientRect();
+  /** 格式化后的文章摘要 */
+  const trimmedSummary = useMemo(() => 
+    activeArticle ? formatSummary(activeArticle.summary) : ""
+  , [activeArticle]);
 
-      // sticky 的基础顶部距离，对应 CSS 中的 md:top-24 (96px)
-      const STICKY_TOP = 96;
+  /** 列表中倒数第二个文章的索引，用于设置滚动哨兵 */
+  const secondLastIndex = useMemo(() => 
+    articles.length >= 2 ? articles.length - 2 : articles.length - 1
+  , [articles]);
 
-      // 计算最大允许的 top 值
-      // 逻辑：为了不让左侧底部覆盖到 sentinel，左侧的 visualBottom 必须 <= sentinelTop
-      // visualBottom = visualTop + height
-      // visualTop (即 sticky 的 top 属性) <= sentinelTop - height
-      const maxTop = sentinelRect.top - leftRect.height;
+  // --- 事件处理 ---
+  /**
+   * 处理滚动逻辑，实现左侧 sticky 效果在接近底部时自动上推
+   */
+  const handleScroll = useCallback(() => {
+    if (!leftContainerRef.current || !secondLastRef.current || !containerRef.current) {
+      return;
+    }
 
-      // 最终的 top 值取基础 sticky 高度和计算出的最大高度的较小值
-      // 当 maxTop < 96 时，top 会变小（甚至负数），从而实现“跟随页面向上推走”的效果
-      // 这种方式不需要切换 position: sticky 到 static，避免了布局抖动
-      const finalTop = Math.min(STICKY_TOP, maxTop);
+    // 仅在桌面端应用此逻辑 (md 也就是 768px 以上)
+    if (window.innerWidth < 768) {
+      leftContainerRef.current.style.top = "";
+      return;
+    }
 
-      leftContainerRef.current.style.top = `${finalTop}px`;
-    };
+    /** 左侧容器的位置信息 */
+    const leftRect = leftContainerRef.current.getBoundingClientRect();
+    /** 哨兵元素的位置信息 */
+    const sentinelRect = secondLastRef.current.getBoundingClientRect();
+    /** 基础顶部悬停距离 (对应 CSS 中的 md:top-24 = 96px) */
+    const STICKY_TOP = 96;
+    /** 最大允许的 top 值，计算逻辑：visualTop <= sentinelTop - height */
+    const maxTop = sentinelRect.top - leftRect.height;
+    /** 最终应用到元素的 top 值 */
+    const finalTop = Math.min(STICKY_TOP, maxTop);
 
+    leftContainerRef.current.style.top = `${finalTop}px`;
+  }, []);
+
+  /**
+   * 处理文章选择事件
+   * @param id 文章ID
+   */
+  const handleArticleSelect = (id: string) => {
+    setActiveArticleId(id);
+  };
+
+  /**
+   * 处理文章跳转详情页事件
+   * @param id 文章ID
+   */
+  const handleArticleJump = (id: string) => {
+    navigate(routes.docDetail.replace(":id", id));
+  };
+
+  // --- 生命周期与监听 ---
+  /**
+   * 绑定滚动和窗口调整事件，实现动态 Sticky 效果
+   */
+  useEffect(() => {
     window.addEventListener("scroll", handleScroll);
     window.addEventListener("resize", handleScroll);
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", handleScroll);
     };
-  }, [activeArticle, articles]);
+  }, [handleScroll]);
 
-  const trimmedSummary =
-    activeArticle.summary.length > 100
-      ? `${activeArticle.summary.slice(0, 100)}...`
-      : activeArticle.summary;
-
-  const secondLastIndex =
-    articles.length >= 2 ? articles.length - 2 : articles.length - 1;
+  // --- 渲染逻辑 ---
+  if (!activeArticle) return null;
 
   return (
     <section className="space-y-8 px-[var(--content-padding)] pb-12">
@@ -83,6 +163,7 @@ export default function ArticleRecommendSection({
         ref={containerRef}
         className="max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-6 md:gap-8"
       >
+        {/* 左侧详情展示区 */}
         <div
           ref={leftContainerRef}
           className="md:basis-3/5 space-y-4 self-start md:sticky md:top-24"
@@ -111,10 +192,10 @@ export default function ArticleRecommendSection({
                 initial={{ opacity: 0, scale: 0.96, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: [0.2, 0.7, 0.3, 1] }}
-                onClick={() => onArticleNavigate(activeArticle.id)}
+                onClick={() => handleArticleJump(activeArticle.id)}
               >
                 <img
-                  src={activeArticle.cover || DEFAULT_COVER}
+                  src={activeArticle.cover || DEFAULT_ARTICLE_COVER}
                   alt={activeArticle.title}
                   className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                 />
@@ -122,10 +203,14 @@ export default function ArticleRecommendSection({
             </div>
           </AnimatedContent>
         </div>
+
+        {/* 右侧列表选择区 */}
         <div className="md:basis-2/5">
           <AnimatedList className="space-y-3 md:space-y-4">
             {articles.map((item, index) => {
+              /** 当前项是否被选中 */
               const isActive = item.id === activeArticle.id;
+              /** 是否为倒数第二项（哨兵节点） */
               const isSecondLast = index === secondLastIndex;
               return (
                 <div
@@ -141,7 +226,7 @@ export default function ArticleRecommendSection({
                         : "bg-[color-mix(in_srgb,var(--bg-elevated)_96%,black_4%)] border-[color-mix(in_srgb,var(--border-color)_80%,transparent)] hover:border-[color-mix(in_srgb,var(--primary-color)_45%,transparent)] hover:-translate-y-0.5")
                     }
                     variant="light"
-                    onPress={() => onArticleChange(item.id)}
+                    onPress={() => handleArticleSelect(item.id)}
                   >
                     <div className="flex-1 min-w-0 space-y-1.5">
                       <div className="truncate font-medium">
@@ -156,7 +241,7 @@ export default function ArticleRecommendSection({
                     </div>
                     <div className="relative w-24 h-12 md:w-28 md:h-14 shrink-0 rounded-[calc(var(--radius-base)_-_2px)] overflow-hidden bg-slate-900">
                       <img
-                        src={item.cover || DEFAULT_COVER}
+                        src={item.cover || DEFAULT_ARTICLE_COVER}
                         alt={item.title}
                         className="w-full h-full object-cover"
                       />
@@ -172,3 +257,7 @@ export default function ArticleRecommendSection({
     </section>
   );
 }
+
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====

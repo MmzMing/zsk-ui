@@ -246,31 +246,33 @@ export default function VideoReviewPage() {
    * 监听 activeReviewItem 变化加载详情
    */
   useEffect(() => {
-    if (activeReviewItem) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      loadReviewDetail(activeReviewItem.id);
-      // 重置表单
-      setSelectedViolationIds([]);
-      setRejectReason("");
-    } else {
-      setVideoDetail(null);
-    }
+    const timer = setTimeout(() => {
+      if (activeReviewItem) {
+        loadReviewDetail(activeReviewItem.id);
+        // 重置表单
+        setSelectedViolationIds([]);
+        setRejectReason("");
+      } else {
+        setVideoDetail(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [activeReviewItem, loadReviewDetail]);
 
-  /**
-   * 监听依赖变化重新加载数据
-   */
+  // 当选中项变化时加载队列
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadQueue();
+    const timer = setTimeout(() => {
+      loadQueue();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadQueue]);
 
-  /**
-   * 监听选中项变化加载日志
-   */
+  // 当选中项变化时加载日志
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadLogs();
+    const timer = setTimeout(() => {
+      loadLogs();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadLogs]);
 
   /**

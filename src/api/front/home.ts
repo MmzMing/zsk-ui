@@ -1,16 +1,44 @@
 // ===== 1. 依赖导入区域 =====
-import { contentRequest as request, handleRequestWithMock } from "../axios";
+import { contentRequest as request, handleRequestWithMock, handleApiCall } from "../axios";
 import type { ApiResponse } from "../types";
 import {
   mockHomeVideos,
   mockHomeArticles,
   mockHomeReviews,
   mockHomeSlides,
+  mockHomeHero,
 } from "../mock/front/home";
 
 // ===== 2. TODO待处理导入区域 =====
 
 // ===== 3. 状态控制逻辑区域 =====
+/**
+ * 默认文章封面图
+ */
+export const DEFAULT_ARTICLE_COVER = "/DefaultImage/MyDefaultImage.jpg";
+
+/**
+ * 首页英雄区数据类型定义
+ */
+export type HomeHero = {
+  /** 徽标文本 */
+  badge: string;
+  /** 主标题第一行 */
+  titleLine1: string;
+  /** 主标题第二行 */
+  titleLine2: string;
+  /** 描述文本 */
+  description: string;
+  /** 按钮文本 */
+  buttonText: string;
+  /** 特性列表 */
+  features: {
+    /** 特性名称 */
+    label: string;
+    /** 特性图标名称 (lucide-react) */
+    iconName: "Box" | "Layers" | "Zap";
+  }[];
+};
 
 // ===== 4. 通用工具函数区域 =====
 
@@ -27,6 +55,17 @@ import {
 // ===== 10. TODO任务管理区域 =====
 
 // ===== 11. 导出区域 =====
+
+/**
+ * 首页 Mock 数据导出 (供初始化状态使用)
+ */
+export {
+  mockHomeVideos,
+  mockHomeArticles,
+  mockHomeReviews,
+  mockHomeHero,
+  mockHomeSlides,
+} from "../mock/front/home";
 
 /**
  * 视频资源类型定义
@@ -157,15 +196,17 @@ export type HomeSlide = {
  * @returns 首页视频列表响应
  */
 export async function fetchHomeVideos() {
-  const res = await handleRequestWithMock(
-    () =>
-      request.instance
-        .get<ApiResponse<HomeVideo[]>>("/home/videos")
-        .then((r) => r.data),
-    mockHomeVideos,
-    "fetchHomeVideos"
-  );
-  return res.data;
+  return handleApiCall({
+    requestFn: () =>
+      handleRequestWithMock(
+        () =>
+          request.instance
+            .get<ApiResponse<HomeVideo[]>>("/home/videos")
+            .then((r) => r.data),
+        mockHomeVideos,
+        "fetchHomeVideos"
+      ).then((res) => res.data),
+  });
 }
 
 /**
@@ -173,15 +214,17 @@ export async function fetchHomeVideos() {
  * @returns 首页文章列表响应
  */
 export async function fetchHomeArticles() {
-  const res = await handleRequestWithMock(
-    () =>
-      request.instance
-        .get<ApiResponse<HomeArticle[]>>("/home/articles")
-        .then((r) => r.data),
-    mockHomeArticles,
-    "fetchHomeArticles"
-  );
-  return res.data;
+  return handleApiCall({
+    requestFn: () =>
+      handleRequestWithMock(
+        () =>
+          request.instance
+            .get<ApiResponse<HomeArticle[]>>("/home/articles")
+            .then((r) => r.data),
+        mockHomeArticles,
+        "fetchHomeArticles"
+      ).then((res) => res.data),
+  });
 }
 
 /**
@@ -189,15 +232,17 @@ export async function fetchHomeArticles() {
  * @returns 首页评论列表响应
  */
 export async function fetchHomeReviews() {
-  const res = await handleRequestWithMock(
-    () =>
-      request.instance
-        .get<ApiResponse<HomeReview[]>>("/home/reviews")
-        .then((r) => r.data),
-    mockHomeReviews,
-    "fetchHomeReviews"
-  );
-  return res.data;
+  return handleApiCall({
+    requestFn: () =>
+      handleRequestWithMock(
+        () =>
+          request.instance
+            .get<ApiResponse<HomeReview[]>>("/home/reviews")
+            .then((r) => r.data),
+        mockHomeReviews,
+        "fetchHomeReviews"
+      ).then((res) => res.data),
+  });
 }
 
 /**
@@ -205,13 +250,33 @@ export async function fetchHomeReviews() {
  * @returns 首页幻灯片列表响应
  */
 export async function fetchHomeSlides() {
-  const res = await handleRequestWithMock(
-    () =>
-      request.instance
-        .get<ApiResponse<HomeSlide[]>>("/home/slides")
-        .then((r) => r.data),
-    mockHomeSlides,
-    "fetchHomeSlides"
-  );
-  return res.data;
+  return handleApiCall({
+    requestFn: () =>
+      handleRequestWithMock(
+        () =>
+          request.instance
+            .get<ApiResponse<HomeSlide[]>>("/home/slides")
+            .then((r) => r.data),
+        mockHomeSlides,
+        "fetchHomeSlides"
+      ).then((res) => res.data),
+  });
+}
+
+/**
+ * 获取首页英雄区数据
+ * @returns 首页英雄区数据响应
+ */
+export async function fetchHomeHero() {
+  return handleApiCall({
+    requestFn: () =>
+      handleRequestWithMock(
+        () =>
+          request.instance
+            .get<ApiResponse<HomeHero>>("/home/hero")
+            .then((r) => r.data),
+        mockHomeHero,
+        "fetchHomeHero"
+      ).then((res) => res.data),
+  });
 }

@@ -1,6 +1,8 @@
 // ===== 1. 依赖导入区域 =====
 import { authRequest as request, handleRequestWithMock } from "../axios";
 import type { ApiResponse } from "../types";
+import { MOCK_CAPTCHA_DATA, MOCK_LOGIN_RESPONSE } from "@/api/mock/auth";
+
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -71,23 +73,6 @@ export type ForgotPasswordRequest = {
 
 // --- Mock 数据定义 ---
 
-const MOCK_CAPTCHA_DATA: SliderCaptchaData = {
-  uuid: "mock-uuid-default",
-  bgUrl: "https://img.alicdn.com/tfs/TB1sW.QZpXXXXc.XXXXXXXXXXXX-400-200.jpg",
-  puzzleUrl: "https://img.alicdn.com/tfs/TB1W8_QZpXXXXb.XXXXXXXXXXXX-400-200.jpg",
-};
-
-const MOCK_LOGIN_RESPONSE: LoginResponse = {
-  token: "mock-token-default",
-  refreshToken: "mock-refresh-default",
-  expiresIn: 3600,
-  user: {
-    id: "mock-user-id",
-    username: "MockUser",
-    avatar: "https://i.pravatar.cc/150?u=mock",
-    roles: ["admin"],
-  },
-};
 
 // --- API 函数 ---
 

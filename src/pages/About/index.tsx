@@ -80,17 +80,17 @@ function AboutPage() {
   /**
    * 获取页面初始化数据
    */
-  const handleFetchInitData = useCallback(async () => {
-    setIsLoading(true);
+  const handleFetchInitData = useCallback(async (getIgnore: () => boolean) => {
     try {
       const [techRes, faqRes] = await Promise.all([
         fetchTechStack(),
         fetchFAQ()
       ]);
+      if (getIgnore()) return;
       setTechStack(techRes);
       setFaqList(faqRes);
     } finally {
-      setIsLoading(false);
+      if (!getIgnore()) setIsLoading(false);
     }
   }, []);
 
@@ -165,7 +165,15 @@ function AboutPage() {
 
   // ===== 9. 页面初始化与事件绑定 =====
   useEffect(() => {
-    handleFetchInitData();
+    let ignore = false;
+    const timer = setTimeout(() => {
+      setIsLoading(true);
+      handleFetchInitData(() => ignore);
+    }, 0);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [handleFetchInitData]);
 
   return (

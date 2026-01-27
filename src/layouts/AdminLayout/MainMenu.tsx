@@ -55,6 +55,7 @@ const MainMenu = ({ isOpen, onClose, onSelect }: MainMenuProps) => {
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-[800px] h-[540px] bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            style={{ fontSize: "var(--nav-font-size)" }}
           >
             {/* Header / Search */}
             <div className="p-4 border-b border-[var(--border-color)]">
@@ -82,20 +83,20 @@ const MainMenu = ({ isOpen, onClose, onSelect }: MainMenuProps) => {
                       onMouseEnter={() => setActiveId(item.id)}
                       onClick={() => setActiveId(item.id)}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-colors",
+                        "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-[1em] transition-colors",
                         activeId === item.id
                           ? "bg-[color-mix(in_srgb,var(--primary-color)_15%,transparent)] text-[var(--primary-color)] shadow-sm"
                           : "text-[var(--text-color)] hover:bg-[var(--bg-elevated)]"
                       )}
                     >
-                      <Icon className="text-lg" />
+                      <Icon className="text-[1.2em]" />
                       <span className="font-medium flex-1 text-left">{item.name}</span>
                       {activeId === item.id && <FiChevronRight />}
                     </button>
                   );
                 })}
                 {filteredMenuItems.length === 0 && (
-                  <div className="text-center py-4 text-[var(--text-color-secondary)] text-xs">
+                  <div className="text-center py-4 text-[var(--text-color-secondary)] text-[0.85em]">
                     无匹配结果
                   </div>
                 )}
@@ -103,7 +104,7 @@ const MainMenu = ({ isOpen, onClose, onSelect }: MainMenuProps) => {
 
               {/* Right Column: Level 2 */}
               <div className="flex-1 overflow-y-auto p-4 bg-[var(--bg-elevated)]">
-                <div className="text-xs font-semibold text-[var(--text-color-secondary)] mb-3 uppercase tracking-wider">
+                <div className="text-[0.85em] font-semibold text-[var(--text-color-secondary)] mb-3 uppercase tracking-wider">
                   {activeItem?.name || "子菜单"}
                 </div>
                 <div className="grid grid-cols-1 gap-2">
@@ -116,14 +117,14 @@ const MainMenu = ({ isOpen, onClose, onSelect }: MainMenuProps) => {
                       }}
                       className="flex items-center justify-between px-4 py-3 rounded-lg border border-[var(--border-color)] hover:border-[var(--primary-color)] hover:bg-[color-mix(in_srgb,var(--primary-color)_5%,transparent)] transition-all group"
                     >
-                      <span className="text-sm text-[var(--text-color)] group-hover:text-[var(--primary-color)]">
+                      <span className="text-[1em] text-[var(--text-color)] group-hover:text-[var(--primary-color)]">
                         {child.name}
                       </span>
                       <FiChevronRight className="opacity-0 group-hover:opacity-100 text-[var(--primary-color)] transition-opacity" />
                     </button>
                   ))}
                   {(!activeItem?.children || activeItem.children.length === 0) && (
-                     <div className="text-center py-10 text-[var(--text-color-secondary)] text-sm">
+                     <div className="text-center py-10 text-[var(--text-color-secondary)] text-[1em]">
                        暂无子菜单
                      </div>
                   )}

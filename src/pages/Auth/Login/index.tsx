@@ -1,6 +1,7 @@
+// ===== 1. 依赖导入区域 =====
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import SliderCaptcha, { VerifyParam } from "rc-slider-captcha";
+import SliderCaptcha, { type VerifyParam } from "rc-slider-captcha";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Button,
@@ -14,23 +15,93 @@ import {
   ModalContent,
   ModalHeader
 } from "@heroui/react";
-import { routes } from "../../../router/routes";
-import InteractiveHoverButton from "../../../components/Motion/InteractiveHoverButton";
-import { useUserStore } from "../../../store/modules/userStore";
-import { useAppStore } from "../../../store";
-import { UserAgreementModal, PrivacyPolicyModal } from "../../../components/AgreementModals";
-import { verifySliderCaptcha, preCheckAndGetCaptcha, login } from "../../../api/auth";
-import Shuffle from "../../../components/Motion/Shuffle";
-import TextType from "../../../components/Motion/TextType";
+import { routes } from "@/router/routes";
+import InteractiveHoverButton from "@/components/Motion/InteractiveHoverButton";
+import { useUserStore } from "@/store/modules/userStore";
+import { UserAgreementModal, PrivacyPolicyModal } from "@/components/AgreementModals";
+import { verifySliderCaptcha, preCheckAndGetCaptcha, login, type SliderCaptchaData } from "@/api/auth";
+import Shuffle from "@/components/Motion/Shuffle";
+import TextType from "@/components/Motion/TextType";
 import { RiHome4Line } from "react-icons/ri";
-import { FaGithub, FaQq, FaWeixin, FaEye, FaEyeSlash } from "react-icons/fa6";
+import { FaEye, FaEyeSlash, FaQq, FaWeixin, FaGithub } from "react-icons/fa6";
 
-const bgImages = ["/auth/auth-Polling-1.png", "/auth/auth-Polling-2.png" , "/auth/auth-Polling-3.png"];
+// ===== 2. TODO待处理导入区域 =====
 
+// ===== 3. 状态控制逻辑区域 =====
+/**
+ * 背景图片列表
+ */
+const BG_IMAGES = [
+  "/auth/auth-Polling-1.png",
+  "/auth/auth-Polling-2.png",
+  "/auth/auth-Polling-3.png"
+];
+
+// ===== 4. 通用工具函数区域 =====
+/**
+ * 校验账号格式
+ * @param value 账号值
+ * @returns 错误信息，无错误返回空字符串
+ */
+const validateAccount = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return "请输入账号";
+  if (trimmed.includes("@")) {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(trimmed)) {
+      return "邮箱格式不正确";
+    }
+    return "";
+  }
+  const usernamePattern = /^[a-zA-Z0-9_.-]{3,20}$/;
+  if (!usernamePattern.test(trimmed)) {
+    return "用户名需为 3-20 位字母、数字或符号 ._-";
+  }
+  return "";
+};
+
+/**
+ * 校验密码格式
+ * @param value 密码值
+ * @returns 错误信息，无错误返回空字符串
+ */
+const validatePassword = (value: string): string => {
+  if (!value) return "请输入登录密码";
+  if (value.length < 8) return "密码长度至少 8 位";
+  return "";
+};
+
+/**
+ * 校验验证码格式
+ * @param value 验证码值
+ * @param required 是否必填
+ * @returns 错误信息，无错误返回空字符串
+ */
+const validateCaptcha = (value: string, required: boolean): string => {
+  if (!value) {
+    return required ? "请输入验证码" : "";
+  }
+  if (!/^\d{6}$/.test(value)) {
+    return "验证码需为 6 位数字";
+  }
+  return "";
+};
+
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+
+// ===== 7. 数据处理函数区域 =====
+
+// ===== 8. UI渲染逻辑区域 =====
+/**
+ * 登录页面组件
+ */
 function LoginPage() {
   const navigate = useNavigate();
   const { setToken, setUserId } = useUserStore();
-  const { setIsLoading } = useAppStore();
+
+  // --- 状态定义 ---
   const [account, setAccount] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [captcha, setCaptcha] = React.useState("");
@@ -41,118 +112,88 @@ function LoginPage() {
   const [passwordError, setPasswordError] = React.useState("");
   const [captchaError, setCaptchaError] = React.useState("");
   const [formError, setFormError] = React.useState("");
-  const [, setLoginFailCount] = React.useState(0);
   const [requireCaptcha, setRequireCaptcha] = React.useState(false);
   const [captchaCountdown, setCaptchaCountdown] = React.useState(0);
   const [sliderVisible, setSliderVisible] = React.useState(false);
   const [sliderVerified, setSliderVerified] = React.useState(false);
-  const [sliderCaptchaInfo, setSliderCaptchaInfo] = React.useState<{
-    uuid: string;
-    bgUrl: string;
-    puzzleUrl: string;
-  } | null>(null);
+  const [sliderCaptchaInfo, setSliderCaptchaInfo] = React.useState<SliderCaptchaData | null>(null);
   const [sliderError, setSliderError] = React.useState("");
   const [showUserAgreement, setShowUserAgreement] = React.useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = React.useState(false);
   const [codeSent, setCodeSent] = React.useState(false);
-
-  // Background image polling
   const [currentBgIndex, setCurrentBgIndex] = React.useState(0);
 
+  // ===== 9. 页面初始化与事件绑定 =====
+  React.useEffect(() => {
+    let ignore = false;
+    const timer = setTimeout(() => {
+      if (!ignore) {
+        // 登录失败计数检查
+        try {
+          const failRaw = window.localStorage.getItem("auth_login_fail_count");
+          const fail = failRaw ? Number.parseInt(failRaw, 10) || 0 : 0;
+          if (fail >= 5) {
+            setRequireCaptcha(true);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }, 0);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  // --- 页面副作用 ---
+  // 背景轮播
   React.useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentBgIndex((prev) => (prev + 1) % bgImages.length);
+      setCurrentBgIndex((prev) => (prev + 1) % BG_IMAGES.length);
     }, 5000);
     return () => clearInterval(timer);
   }, []);
 
-  React.useEffect(() => {
-    try {
-      const failRaw = window.localStorage.getItem("auth_login_fail_count");
-      const fail = failRaw ? Number.parseInt(failRaw, 10) || 0 : 0;
-      setLoginFailCount(fail);
-      if (fail >= 5) {
-        setRequireCaptcha(true);
-      }
-    } catch {
-      setLoginFailCount(0);
-      void 0;
-    }
-  }, []);
-
+  // 验证码倒计时
   React.useEffect(() => {
     if (!captchaCountdown) return;
     const timer = window.setInterval(() => {
-      setCaptchaCountdown(previous => {
-        if (previous <= 1) {
+      setCaptchaCountdown(prev => {
+        if (prev <= 1) {
           window.clearInterval(timer);
           return 0;
         }
-        return previous - 1;
+        return prev - 1;
       });
     }, 1000);
     return () => window.clearInterval(timer);
   }, [captchaCountdown]);
 
-  function recordLoginFail() {
-    setLoginFailCount(previous => {
-      const next = previous + 1;
-      try {
-        window.localStorage.setItem("auth_login_fail_count", String(next));
-      } catch {
-        void 0;
-      }
-      if (next >= 5) {
-        setRequireCaptcha(true);
-      }
-      return next;
-    });
-  }
+  // --- 辅助函数 ---
+  const recordLoginFail = () => {
+    try {
+      const failRaw = window.localStorage.getItem("auth_login_fail_count");
+      const current = failRaw ? Number.parseInt(failRaw, 10) || 0 : 0;
+      const next = current + 1;
+      window.localStorage.setItem("auth_login_fail_count", String(next));
+      if (next >= 5) setRequireCaptcha(true);
+    } catch {
+      // ignore
+    }
+  };
 
-  function resetLoginFail() {
-    setLoginFailCount(0);
+  const resetLoginFail = () => {
     setRequireCaptcha(false);
     try {
       window.localStorage.removeItem("auth_login_fail_count");
     } catch {
-      void 0;
+      // ignore
     }
-  }
+  };
 
-  function validateAccount(value: string) {
-    const trimmed = value.trim();
-    if (!trimmed) return "请输入账号";
-    if (trimmed.includes("@")) {
-      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailPattern.test(trimmed)) {
-        return "邮箱格式不正确";
-      }
-      return "";
-    }
-    const usernamePattern = /^[a-zA-Z0-9_.-]{3,20}$/;
-    if (!usernamePattern.test(trimmed)) {
-      return "用户名需为 3-20 位字母、数字或符号 ._-";
-    }
-    return "";
-  }
-
-  function validatePassword(value: string) {
-    if (!value) return "请输入登录密码";
-    if (value.length < 6) return "密码长度至少 6 位";
-    return "";
-  }
-
-  function validateCaptcha(value: string, required: boolean) {
-    if (!value) {
-      return required ? "请输入验证码" : "";
-    }
-    if (!/^\d{6}$/.test(value)) {
-      return "验证码需为 6 位数字";
-    }
-    return "";
-  }
-
-  function handleAccountChange(event: React.ChangeEvent<HTMLInputElement>) {
+  // --- 事件处理函数 ---
+  const handleAccountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setAccount(value);
     if (!value) {
@@ -160,9 +201,9 @@ function LoginPage() {
     } else {
       setAccountError(validateAccount(value));
     }
-  }
+  };
 
-  function handlePasswordChange(event: React.ChangeEvent<HTMLInputElement>) {
+  const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setPassword(value);
     if (!value) {
@@ -170,38 +211,37 @@ function LoginPage() {
     } else {
       setPasswordError(validatePassword(value));
     }
-  }
+  };
 
-  function handleCaptchaChange(value: string) {
+  const handleCaptchaChange = (value: string) => {
     const digits = value.replace(/\D/g, "");
     setCaptcha(digits);
     setCaptchaError(validateCaptcha(digits, requireCaptcha || sliderVerified));
-  }
+  };
 
-  function handleSendCaptcha() {
+  const handleSendCaptcha = () => {
     if (captchaCountdown > 0) return;
-    
+
     const accountMessage = validateAccount(account);
     const passwordMessage = validatePassword(password);
-    
+
     setAccountError(accountMessage);
     setPasswordError(passwordMessage);
-    
+
     if (accountMessage || passwordMessage) {
       setFormError("请先输入正确的账号和密码，再发送验证码");
       return;
     }
-    
+
     setFormError("");
     setSliderVisible(true);
     setSliderVerified(false);
     setSliderCaptchaInfo(null);
     setSliderError("");
-  }
+  };
 
-  async function requestSliderCaptcha() {
+  const requestSliderCaptcha = async () => {
     try {
-      // Call pre-check with credentials to get slider info
       const data = await preCheckAndGetCaptcha({
         account: account.trim(),
         password: password,
@@ -212,13 +252,13 @@ function LoginPage() {
         bgUrl: data.bgUrl,
         puzzleUrl: data.puzzleUrl
       };
-    } catch {
+    } catch (error) {
       setSliderError("滑块验证码加载失败，请稍后重试");
-      throw new Error("request slider captcha failed");
+      throw error;
     }
-  }
+  };
 
-  async function handleSliderVerify(data: VerifyParam) {
+  const handleSliderVerify = async (data: VerifyParam) => {
     if (!sliderCaptchaInfo) {
       setSliderError("验证码已失效，请刷新重试");
       return Promise.reject();
@@ -237,16 +277,16 @@ function LoginPage() {
       }
       setSliderVerified(true);
       setSliderVisible(false);
-      setCodeSent(true); // Enable captcha input and login
+      setCodeSent(true);
       setCaptchaCountdown(60);
       return Promise.resolve();
-    } catch {
+    } catch (error) {
       setSliderError("网络异常，验证失败，请稍后重试");
-      return Promise.reject();
+      return Promise.reject(error);
     }
-  }
+  };
 
-  async function handleSubmit(event: React.FormEvent) {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (submitting) return;
 
@@ -271,13 +311,13 @@ function LoginPage() {
       return;
     }
 
-    setFormError("");
-    setSubmitting(true);
-
     if (!agree) {
       setFormError("请阅读并同意用户协议和隐私政策");
       return;
     }
+
+    setFormError("");
+    setSubmitting(true);
 
     try {
       const isEmail = account.includes("@");
@@ -289,31 +329,24 @@ function LoginPage() {
         code: captcha
       });
 
-      const token = res.token;
-      const userId = res.user.id;
-      setToken(token);
-      setUserId(userId);
+      setToken(res.token);
+      setUserId(res.user.id);
       try {
-        window.localStorage.setItem("token", token);
+        window.localStorage.setItem("token", res.token);
       } catch {
-        void 0;
+        // ignore
       }
       resetLoginFail();
 
-      setIsLoading(true);
-      setTimeout(() => {
-        navigate(routes.admin);
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 1000);
-      }, 500);
+      // 直接跳转，移除冗余的 setTimeout 和 setIsLoading
+      navigate(routes.admin);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "网络异常，请稍后再试");
       recordLoginFail();
     } finally {
       setSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex bg-[var(--bg-color)] text-[var(--text-color)]">
@@ -321,7 +354,7 @@ function LoginPage() {
         <AnimatePresence>
           <motion.img
             key={currentBgIndex}
-            src={bgImages[currentBgIndex]}
+            src={BG_IMAGES[currentBgIndex]}
             alt="Background"
             initial={{ opacity: 0, scale: 1.1 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -424,7 +457,7 @@ function LoginPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-2">
             <div className="space-y-1.5 text-xs">
               <Input
                 label="账号"
@@ -432,7 +465,13 @@ function LoginPage() {
                 isRequired
                 value={account}
                 onChange={handleAccountChange}
-                description="请输入邮箱或用户名"
+                description={
+                  account && !accountError ? (
+                    <span className="text-emerald-400">账号格式正确</span>
+                  ) : (
+                    "请输入邮箱或用户名"
+                  )
+                }
                 size="sm"
                 variant="flat"
                 className="text-xs"
@@ -440,14 +479,10 @@ function LoginPage() {
                 errorMessage={accountError}
                 classNames={{
                   helperWrapper: "min-h-0 p-0 mt-1",
+                  description: "text-[11px] font-normal leading-none",
                   errorMessage: "text-[11px] font-normal leading-none"
                 }}
               />
-              <div className="h-[1.25rem] text-[11px]">
-                {account && !accountError ? (
-                  <span className="text-emerald-400">账号格式正确</span>
-                ) : null}
-              </div>
             </div>
 
             <div className="space-y-1.5 text-xs">
@@ -564,10 +599,9 @@ function LoginPage() {
                   </span>
                 </div>
                 <HeroLink
-                  href="#"
+                  href={routes.forgotPassword}
                   underline="hover"
-                  className="text-[11px] text-[var(--primary-color)]"
-                  onPress={() => navigate(routes.forgotPassword)}
+                  className="text-[11px] text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]"
                 >
                   忘记密码？
                 </HeroLink>
@@ -575,118 +609,106 @@ function LoginPage() {
 
               <InteractiveHoverButton
                 type="submit"
-                disabled={submitting || !agree || !codeSent}
+                disabled={submitting}
                 className="w-full"
               >
-                {submitting ? "登录中..." : "登录"}
+                {submitting ? "登录中..." : "立即登录"}
               </InteractiveHoverButton>
+
+              <div className="flex items-center gap-3 my-6">
+                <div className="flex-1 border-t border-[var(--border-color)]" />
+                <span className="text-xs uppercase text-[var(--text-color-secondary)] whitespace-nowrap">
+                  或通过以下方式继续
+                </span>
+                <div className="flex-1 border-t border-[var(--border-color)]" />
+              </div>
+
+              <div className="flex justify-center gap-6">
+                {/* 社交登录按钮暂未实现功能，仅展示 UI */}
+                 <Button isIconOnly variant="flat" radius="full" className="bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] hover:bg-[var(--primary-color)]/10" aria-label="Github Login">
+                  <FaGithub className="text-xl" />
+                </Button>
+                <Button isIconOnly variant="flat" radius="full" className="bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:text-[#12B7F5] hover:bg-[#12B7F5]/10" aria-label="QQ Login">
+                  <FaQq className="text-xl" />
+                </Button>
+                <Button isIconOnly variant="flat" radius="full" className="bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:text-[#07C160] hover:bg-[#07C160]/10" aria-label="WeChat Login">
+                  <FaWeixin className="text-xl" />
+                </Button>
+              </div>
+
+              <div className="text-center text-xs text-[var(--text-color-secondary)] mt-4">
+                还没有账号？{" "}
+                <HeroLink
+                  href={routes.register}
+                  underline="hover"
+                  className="text-xs font-medium text-[var(--primary-color)]"
+                >
+                  立即注册
+                </HeroLink>
+              </div>
             </div>
           </form>
-
-          <div className="space-y-3 text-xs">
-            <div className="flex items-center justify-between">
-              <div className="h-px flex-1 bg-[var(--border-color)]" />
-              <span className="mx-3 text-[var(--text-color-secondary)]">
-                其他登录方式
-              </span>
-              <div className="h-px flex-1 bg-[var(--border-color)]" />
-            </div>
-            <div className="flex items-center justify-center gap-6">
-              <Button
-                isIconOnly
-                aria-label="GitHub 登录"
-                variant="light"
-                className="group h-10 w-10 min-w-10 bg-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]"
-              >
-                <FaGithub className="h-6 w-6 transition-transform group-hover:scale-110" />
-              </Button>
-              <Button
-                isIconOnly
-                aria-label="QQ 登录"
-                variant="light"
-                className="group h-10 w-10 min-w-10 bg-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]"
-              >
-                <FaQq className="h-6 w-6 transition-transform group-hover:scale-110" />
-              </Button>
-              <Button
-                isIconOnly
-                aria-label="微信 登录"
-                variant="light"
-                className="group h-10 w-10 min-w-10 bg-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)]"
-              >
-                <FaWeixin className="h-6 w-6 transition-transform group-hover:scale-110" />
-              </Button>
-            </div>
-            <div className="flex items-center justify-center gap-1 text-[11px] text-[var(--text-color-secondary)]">
-              <span>还没有账号？</span>
-              <HeroLink
-                href="#"
-                underline="hover"
-                className="text-[var(--primary-color)]"
-                onPress={() => navigate(routes.register)}
-              >
-                立即注册
-              </HeroLink>
-            </div>
-          </div>
-
-          <Modal
-            isOpen={sliderVisible}
-            onOpenChange={isOpen => {
-              setSliderVisible(isOpen);
-              if (!isOpen) {
-                setSliderCaptchaInfo(null);
-                setSliderError("");
-              }
-            }}
-            size="sm"
-            backdrop="blur"
-            placement="center"
-            classNames={{
-              base: "bg-[var(--bg-elevated)] text-[var(--text-color)] max-w-[420px]",
-              header: "border-b border-[var(--border-color)] py-3 px-4",
-              body: "p-4"
-            }}
-          >
-            <ModalContent>
-              {() => (
-                <>
-                  <ModalHeader className="text-sm font-semibold">
-                    安全验证
-                  </ModalHeader>
-                  <ModalBody>
-                    <div className="flex flex-col items-center justify-center space-y-3">
-                      <div className="rounded-lg overflow-hidden border border-[var(--border-color)]">
-                        <SliderCaptcha
-                          request={requestSliderCaptcha}
-                          onVerify={handleSliderVerify}
-                          bgSize={{ width: 380, height: 200 }}
-                        />
-                      </div>
-                      {sliderError ? (
-                        <div className="text-[11px] text-red-400 w-full text-center">
-                          {sliderError}
-                        </div>
-                      ) : null}
-                    </div>
-                  </ModalBody>
-                </>
-              )}
-            </ModalContent>
-          </Modal>
-
-          <UserAgreementModal
-            isOpen={showUserAgreement}
-            onOpenChange={setShowUserAgreement}
-          />
-          <PrivacyPolicyModal
-            isOpen={showPrivacyPolicy}
-            onOpenChange={setShowPrivacyPolicy}
-          />
         </div>
       </div>
+
+      <Modal
+        isOpen={sliderVisible}
+        onOpenChange={(open) => {
+          setSliderVisible(open);
+          if (!open) {
+            setSliderCaptchaInfo(null);
+            setSliderError("");
+          }
+        }}
+        size="sm"
+        backdrop="blur"
+        placement="center"
+        classNames={{
+          base: "bg-[var(--bg-elevated)] text-[var(--text-color)] max-w-[420px]",
+          header: "border-b border-[var(--border-color)] py-3 px-4",
+          body: "p-4"
+        }}
+      >
+        <ModalContent>
+          {() => (
+            <>
+              <ModalHeader className="text-sm font-semibold">
+                安全验证
+              </ModalHeader>
+              <ModalBody>
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <div className="rounded-lg overflow-hidden border border-[var(--border-color)]">
+                    <SliderCaptcha
+                      request={requestSliderCaptcha}
+                      onVerify={handleSliderVerify}
+                      bgSize={{ width: 380, height: 200 }}
+                    />
+                  </div>
+                  {sliderError ? (
+                    <div className="text-[11px] text-red-400 w-full text-center">
+                      {sliderError}
+                    </div>
+                  ) : null}
+                </div>
+              </ModalBody>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      <UserAgreementModal
+        isOpen={showUserAgreement}
+        onOpenChange={setShowUserAgreement}
+      />
+      <PrivacyPolicyModal
+        isOpen={showPrivacyPolicy}
+        onOpenChange={setShowPrivacyPolicy}
+      />
     </div>
   );
 }
 
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====
 export default LoginPage;

@@ -1,12 +1,13 @@
+// ===== 1. 依赖导入区域 =====
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { routes } from "../../../router/routes";
+import { routes } from "@/router/routes";
 import { useNavigate } from "react-router-dom";
-import SliderCaptcha, { VerifyParam } from "rc-slider-captcha";
-import InteractiveHoverButton from "../../../components/Motion/InteractiveHoverButton";
-import Stepper from "../../../components/Motion/Stepper";
-import { Shuffle } from "../../../components/Motion/Shuffle";
-import { TextType } from "../../../components/Motion/TextType";
+import SliderCaptcha, { type VerifyParam } from "rc-slider-captcha";
+import InteractiveHoverButton from "@/components/Motion/InteractiveHoverButton";
+import Stepper from "@/components/Motion/Stepper";
+import { Shuffle } from "@/components/Motion/Shuffle";
+import { TextType } from "@/components/Motion/TextType";
 import { RiHome4Line } from "react-icons/ri";
 import {
   Button,
@@ -16,158 +17,258 @@ import {
   Modal,
   ModalBody,
   ModalContent,
-  ModalHeader
+  ModalHeader,
 } from "@heroui/react";
-import { verifySliderCaptcha, preCheckAndGetCaptcha, forgotPassword } from "../../../api/auth";
+import {
+  verifySliderCaptcha,
+  preCheckAndGetCaptcha,
+  forgotPassword,
+  type SliderCaptchaData,
+} from "@/api/auth";
 
-const bgImages = ["/auth/auth-Polling-1.png", "/auth/auth-Polling-2.png" , "/auth/auth-Polling-3.png"];
+// ===== 2. TODO待处理导入区域 =====
 
-function ForgotPasswordPage() {
+// ===== 3. 状态控制逻辑区域 =====
+/**
+ * 背景图片列表
+ */
+const BG_IMAGES = [
+  "/auth/auth-Polling-1.png",
+  "/auth/auth-Polling-2.png",
+  "/auth/auth-Polling-3.png",
+];
+
+// ===== 4. 通用工具函数区域 =====
+/**
+ * 校验账号格式
+ * @param value 账号值
+ * @returns 错误信息，无错误返回空字符串
+ */
+const validateAccount = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return "请输入账号";
+  if (trimmed.includes("@")) {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(trimmed)) {
+      return "邮箱格式不正确";
+    }
+    return "";
+  }
+  const usernamePattern = /^[a-zA-Z0-9_.-]{3,20}$/;
+  if (!usernamePattern.test(trimmed)) {
+    return "用户名需为 3-20 位字母、数字或符号 ._-";
+  }
+  return "";
+};
+
+/**
+ * 校验邮箱格式
+ * @param value 邮箱值
+ * @returns 错误信息，无错误返回空字符串
+ */
+const validateEmail = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return "请输入邮箱地址";
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(trimmed)) return "邮箱格式不正确";
+  return "";
+};
+
+/**
+ * 校验验证码格式
+ * @param value 验证码值
+ * @param required 是否必填
+ * @returns 错误信息，无错误返回空字符串
+ */
+const validateCaptcha = (value: string, required: boolean): string => {
+  if (!value) {
+    return required ? "请输入验证码" : "";
+  }
+  if (!/^\d{6}$/.test(value)) {
+    return "验证码需为 6 位数字";
+  }
+  return "";
+};
+
+/**
+ * 校验密码格式
+ * @param value 密码值
+ * @returns 错误信息，无错误返回空字符串
+ */
+const validatePassword = (value: string): string => {
+  if (!value) return "请输入登录密码";
+  if (value.length < 8) return "密码长度至少 8 位";
+  return "";
+};
+
+/**
+ * 校验确认密码是否一致
+ * @param currentPassword 当前密码
+ * @param value 确认密码值
+ * @returns 错误信息，无错误返回空字符串
+ */
+const validateConfirmPassword = (
+  currentPassword: string,
+  value: string
+): string => {
+  if (!value) return "请再次输入密码";
+  if (value !== currentPassword) return "两次输入的密码不一致";
+  return "";
+};
+
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+
+// ===== 7. 数据处理函数区域 =====
+
+// ===== 8. UI渲染逻辑区域 =====
+/**
+ * 忘记密码页面组件
+ */
+const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
-  const [currentBgIndex, setCurrentBgIndex] = React.useState(0);
 
+  // --- 状态定义 ---
+  /** 当前背景索引 */
+  const [currentBgIndex, setCurrentBgIndex] = React.useState(0);
+  /** 账号 */
+  const [account, setAccount] = React.useState("");
+  /** 邮箱 */
+  const [email, setEmail] = React.useState("");
+  /** 验证码 */
+  const [captcha, setCaptcha] = React.useState("");
+  /** 是否提交中 */
+  const [submitting, setSubmitting] = React.useState(false);
+  /** 当前步骤索引 */
+  const [stepIndex, setStepIndex] = React.useState(0);
+  /** 新密码 */
+  const [newPassword, setNewPassword] = React.useState("");
+  /** 确认密码 */
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+  /** 账号错误信息 */
+  const [accountError, setAccountError] = React.useState("");
+  /** 邮箱错误信息 */
+  const [emailError, setEmailError] = React.useState("");
+  /** 验证码错误信息 */
+  const [captchaError, setCaptchaError] = React.useState("");
+  /** 密码错误信息 */
+  const [passwordError, setPasswordError] = React.useState("");
+  /** 确认密码错误信息 */
+  const [confirmPasswordError, setConfirmPasswordError] = React.useState("");
+  /** 表单全局错误信息 */
+  const [formError, setFormError] = React.useState("");
+  /** 验证码倒计时 */
+  const [captchaCountdown, setCaptchaCountdown] = React.useState(0);
+  /** 滑块弹窗可见性 */
+  const [sliderVisible, setSliderVisible] = React.useState(false);
+  /** 滑块是否已验证 */
+  const [sliderVerified, setSliderVerified] = React.useState(false);
+  /** 滑块验证码信息 */
+  const [sliderCaptchaInfo, setSliderCaptchaInfo] =
+    React.useState<SliderCaptchaData | null>(null);
+  /** 滑块错误信息 */
+  const [sliderError, setSliderError] = React.useState("");
+  /** 验证码是否已发送 */
+  const [codeSent, setCodeSent] = React.useState(false);
+
+  // --- 页面副作用 ---
+  // 页面初始化
+  React.useEffect(() => {
+    let ignore = false;
+    const timer = setTimeout(() => {
+      if (!ignore) {
+        // 页面初始化逻辑
+      }
+    }, 0);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  // 背景轮播
   React.useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentBgIndex(prev => (prev + 1) % bgImages.length);
+      setCurrentBgIndex((prev) => (prev + 1) % BG_IMAGES.length);
     }, 5000);
     return () => clearInterval(timer);
   }, []);
 
-  const [email, setEmail] = React.useState("");
-  const [captcha, setCaptcha] = React.useState("");
-  const [submitting, setSubmitting] = React.useState(false);
-  const [stepIndex, setStepIndex] = React.useState(0);
-  const [account, setAccount] = React.useState("");
-  const [newPassword, setNewPassword] = React.useState("");
-  const [confirmPassword, setConfirmPassword] = React.useState("");
-  const [accountError, setAccountError] = React.useState("");
-  const [emailError, setEmailError] = React.useState("");
-  const [captchaError, setCaptchaError] = React.useState("");
-  const [passwordError, setPasswordError] = React.useState("");
-  const [confirmPasswordError, setConfirmPasswordError] = React.useState("");
-  const [formError, setFormError] = React.useState("");
-  const [captchaCountdown, setCaptchaCountdown] = React.useState(0);
-  const [sliderVisible, setSliderVisible] = React.useState(false);
-  const [sliderVerified, setSliderVerified] = React.useState(false);
-  const [sliderCaptchaInfo, setSliderCaptchaInfo] = React.useState<{
-    uuid: string;
-    bgUrl: string;
-    puzzleUrl: string;
-  } | null>(null);
-  const [sliderError, setSliderError] = React.useState("");
-  const [codeSent, setCodeSent] = React.useState(false);
-
+  // 验证码倒计时
   React.useEffect(() => {
     if (!captchaCountdown) return;
     const timer = window.setInterval(() => {
-      setCaptchaCountdown(previous => {
-        if (previous <= 1) {
+      setCaptchaCountdown(prev => {
+        if (prev <= 1) {
           window.clearInterval(timer);
           return 0;
         }
-        return previous - 1;
+        return prev - 1;
       });
     }, 1000);
     return () => window.clearInterval(timer);
   }, [captchaCountdown]);
 
-  function validateAccount(value: string) {
-    const trimmed = value.trim();
-    if (!trimmed) return "请输入账号";
-    if (trimmed.includes("@")) {
-      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailPattern.test(trimmed)) {
-        return "邮箱格式不正确";
-      }
-      return "";
-    }
-    const usernamePattern = /^[a-zA-Z0-9_.-]{3,20}$/;
-    if (!usernamePattern.test(trimmed)) {
-      return "用户名需为 3-20 位字母、数字或符号 ._-";
-    }
-    return "";
-  }
-
-  function validateEmail(value: string) {
-    const trimmed = value.trim();
-    if (!trimmed) return "请输入邮箱地址";
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(trimmed)) return "邮箱格式不正确";
-    return "";
-  }
-
-  function validateCaptcha(value: string, required: boolean) {
-    if (!value) {
-      return required ? "请输入验证码" : "";
-    }
-    if (!/^\d{6}$/.test(value)) {
-      return "验证码需为 6 位数字";
-    }
-    return "";
-  }
-
-  function validatePassword(value: string) {
-    if (!value) return "请输入登录密码";
-    if (value.length < 8) return "密码长度至少 8 位";
-    return "";
-  }
-
-  function validateConfirmPassword(currentPassword: string, value: string) {
-    if (!value) return "请再次输入密码";
-    if (value !== currentPassword) return "两次输入的密码不一致";
-    return "";
-  }
-
-  function handleAccountChange(event: React.ChangeEvent<HTMLInputElement>) {
+  // --- 事件处理函数 ---
+  /**
+   * 处理账号输入变更
+   */
+  const handleAccountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setAccount(value);
-    if (!value) {
-      setAccountError("");
-    } else {
-      setAccountError(validateAccount(value));
-    }
-  }
+    setAccountError(value ? validateAccount(value) : "");
+  };
 
-  function handleEmailChange(event: React.ChangeEvent<HTMLInputElement>) {
+  /**
+   * 处理邮箱输入变更
+   */
+  const handleEmailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setEmail(value);
-    if (!value) {
-      setEmailError("");
-    } else {
-      setEmailError(validateEmail(value));
-    }
-  }
+    setEmailError(value ? validateEmail(value) : "");
+  };
 
-  function handleCaptchaChange(value: string) {
+  /**
+   * 处理验证码输入变更
+   */
+  const handleCaptchaChange = (value: string) => {
     const digits = value.replace(/\D/g, "");
     setCaptcha(digits);
     setCaptchaError(validateCaptcha(digits, true));
-  }
+  };
 
-  function handleNewPasswordChange(event: React.ChangeEvent<HTMLInputElement>) {
+  /**
+   * 处理新密码输入变更
+   */
+  const handleNewPasswordChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const value = event.target.value;
     setNewPassword(value);
-    if (!value) {
-      setPasswordError("");
-    } else {
-      setPasswordError(validatePassword(value));
-    }
+    setPasswordError(value ? validatePassword(value) : "");
     if (confirmPassword) {
       setConfirmPasswordError(validateConfirmPassword(value, confirmPassword));
     }
-  }
+  };
 
-  function handleConfirmPasswordChange(event: React.ChangeEvent<HTMLInputElement>) {
+  /**
+   * 处理确认密码输入变更
+   */
+  const handleConfirmPasswordChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const value = event.target.value;
     setConfirmPassword(value);
-    if (!value) {
-      setConfirmPasswordError("");
-    } else {
-      setConfirmPasswordError(validateConfirmPassword(newPassword, value));
-    }
-  }
+    setConfirmPasswordError(
+      value ? validateConfirmPassword(newPassword, value) : ""
+    );
+  };
 
-  function handleSendCaptcha() {
+  /**
+   * 处理发送验证码请求
+   */
+  const handleSendCaptcha = () => {
     if (captchaCountdown > 0) return;
     const emailMessage = validateEmail(email);
     setEmailError(emailMessage);
@@ -180,39 +281,47 @@ function ForgotPasswordPage() {
     setSliderVerified(false);
     setSliderCaptchaInfo(null);
     setSliderError("");
-  }
+  };
 
-  async function requestSliderCaptcha() {
+  /**
+   * 请求滑块验证码数据
+   */
+  const requestSliderCaptcha = async () => {
     try {
       const data = await preCheckAndGetCaptcha({
         account: email.trim(),
-        scene: "forgot_email"
+        scene: "forgot_email",
       });
       setSliderCaptchaInfo(data);
       return {
         bgUrl: data.bgUrl,
-        puzzleUrl: data.puzzleUrl
+        puzzleUrl: data.puzzleUrl,
       };
-    } catch {
+    } catch (error) {
       setSliderError("滑块验证码加载失败，请稍后重试");
-      throw new Error("request slider captcha failed");
+      throw error;
     }
-  }
+  };
 
-  async function handleSliderVerify(data: VerifyParam) {
+  /**
+   * 处理滑块验证提交
+   */
+  const handleSliderVerify = async (data: VerifyParam) => {
     if (!sliderCaptchaInfo) {
       setSliderError("验证码已失效，请刷新重试");
       return Promise.reject();
     }
+
+    setSliderError("");
     try {
-      setSliderError("");
       const result = await verifySliderCaptcha({
         scene: "forgot_email",
         uuid: sliderCaptchaInfo.uuid,
         email: email.trim(),
         account: account.trim(),
-        ...data
+        ...data,
       });
+
       if (!result.passed) {
         setSliderError("验证失败，请重新尝试");
         return Promise.reject();
@@ -222,24 +331,29 @@ function ForgotPasswordPage() {
       setCodeSent(true);
       setCaptchaCountdown(60);
       return Promise.resolve();
-    } catch {
+    } catch (error) {
       setSliderError("网络异常，验证失败，请稍后重试");
-      return Promise.reject();
+      return Promise.reject(error);
     }
-  }
+  };
 
-  async function handleResetSubmit(event: React.FormEvent) {
+  /**
+   * 处理重置密码表单提交
+   */
+  const handleResetSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (submitting) return;
+
     const passwordMessage = validatePassword(newPassword);
     const confirmMessage = validateConfirmPassword(newPassword, confirmPassword);
     setPasswordError(passwordMessage);
     setConfirmPasswordError(confirmMessage);
+
     if (passwordMessage || confirmMessage) {
       setFormError("请先修正表单中的错误后再尝试重置密码");
       return;
     }
-    
+
     if (!codeSent) {
       setFormError("请先获取并输入验证码");
       return;
@@ -247,31 +361,50 @@ function ForgotPasswordPage() {
 
     setFormError("");
     setSubmitting(true);
-    
+
     try {
       await forgotPassword({
-        email: email,
+        email,
         code: captcha,
-        newPassword: newPassword
+        newPassword,
       });
-      
       window.setTimeout(() => {
-        setSubmitting(false);
         navigate(routes.login);
       }, 800);
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : "网络异常，请稍后再试");
+    } catch {
+      // 错误已由全局拦截器处理，这里仅需重置状态
+    } finally {
       setSubmitting(false);
     }
-  }
+  };
 
+  // ===== 9. 页面初始化与事件绑定 =====
+  // 初始化校验或数据预取（如果有）
+  React.useEffect(() => {
+    let ignore = false;
+    const timer = setTimeout(() => {
+      if (!ignore) {
+        // 这里可以执行页面进入时的初始化逻辑，如检查账号状态等
+        // 目前仅作为重复调用修复模式的占位和参考
+      }
+    }, 0);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  /**
+   * 渲染主体 JSX
+   */
   return (
     <div className="min-h-screen flex bg-[var(--bg-color)] text-[var(--text-color)]">
+      {/* 左侧装饰区 */}
       <div className="hidden lg:flex lg:basis-2/3 relative overflow-hidden bg-slate-950">
         <AnimatePresence mode="wait">
           <motion.img
             key={currentBgIndex}
-            src={bgImages[currentBgIndex]}
+            src={BG_IMAGES[currentBgIndex]}
             alt="Background"
             initial={{ opacity: 0, scale: 1.1 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -333,6 +466,7 @@ function ForgotPasswordPage() {
         </div>
       </div>
 
+      {/* 右侧表单区 */}
       <div className="flex-1 lg:basis-1/3 flex items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
         <div className="w-full max-w-sm space-y-8">
           <div className="space-y-2 text-center">
@@ -356,7 +490,7 @@ function ForgotPasswordPage() {
                 { id: "reset", title: "重置密码", subtitle: "设置新的登录密码" },
               ]}
               currentIndex={stepIndex}
-              onChange={index => setStepIndex(index)}
+              onChange={(index) => setStepIndex(index)}
             />
 
             {formError ? (
@@ -367,7 +501,7 @@ function ForgotPasswordPage() {
 
             {stepIndex === 0 && (
               <form
-                onSubmit={event => {
+                onSubmit={(event) => {
                   event.preventDefault();
                   if (!account.trim()) return;
                   setStepIndex(1);
@@ -389,7 +523,7 @@ function ForgotPasswordPage() {
                     errorMessage={accountError}
                     classNames={{
                       helperWrapper: "min-h-0 p-0 mt-1",
-                      errorMessage: "text-[11px] font-normal leading-none"
+                      errorMessage: "text-[11px] font-normal leading-none",
                     }}
                   />
                   {account && !accountError && (
@@ -403,7 +537,7 @@ function ForgotPasswordPage() {
                   type="submit"
                   disabled={Boolean(accountError) || !account.trim()}
                   className="w-full"
-                  onClick={event => {
+                  onClick={(event) => {
                     event.preventDefault();
                     const message = validateAccount(account);
                     setAccountError(message);
@@ -422,7 +556,7 @@ function ForgotPasswordPage() {
 
             {stepIndex === 1 && (
               <form
-                onSubmit={event => {
+                onSubmit={(event) => {
                   event.preventDefault();
                   const emailMessage = validateEmail(email);
                   const captchaMessage = validateCaptcha(captcha, true);
@@ -432,7 +566,7 @@ function ForgotPasswordPage() {
                     setFormError(
                       !sliderVerified
                         ? "请先完成滑块验证并获取验证码"
-                        : "请先修正表单中的错误后再继续",
+                        : "请先修正表单中的错误后再继续"
                     );
                     return;
                   }
@@ -456,7 +590,7 @@ function ForgotPasswordPage() {
                     errorMessage={emailError}
                     classNames={{
                       helperWrapper: "min-h-0 p-0 mt-1",
-                      errorMessage: "text-[11px] font-normal leading-none"
+                      errorMessage: "text-[11px] font-normal leading-none",
                     }}
                   />
                   {email && !emailError && (
@@ -487,7 +621,7 @@ function ForgotPasswordPage() {
                           wrapper: "flex-1",
                           segmentWrapper: "w-full justify-between gap-1.5",
                           segment: "w-9 h-9 text-sm",
-                          helperWrapper: "min-h-[1.25rem]"
+                          helperWrapper: "min-h-[1.25rem]",
                         }}
                       />
                       <Button
@@ -534,7 +668,7 @@ function ForgotPasswordPage() {
                     errorMessage={passwordError}
                     classNames={{
                       helperWrapper: "min-h-0 p-0 mt-1",
-                      errorMessage: "text-[11px] font-normal leading-none"
+                      errorMessage: "text-[11px] font-normal leading-none",
                     }}
                   />
                 </div>
@@ -547,7 +681,7 @@ function ForgotPasswordPage() {
                     type="password"
                     value={confirmPassword}
                     onChange={handleConfirmPasswordChange}
-                    description="再次输入新的登录密码"
+                    description="请再次输入新密码"
                     size="sm"
                     variant="flat"
                     className="text-xs"
@@ -555,89 +689,88 @@ function ForgotPasswordPage() {
                     errorMessage={confirmPasswordError}
                     classNames={{
                       helperWrapper: "min-h-0 p-0 mt-1",
-                      errorMessage: "text-[11px] font-normal leading-none"
+                      errorMessage: "text-[11px] font-normal leading-none",
                     }}
                   />
                 </div>
 
                 <InteractiveHoverButton
                   type="submit"
-                  disabled={submitting || !newPassword || newPassword !== confirmPassword}
+                  disabled={
+                    submitting ||
+                    Boolean(passwordError) ||
+                    Boolean(confirmPasswordError) ||
+                    !newPassword ||
+                    !confirmPassword
+                  }
                   className="w-full"
                 >
-                  {submitting ? "重置中..." : "完成重置密码"}
+                  {submitting ? "提交中..." : "重置密码"}
                 </InteractiveHoverButton>
               </form>
             )}
-          </div>
 
-          <div className="flex items-center justify-center gap-2 text-[11px] text-[var(--text-color-secondary)]">
-            <HeroLink
-              href="#"
-              underline="hover"
-              className="hover:underline"
-              onPress={() => navigate(routes.login)}
-            >
-              返回登录
-            </HeroLink>
-            <span>·</span>
-            <HeroLink
-              href="#"
-              underline="hover"
-              className="text-[var(--primary-color)] hover:underline"
-              onPress={() => navigate(routes.register)}
-            >
-              还没有账号？立即注册
-            </HeroLink>
+            <div className="flex items-center justify-center pt-2">
+              <HeroLink
+                size="sm"
+                onPress={() => navigate(routes.login)}
+                className="cursor-pointer text-[11px] text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors"
+              >
+                想起密码了？返回登录
+              </HeroLink>
+            </div>
           </div>
-          <Modal
-            isOpen={sliderVisible}
-            onOpenChange={isOpen => {
-              setSliderVisible(isOpen);
-              if (!isOpen) {
-                setSliderCaptchaInfo(null);
-                setSliderError("");
-              }
-            }}
-            size="sm"
-            backdrop="blur"
-            placement="center"
-            classNames={{
-              base: "bg-[var(--bg-elevated)] text-[var(--text-color)] max-w-[420px]",
-              header: "border-b border-[var(--border-color)] py-3 px-4",
-              body: "p-4"
-            }}
-          >
-            <ModalContent>
-              {() => (
-                <>
-                  <ModalHeader className="text-sm font-semibold">
-                    安全验证
-                  </ModalHeader>
-                  <ModalBody>
-                    <div className="flex flex-col items-center justify-center space-y-3">
-                      <div className="rounded-lg overflow-hidden border border-[var(--border-color)]">
-                        <SliderCaptcha
-                          request={requestSliderCaptcha}
-                          onVerify={handleSliderVerify}
-                          bgSize={{ width: 380, height: 200 }}
-                        />
-                      </div>
-                      {sliderError ? (
-                        <div className="text-[11px] text-red-400 w-full text-center">
-                          {sliderError}
-                        </div>
-                      ) : null}
-                    </div>
-                  </ModalBody>
-                </>
-              )}
-            </ModalContent>
-          </Modal>
         </div>
       </div>
+
+      {/* 滑块验证模态框 */}
+      <Modal
+        isOpen={sliderVisible}
+        onOpenChange={(open) => {
+          setSliderVisible(open);
+          if (!open) {
+            setSliderCaptchaInfo(null);
+            setSliderError("");
+          }
+        }}
+        size="sm"
+        placement="center"
+        backdrop="blur"
+        classNames={{
+          base: "bg-[var(--bg-elevated)] text-[var(--text-color)] max-w-[420px]",
+          header: "border-b border-[var(--border-color)] py-3 px-4",
+          body: "p-4",
+        }}
+      >
+        <ModalContent>
+          {() => (
+            <>
+              <ModalHeader className="text-sm font-semibold">
+                安全验证
+              </ModalHeader>
+              <ModalBody>
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <div className="rounded-lg overflow-hidden border border-[var(--border-color)]">
+                    <SliderCaptcha
+                      request={requestSliderCaptcha}
+                      onVerify={handleSliderVerify}
+                      bgSize={{ width: 380, height: 200 }}
+                    />
+                  </div>
+                  {sliderError ? (
+                    <div className="text-[11px] text-red-400 w-full text-center">
+                      {sliderError}
+                    </div>
+                  ) : null}
+                </div>
+              </ModalBody>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
-}
+};
 
+// ===== 11. 导出区域 =====
 export default ForgotPasswordPage;

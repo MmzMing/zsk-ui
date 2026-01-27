@@ -1,7 +1,8 @@
-import React from "react";
+// ===== 1. 依赖导入区域 =====
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import SliderCaptcha, { VerifyParam } from "rc-slider-captcha";
+import SliderCaptcha, { type VerifyParam } from "rc-slider-captcha";
 import { FaEye, FaEyeSlash } from "react-icons/fa6";
 import { RiHome4Line } from "react-icons/ri";
 import {
@@ -15,59 +16,182 @@ import {
   ModalContent,
   ModalHeader
 } from "@heroui/react";
-import { routes } from "../../../router/routes";
-import InteractiveHoverButton from "../../../components/Motion/InteractiveHoverButton";
-import { Shuffle } from "../../../components/Motion/Shuffle";
-import { TextType } from "../../../components/Motion/TextType";
-import { UserAgreementModal, PrivacyPolicyModal } from "../../../components/AgreementModals";
-import { verifySliderCaptcha, preCheckAndGetCaptcha, register } from "../../../api/auth";
+import { routes } from "@/router/routes";
+import { Shuffle } from "@/components/Motion/Shuffle";
+import { TextType } from "@/components/Motion/TextType";
+import InteractiveHoverButton from "@/components/Motion/InteractiveHoverButton";
+import { UserAgreementModal, PrivacyPolicyModal } from "@/components/AgreementModals";
+import { verifySliderCaptcha, preCheckAndGetCaptcha, register, type SliderCaptchaData } from "@/api/auth";
 
-const bgImages = ["/auth/auth-Polling-1.png", "/auth/auth-Polling-2.png" , "/auth/auth-Polling-3.png"];
+// ===== 2. TODO待处理导入区域 =====
 
+// ===== 3. 状态控制逻辑区域 =====
+const BG_IMAGES = ["/auth/auth-Polling-1.png", "/auth/auth-Polling-2.png", "/auth/auth-Polling-3.png"];
+
+// ===== 4. 通用工具函数区域 =====
+/**
+ * 验证邮箱格式
+ * @param value 邮箱地址
+ */
+const validateEmail = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return "请输入邮箱地址";
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(trimmed)) return "邮箱格式不正确";
+  return "";
+};
+
+/**
+ * 验证用户名格式
+ * @param value 用户名
+ */
+const validateUsername = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return "请输入用户名";
+  const usernamePattern = /^[a-zA-Z0-9_.-]{3,20}$/;
+  if (!usernamePattern.test(trimmed)) return "用户名需为 3-20 位字母、数字或符号 ._-";
+  return "";
+};
+
+/**
+ * 评估密码强度
+ * @param value 密码
+ */
+const evaluatePasswordStrength = (value: string): string => {
+  if (!value) return "";
+  let score = 0;
+  if (value.length >= 8) score += 1;
+  if (/[A-Z]/.test(value)) score += 1;
+  if (/[a-z]/.test(value)) score += 1;
+  if (/\d/.test(value)) score += 1;
+  if (/[^A-Za-z0-9]/.test(value)) score += 1;
+  if (score <= 2) return "弱";
+  if (score === 3 || score === 4) return "中";
+  return "强";
+};
+
+/**
+ * 验证密码格式
+ * @param value 密码
+ */
+const validatePassword = (value: string): string => {
+  if (!value) return "请输入登录密码";
+  if (value.length < 8) return "密码长度至少 8 位";
+  return "";
+};
+
+/**
+ * 验证确认密码
+ * @param currentPassword 当前密码
+ * @param value 确认密码
+ */
+const validateConfirmPassword = (currentPassword: string, value: string): string => {
+  if (!value) return "请再次输入密码";
+  if (value !== currentPassword) return "两次输入的密码不一致";
+  return "";
+};
+
+/**
+ * 验证验证码格式
+ * @param value 验证码
+ * @param required 是否必填
+ */
+const validateCaptcha = (value: string, required: boolean): string => {
+  if (!value) {
+    return required ? "请输入验证码" : "";
+  }
+  if (!/^\d{6}$/.test(value)) {
+    return "验证码需为 6 位数字";
+  }
+  return "";
+};
+
+/**
+ * 密码哈希处理
+ * @param value 原始密码
+ */
+const hashPassword = async (value: string): Promise<string> => {
+  if (!window.crypto || !window.crypto.subtle) return value;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(value);
+  const digest = await window.crypto.subtle.digest("SHA-256", data);
+  const bytes = Array.from(new Uint8Array(digest));
+  return bytes.map((byte) => byte.toString(16).padStart(2, "0")).join("");
+};
+
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+
+// ===== 7. 数据处理函数区域 =====
+
+// ===== 8. UI渲染逻辑区域 =====
+
+// ===== 9. 页面初始化与事件绑定 =====
 function RegisterPage() {
   const navigate = useNavigate();
-  const [currentBgIndex, setCurrentBgIndex] = React.useState(0);
+  
+  // 背景轮播状态
+  const [currentBgIndex, setCurrentBgIndex] = useState(0);
 
-  React.useEffect(() => {
+  // 表单状态
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [captcha, setCaptcha] = useState("");
+  const [agree, setAgree] = useState(false);
+  
+  // UI状态
+  const [submitting, setSubmitting] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+  const [showUserAgreement, setShowUserAgreement] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  
+  // 验证状态
+  const [emailError, setEmailError] = useState("");
+  const [usernameError, setUsernameError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [captchaError, setCaptchaError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState("");
+  
+  // 滑块验证码状态
+  const [sliderVisible, setSliderVisible] = useState(false);
+  const [sliderVerified, setSliderVerified] = useState(false);
+  const [sliderCaptchaInfo, setSliderCaptchaInfo] = useState<SliderCaptchaData | null>(null);
+  const [sliderError, setSliderError] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [captchaCountdown, setCaptchaCountdown] = useState(0);
+
+  useEffect(() => {
+    let ignore = false;
+    const timer = setTimeout(() => {
+      if (!ignore) {
+        // 页面初始化逻辑
+      }
+    }, 0);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  // 背景轮播副作用
+  useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentBgIndex(prev => (prev + 1) % bgImages.length);
+      setCurrentBgIndex((prev) => (prev + 1) % BG_IMAGES.length);
     }, 5000);
     return () => clearInterval(timer);
   }, []);
 
-  const [email, setEmail] = React.useState("");
-  const [username, setUsername] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [confirmPassword, setConfirmPassword] = React.useState("");
-  const [captcha, setCaptcha] = React.useState("");
-  const [agree, setAgree] = React.useState(false);
-  const [submitting, setSubmitting] = React.useState(false);
-  const [passwordVisible, setPasswordVisible] = React.useState(false);
-  const [confirmPasswordVisible, setConfirmPasswordVisible] = React.useState(false);
-  const [emailError, setEmailError] = React.useState("");
-  const [usernameError, setUsernameError] = React.useState("");
-  const [passwordError, setPasswordError] = React.useState("");
-  const [confirmPasswordError, setConfirmPasswordError] = React.useState("");
-  const [captchaError, setCaptchaError] = React.useState("");
-  const [formError, setFormError] = React.useState("");
-  const [passwordStrength, setPasswordStrength] = React.useState("");
-  const [sliderVisible, setSliderVisible] = React.useState(false);
-  const [sliderVerified, setSliderVerified] = React.useState(false);
-  const [sliderCaptchaInfo, setSliderCaptchaInfo] = React.useState<{
-    uuid: string;
-    bgUrl: string;
-    puzzleUrl: string;
-  } | null>(null);
-  const [sliderError, setSliderError] = React.useState("");
-  const [captchaCountdown, setCaptchaCountdown] = React.useState(0);
-  const [showUserAgreement, setShowUserAgreement] = React.useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = React.useState(false);
-  const [codeSent, setCodeSent] = React.useState(false);
-
-  React.useEffect(() => {
+  // 倒计时副作用
+  useEffect(() => {
     if (!captchaCountdown) return;
     const timer = window.setInterval(() => {
-      setCaptchaCountdown(previous => {
+      setCaptchaCountdown((previous) => {
         if (previous <= 1) {
           window.clearInterval(timer);
           return 0;
@@ -78,78 +202,20 @@ function RegisterPage() {
     return () => window.clearInterval(timer);
   }, [captchaCountdown]);
 
-  function validateEmail(value: string) {
-    const trimmed = value.trim();
-    if (!trimmed) return "请输入邮箱地址";
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(trimmed)) return "邮箱格式不正确";
-    return "";
-  }
-
-  function validateUsername(value: string) {
-    const trimmed = value.trim();
-    if (!trimmed) return "请输入用户名";
-    const usernamePattern = /^[a-zA-Z0-9_.-]{3,20}$/;
-    if (!usernamePattern.test(trimmed)) return "用户名需为 3-20 位字母、数字或符号 ._-";
-    return "";
-  }
-
-  function evaluatePasswordStrength(value: string) {
-    if (!value) return "";
-    let score = 0;
-    if (value.length >= 8) score += 1;
-    if (/[A-Z]/.test(value)) score += 1;
-    if (/[a-z]/.test(value)) score += 1;
-    if (/\d/.test(value)) score += 1;
-    if (/[^A-Za-z0-9]/.test(value)) score += 1;
-    if (score <= 2) return "弱";
-    if (score === 3 || score === 4) return "中";
-    return "强";
-  }
-
-  function validatePassword(value: string) {
-    if (!value) return "请输入登录密码";
-    if (value.length < 8) return "密码长度至少 8 位";
-    return "";
-  }
-
-  function validateConfirmPassword(currentPassword: string, value: string) {
-    if (!value) return "请再次输入密码";
-    if (value !== currentPassword) return "两次输入的密码不一致";
-    return "";
-  }
-
-  function validateCaptcha(value: string, required: boolean) {
-    if (!value) {
-      return required ? "请输入验证码" : "";
-    }
-    if (!/^\d{6}$/.test(value)) {
-      return "验证码需为 6 位数字";
-    }
-    return "";
-  }
-
-  function handleEmailChange(event: React.ChangeEvent<HTMLInputElement>) {
+  // 表单变更处理
+  const handleEmailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setEmail(value);
-    if (!value) {
-      setEmailError("");
-    } else {
-      setEmailError(validateEmail(value));
-    }
-  }
+    setEmailError(value ? validateEmail(value) : "");
+  };
 
-  function handleUsernameChange(event: React.ChangeEvent<HTMLInputElement>) {
+  const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setUsername(value);
-    if (!value) {
-      setUsernameError("");
-    } else {
-      setUsernameError(validateUsername(value));
-    }
-  }
+    setUsernameError(value ? validateUsername(value) : "");
+  };
 
-  function handlePasswordChange(event: React.ChangeEvent<HTMLInputElement>) {
+  const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setPassword(value);
     if (!value) {
@@ -162,25 +228,22 @@ function RegisterPage() {
     if (confirmPassword) {
       setConfirmPasswordError(validateConfirmPassword(value, confirmPassword));
     }
-  }
+  };
 
-  function handleConfirmPasswordChange(event: React.ChangeEvent<HTMLInputElement>) {
+  const handleConfirmPasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setConfirmPassword(value);
-    if (!value) {
-      setConfirmPasswordError("");
-    } else {
-      setConfirmPasswordError(validateConfirmPassword(password, value));
-    }
-  }
+    setConfirmPasswordError(value ? validateConfirmPassword(password, value) : "");
+  };
 
-  function handleCaptchaChange(value: string) {
+  const handleCaptchaChange = (value: string) => {
     const digits = value.replace(/\D/g, "");
     setCaptcha(digits);
     setCaptchaError(validateCaptcha(digits, sliderVerified));
-  }
+  };
 
-  function handleSendCaptcha() {
+  // 发送验证码前置检查
+  const handleSendCaptcha = () => {
     if (captchaCountdown > 0) return;
     
     const emailMessage = validateEmail(email);
@@ -194,7 +257,6 @@ function RegisterPage() {
     setConfirmPasswordError(confirmPasswordMessage);
     
     if (emailMessage || usernameMessage || passwordMessage || confirmPasswordMessage) {
-      setFormError("请先正确填写注册信息，再发送验证码");
       return;
     }
     
@@ -203,9 +265,10 @@ function RegisterPage() {
     setSliderVerified(false);
     setSliderCaptchaInfo(null);
     setSliderError("");
-  }
+  };
 
-  async function requestSliderCaptcha() {
+  // 请求滑块验证码
+  const requestSliderCaptcha = async () => {
     try {
       const data = await preCheckAndGetCaptcha({
         account: email.trim(),
@@ -218,11 +281,13 @@ function RegisterPage() {
       };
     } catch {
       setSliderError("滑块验证码加载失败，请稍后重试");
+      // 抛出错误以通知组件
       throw new Error("request slider captcha failed");
     }
-  }
+  };
 
-  async function handleSliderVerify(data: VerifyParam) {
+  // 处理滑块验证结果
+  const handleSliderVerify = async (data: VerifyParam) => {
     if (!sliderCaptchaInfo) {
       setSliderError("验证码已失效，请刷新重试");
       return Promise.reject();
@@ -248,18 +313,10 @@ function RegisterPage() {
       setSliderError("网络异常，验证失败，请稍后重试");
       return Promise.reject();
     }
-  }
+  };
 
-  async function hashPassword(value: string) {
-    if (!window.crypto || !window.crypto.subtle) return value;
-    const encoder = new TextEncoder();
-    const data = encoder.encode(value);
-    const digest = await window.crypto.subtle.digest("SHA-256", data);
-    const bytes = Array.from(new Uint8Array(digest));
-    return bytes.map(byte => byte.toString(16).padStart(2, "0")).join("");
-  }
-
-  async function handleSubmit(event: React.FormEvent) {
+  // 提交注册
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (submitting) return;
 
@@ -276,7 +333,6 @@ function RegisterPage() {
     setCaptchaError(captchaMessage);
 
     if (emailMessage || usernameMessage || passwordMessage || confirmPasswordMessage || captchaMessage) {
-      setFormError("请先修正表单中的错误后再尝试注册");
       return;
     }
 
@@ -296,22 +352,20 @@ function RegisterPage() {
     try {
       const hashedPassword = await hashPassword(password);
       await register({
-        username: username,
-        email: email,
+        username,
+        email,
         password: hashedPassword,
         code: captcha
       });
       
-      await new Promise(resolve => {
-        window.setTimeout(resolve, 800);
-      });
+      // 注册成功跳转
       navigate(routes.login);
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : "网络异常，请稍后再试");
+    } catch {
+      // 错误已由全局拦截器处理，此处仅停止加载状态
     } finally {
       setSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex bg-[var(--bg-color)] text-[var(--text-color)]">
@@ -319,7 +373,7 @@ function RegisterPage() {
         <AnimatePresence mode="wait">
           <motion.img
             key={currentBgIndex}
-            src={bgImages[currentBgIndex]}
+            src={BG_IMAGES[currentBgIndex]}
             alt="Background"
             initial={{ opacity: 0, scale: 1.1 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -396,7 +450,7 @@ function RegisterPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-2">
             <div className="space-y-1.5 text-xs">
               <Input
                 label="邮箱"
@@ -404,7 +458,13 @@ function RegisterPage() {
                 isRequired
                 value={email}
                 onChange={handleEmailChange}
-                description="请输入常用邮箱地址"
+                description={
+                  email && !emailError ? (
+                    <span className="text-emerald-400">邮箱格式正确</span>
+                  ) : (
+                    "请输入常用邮箱地址"
+                  )
+                }
                 size="sm"
                 variant="flat"
                 className="text-xs"
@@ -412,14 +472,10 @@ function RegisterPage() {
                 errorMessage={emailError}
                 classNames={{
                   helperWrapper: "min-h-0 p-0 mt-1",
+                  description: "text-[11px] font-normal leading-none",
                   errorMessage: "text-[11px] font-normal leading-none"
                 }}
               />
-              <div className="text-[11px] h-[1.25rem]">
-                {email && !emailError ? (
-                  <span className="text-emerald-400">邮箱格式正确</span>
-                ) : null}
-              </div>
             </div>
 
             <div className="space-y-1.5 text-xs">
@@ -429,7 +485,13 @@ function RegisterPage() {
                 isRequired
                 value={username}
                 onChange={handleUsernameChange}
-                description="用于展示的昵称，可后续修改"
+                description={
+                  username && !usernameError ? (
+                    <span className="text-emerald-400">用户名格式正确</span>
+                  ) : (
+                    "用于展示的昵称，可后续修改"
+                  )
+                }
                 size="sm"
                 variant="flat"
                 className="text-xs"
@@ -437,14 +499,10 @@ function RegisterPage() {
                 errorMessage={usernameError}
                 classNames={{
                   helperWrapper: "min-h-0 p-0 mt-1",
+                  description: "text-[11px] font-normal leading-none",
                   errorMessage: "text-[11px] font-normal leading-none"
                 }}
               />
-              <div className="text-[11px] h-[1.25rem]">
-                {username && !usernameError ? (
-                  <span className="text-emerald-400">用户名格式正确</span>
-                ) : null}
-              </div>
             </div>
 
             <div className="space-y-1.5 text-xs">
@@ -563,130 +621,129 @@ function RegisterPage() {
                     isDisabled={captchaCountdown > 0}
                     className="h-9 w-[8.5rem] justify-center text-[11px] font-medium bg-[color-mix(in_srgb,var(--primary-color)_14%,transparent)] text-[var(--primary-color)] hover:bg-[color-mix(in_srgb,var(--primary-color)_20%,transparent)] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {captchaCountdown > 0
-                      ? `${captchaCountdown}s 后可重发`
-                      : "发送验证码"}
+                    {captchaCountdown > 0 ? `${captchaCountdown}s 后可重发` : "发送邮箱验证码"}
                   </Button>
+                </div>
+                <div className="text-[10px] text-[var(--text-color-secondary)] pl-1">
+                  验证码将发送至您的邮箱，请查收。
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3 text-xs">
-              {formError ? (
-                <div className="rounded-[var(--radius-base)] border border-red-500/60 bg-red-500/5 px-3 py-2 text-[11px] text-red-300">
-                  {formError}
-                </div>
-              ) : null}
+            <div className="flex items-start gap-2 pt-1">
               <Checkbox
+                size="sm"
                 isSelected={agree}
                 onValueChange={setAgree}
-                name="agreement"
-                className="inline-flex items-center gap-2 text-[var(--text-color-secondary)]"
-                >
-              </Checkbox>
-              <span className="inline-flex items-center gap-1">
-                <span>我已阅读并同意</span>
-                  <HeroLink
-                    href="#"
-                    underline="hover"
-                    className="text-[11px] text-[var(--primary-color)]"
-                    onPress={() => {
-                      setShowUserAgreement(true);
-                    }}
-                  >
-                    用户协议
-                  </HeroLink>
-                  <span>和</span>
-                  <HeroLink
-                    href="#"
-                    underline="hover"
-                    className="text-[11px] text-[var(--primary-color)]"
-                    onPress={() => {
-                      setShowPrivacyPolicy(true);
-                    }}
-                  >
-                    隐私政策
-                  </HeroLink>
-                </span>
-              <InteractiveHoverButton
-                type="submit"
-                disabled={submitting || !agree || !codeSent}
-                className="w-full"
+                classNames={{
+                  label: "text-[11px] text-[var(--text-color-secondary)]"
+                }}
               >
-                {submitting ? "注册中..." : "注册"}
-              </InteractiveHoverButton>
+                我已阅读并同意
+              </Checkbox>
+              <div className="text-[11px] pt-[2px] -ml-1">
+                <span
+                  className="cursor-pointer text-[var(--primary-color)] hover:underline"
+                  onClick={() => setShowUserAgreement(true)}
+                >
+                  《用户协议》
+                </span>
+                <span className="mx-1 text-[var(--text-color-secondary)]">和</span>
+                <span
+                  className="cursor-pointer text-[var(--primary-color)] hover:underline"
+                  onClick={() => setShowPrivacyPolicy(true)}
+                >
+                  《隐私政策》
+                </span>
+              </div>
+            </div>
+
+            {formError ? (
+              <div className="rounded-[var(--radius-base)] border border-red-500/60 bg-red-500/5 px-3 py-2 text-[11px] text-red-300">
+                {formError}
+              </div>
+            ) : null}
+
+            <InteractiveHoverButton
+              type="submit"
+              disabled={submitting}
+              className="w-full"
+            >
+              {submitting ? "注册中..." : "立即注册"}
+            </InteractiveHoverButton>
+
+            <div className="text-center text-xs text-[var(--text-color-secondary)] mt-4">
+              已有账号？{" "}
+              <HeroLink
+                href={routes.login}
+                underline="hover"
+                className="text-xs font-medium text-[var(--primary-color)]"
+              >
+                直接登录
+              </HeroLink>
             </div>
           </form>
-
-          <div className="flex items-center justify-center gap-2 text-[11px] text-[var(--text-color-secondary)]">
-            <span>已经有账号？</span>
-            <HeroLink
-              href="#"
-              underline="hover"
-              className="text-[var(--primary-color)]"
-              onPress={() => navigate(routes.login)}
-            >
-              立即登录
-            </HeroLink>
-          </div>
         </div>
-
-        <Modal
-            isOpen={sliderVisible}
-            onOpenChange={isOpen => {
-              setSliderVisible(isOpen);
-              if (!isOpen) {
-                setSliderCaptchaInfo(null);
-                setSliderError("");
-              }
-            }}
-            size="sm"
-            backdrop="blur"
-            placement="center"
-            classNames={{
-              base: "bg-[var(--bg-elevated)] text-[var(--text-color)] max-w-[420px]",
-              header: "border-b border-[var(--border-color)] py-3 px-4",
-              body: "p-4"
-            }}
-          >
-            <ModalContent>
-              {() => (
-                <>
-                  <ModalHeader className="text-sm font-semibold">
-                    安全验证
-                  </ModalHeader>
-                  <ModalBody>
-                    <div className="flex flex-col items-center justify-center space-y-3">
-                      <div className="rounded-lg overflow-hidden border border-[var(--border-color)]">
-                        <SliderCaptcha
-                          request={requestSliderCaptcha}
-                          onVerify={handleSliderVerify}
-                          bgSize={{ width: 380, height: 200 }}
-                        />
-                      </div>
-                      {sliderError ? (
-                        <div className="text-[11px] text-red-400 w-full text-center">
-                          {sliderError}
-                        </div>
-                      ) : null}
-                    </div>
-                  </ModalBody>
-                </>
-              )}
-            </ModalContent>
-          </Modal>
-
-        <UserAgreementModal
-          isOpen={showUserAgreement}
-          onOpenChange={setShowUserAgreement}
-        />
-        <PrivacyPolicyModal
-          isOpen={showPrivacyPolicy}
-          onOpenChange={setShowPrivacyPolicy}
-        />
       </div>
+      
+      <Modal
+        isOpen={sliderVisible}
+        onOpenChange={(open) => {
+          setSliderVisible(open);
+          if (!open) {
+            setSliderCaptchaInfo(null);
+            setSliderError("");
+          }
+        }}
+        size="sm"
+        backdrop="blur"
+        placement="center"
+        classNames={{
+          base: "bg-[var(--bg-elevated)] text-[var(--text-color)] max-w-[420px]",
+          header: "border-b border-[var(--border-color)] py-3 px-4",
+          body: "p-4"
+        }}
+      >
+        <ModalContent>
+          {() => (
+            <>
+              <ModalHeader className="text-sm font-semibold">
+                安全验证
+              </ModalHeader>
+              <ModalBody>
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <div className="rounded-lg overflow-hidden border border-[var(--border-color)]">
+                    <SliderCaptcha
+                      request={requestSliderCaptcha}
+                      onVerify={handleSliderVerify}
+                      bgSize={{ width: 380, height: 200 }}
+                    />
+                  </div>
+                  {sliderError ? (
+                    <div className="text-[11px] text-red-400 w-full text-center">
+                      {sliderError}
+                    </div>
+                  ) : null}
+                </div>
+              </ModalBody>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      <UserAgreementModal
+        isOpen={showUserAgreement}
+        onOpenChange={setShowUserAgreement}
+      />
+      <PrivacyPolicyModal
+        isOpen={showPrivacyPolicy}
+        onOpenChange={setShowPrivacyPolicy}
+      />
     </div>
   );
 }
 
+// ===== 10. TODO任务管理区域 =====
+
+// ===== 11. 导出区域 =====
 export default RegisterPage;

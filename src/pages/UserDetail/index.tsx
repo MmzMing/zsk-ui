@@ -226,22 +226,46 @@ function UserDetail() {
 
   // ===== 9. 页面初始化与事件绑定 =====
   useEffect(() => {
+    let ignore = false;
     if (id) {
       window.scrollTo(0, 0);
       setActiveTab("home");
-      handleFetchProfile();
+      setIsLoading(true);
+      const timer = setTimeout(() => {
+        if (!ignore) handleFetchProfile();
+      }, 0);
+      return () => {
+        ignore = true;
+        clearTimeout(timer);
+      };
     }
   }, [id, handleFetchProfile]);
 
   useEffect(() => {
+    let ignore = false;
     if (id && (activeTab === "home" || activeTab === "videos")) {
-      handleFetchWorks();
+      setIsWorksLoading(true);
+      const timer = setTimeout(() => {
+        if (!ignore) handleFetchWorks();
+      }, 0);
+      return () => {
+        ignore = true;
+        clearTimeout(timer);
+      };
     }
   }, [id, activeTab, handleFetchWorks]);
 
   useEffect(() => {
+    let ignore = false;
     if (id && activeTab === "favlist") {
-      handleFetchFavorites();
+      setIsFavoritesLoading(true);
+      const timer = setTimeout(() => {
+        if (!ignore) handleFetchFavorites();
+      }, 0);
+      return () => {
+        ignore = true;
+        clearTimeout(timer);
+      };
     }
   }, [id, activeTab, handleFetchFavorites]);
 

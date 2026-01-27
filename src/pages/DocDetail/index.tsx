@@ -395,20 +395,27 @@ function DocDetail() {
   }, [parentMap]);
 
   // 获取文档详情及评论
-  const handleFetchInitData = useCallback(async () => {
+  const handleFetchInitData = useCallback(async (getIgnore: () => boolean) => {
     if (!id) return;
       const docResult = await fetchDocDetail(id, setIsLoading);
+      if (getIgnore()) return;
       if (docResult) setDoc(docResult);
 
       const commentsResult = await fetchDocComments(id, { page: 1, pageSize: 20 });
+      if (getIgnore()) return;
       if (commentsResult?.list) setComments(commentsResult.list);
   }, [id]);
 
   useEffect(() => {
+    let ignore = false;
     const timer = setTimeout(() => {
-      handleFetchInitData();
+      setIsLoading(true);
+      handleFetchInitData(() => ignore);
     }, 0);
-    return () => clearTimeout(timer);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [handleFetchInitData]);
 
   // 生成目录树

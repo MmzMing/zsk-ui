@@ -92,6 +92,15 @@ body {
   transform-origin: center;
 }
 
+/* 隐藏滚动条工具类 */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @keyframes icon-spin-once {
   0% {
     transform: rotate(0deg);

@@ -322,7 +322,10 @@ function AdminPage() {
 
   // ===== 9. 页面初始化与事件绑定 =====
   useEffect(() => {
-    handleFetchInitData();
+    const timer = setTimeout(() => {
+      handleFetchInitData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [handleFetchInitData]);
 
   return (

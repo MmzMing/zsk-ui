@@ -1,19 +1,37 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { routes } from "@/router/routes";
-import { mockHomeSlides } from "@/api/mock/front/home";
+import { fetchHomeSlides, mockHomeSlides, type HomeSlide } from "@/api/front/home";
 
+// ===== 11. 导出区域 =====
 export default function HomeFeatures() {
+  const [slides, setSlides] = useState<HomeSlide[]>(() => mockHomeSlides);
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * 加载幻灯片数据
+   */
+  const loadSlides = React.useCallback(async () => {
+    const data = await fetchHomeSlides();
+    if (data) {
+      setSlides(data);
+    }
+  }, []);
+
+  // 初始化加载
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadSlides();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadSlides]);
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"]
   });
-
-  const slides = mockHomeSlides;
 
   const totalSlides = slides.length;
   const scrollHeight = 400; // 400vh

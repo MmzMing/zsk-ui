@@ -98,15 +98,6 @@ function CacheListPage() {
   };
 
   // ===== 5. 注释代码函数区 =====
-  /**
-   * 调试用的日志输出 (仅开发模式)
-   * @param message 调试信息
-   */
-  const showDebugLog = (message: string) => {
-    if (import.meta.env.DEV) {
-      console.log(`[CacheList Debug]: ${message}`);
-    }
-  };
 
   // ===== 6. 错误处理函数区域 =====
   /**
@@ -121,7 +112,6 @@ function CacheListPage() {
       description: message,
       color: "danger"
     });
-    showDebugLog(`${prefix}出错: ${message}`);
   }, []);
 
   // ===== 7. 数据处理函数区域 =====

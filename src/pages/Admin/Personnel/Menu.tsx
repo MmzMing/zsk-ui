@@ -371,8 +371,10 @@ function MenuPage() {
 
   // 页面加载时初始化数据
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadMenuTree();
+    const timer = setTimeout(() => {
+      loadMenuTree();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadMenuTree]);
 
   /**

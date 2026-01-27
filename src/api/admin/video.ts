@@ -260,6 +260,8 @@ export type VideoItem = {
   url?: string;
   /** 视频描述 */
   description?: string;
+  /** 访问密码 */
+  password?: string;
   /** 是否置顶 */
   pinned?: boolean;
   /** 是否推荐 */
@@ -570,6 +572,43 @@ export async function fetchDraftList(params: {
 }
 
 /**
+ * 保存草稿
+ * @param data 草稿数据
+ */
+export async function saveDraft(
+  data: Omit<DraftItem, "id" | "createdAt" | "updatedAt">
+): Promise<ApiResponse<DraftItem>> {
+  return handleRequestWithMock(
+    () =>
+      request.instance
+        .post<ApiResponse<DraftItem>>("/admin/content/video/draft", data)
+        .then((r) => r.data),
+    {
+      id: "mock-draft-id",
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as DraftItem,
+    "saveDraft"
+  );
+}
+
+/**
+ * 删除草稿
+ * @param id 草稿ID
+ */
+export async function deleteDraft(id: string): Promise<ApiResponse<boolean>> {
+  return handleRequestWithMock(
+    () =>
+      request.instance
+        .delete<ApiResponse<boolean>>(`/admin/content/video/draft/${id}`)
+        .then((r) => r.data),
+    true,
+    "deleteDraft"
+  );
+}
+
+/**
  * 初始化视频上传
  * @param data 初始化参数
  */
@@ -805,6 +844,24 @@ export async function updateVideo(
       ),
     setLoading,
   });
+}
+
+/**
+ * 上传视频封面
+ * @param file 封面文件
+ */
+export async function uploadCover(file: Blob): Promise<ApiResponse<string>> {
+  return handleRequestWithMock(
+    () => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return request.instance
+        .post<ApiResponse<string>>("/admin/content/video/upload/cover", formData)
+        .then((r) => r.data);
+    },
+    "public/DefaultImage/MyDefaultHomeVodie.png",
+    "uploadCover"
+  );
 }
 
 /**

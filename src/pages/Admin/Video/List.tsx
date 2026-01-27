@@ -137,16 +137,6 @@ function getStatusColor(status: VideoStatus): "default" | "primary" | "secondary
 }
 
 // ===== 5. 注释代码函数区 =====
-/**
- * 调试日志输出函数
- * @param message 日志内容
- * @param data 额外数据
- */
-function showDebugLog(message: string, data?: unknown) {
-  if (import.meta.env.DEV) {
-    console.log(`[VideoList] ${message}`, data || "");
-  }
-}
 
 // ===== 6. 错误处理函数区域 =====
 /**
@@ -218,7 +208,10 @@ function VideoListPage() {
 
   // 初始化加载
   useEffect(() => {
-    loadVideoList();
+    const timer = setTimeout(() => {
+      loadVideoList();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadVideoList]);
 
   /**
@@ -460,8 +453,7 @@ function VideoListPage() {
           color: "success"
         });
       }
-    } catch (error) {
-      showDebugLog("截图失败", error);
+    } catch {
       showErrorFn("视频源可能存在跨域限制，无法截取");
     }
   };

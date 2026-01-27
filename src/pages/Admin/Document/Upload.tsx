@@ -195,8 +195,7 @@ function DocumentUploadPage() {
       if (tagsRes && tagsRes.code === 200) setTagOptions(tagsRes.data);
       if (taskListRes && taskListRes.code === 200) setTasks(taskListRes.data.list);
       if (draftListRes && draftListRes.code === 200) setDrafts(draftListRes.data.list);
-    } catch (error) {
-      console.error(error);
+    } catch {
       addToast({
         title: "数据加载失败",
         description: "页面初始数据加载异常，请刷新重试。",
@@ -208,7 +207,10 @@ function DocumentUploadPage() {
   };
 
   useEffect(() => {
-    loadInitialData();
+    const timer = setTimeout(() => {
+      loadInitialData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   /**
@@ -329,8 +331,7 @@ function DocumentUploadPage() {
           if (fileInputRef.current) fileInputRef.current.value = "";
         }
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
       setMessage("上传失败，请重试");
       addToast({
         title: "上传失败",

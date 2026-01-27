@@ -111,4 +111,3 @@ files.forEach(file => {
 // Just output the JSON
 fs.writeFileSync(OUTPUT_FILE, JSON.stringify(apiData, null, 2));
 
-console.log(`Generated API docs data to ${OUTPUT_FILE}`);

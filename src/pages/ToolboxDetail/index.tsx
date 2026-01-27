@@ -91,9 +91,17 @@ export default function ToolboxDetailPage() {
     </div>
   );
 
-  // ===== 9. 页面初始化与事件绑定 =====
+  // ===== 9. 页面初始化与事件绑定 =====// 初始化
   useEffect(() => {
-    handleFetchData();
+    let ignore = false;
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      if (!ignore) handleFetchData();
+    }, 0);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [handleFetchData]);
 
   if (isLoading) {

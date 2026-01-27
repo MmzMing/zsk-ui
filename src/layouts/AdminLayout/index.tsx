@@ -66,9 +66,9 @@ function AdminLayout() {
     }
   }, [token, navigate]);
 
-  // Apply global font size to root element
+  // Apply navigation font size via CSS variable
   useEffect(() => {
-    document.documentElement.style.fontSize = `${fontSize}px`;
+    document.documentElement.style.setProperty("--nav-font-size", `${fontSize}px`);
   }, [fontSize]);
 
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -86,9 +86,7 @@ function AdminLayout() {
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-      });
+      document.documentElement.requestFullscreen();
     } else {
       document.exitFullscreen();
     }
@@ -290,7 +288,10 @@ function AdminLayout() {
       return null;
     }
     return (
-      <div className="hidden md:flex items-center gap-4 text-xs">
+      <div 
+        className="hidden md:flex items-center gap-4"
+        style={{ fontSize: "var(--nav-font-size)" }}
+      >
         {adminMenuTree.map(section => {
           const isActive = section.id === activeSectionKey;
           const Icon = getIcon(section.iconName);
@@ -321,13 +322,14 @@ function AdminLayout() {
                   type="button"
                   className={
                     adminHeaderNavButtonClass +
+                    " text-[0.9em] " +
                     (isActive
                       ? " font-semibold text-[var(--primary-color)] border-b-[var(--primary-color)]"
                       : "")
                   }
                   onClick={() => handleSectionEntryClick(section.id)}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-[1.1em] h-[1.1em]" />
                   <span>{section.name}</span>
                 </button>
                 {hoverSectionKey === section.id && (
@@ -355,7 +357,7 @@ function AdminLayout() {
                       <button
                         key={child.id}
                         type="button"
-                        className="w-full px-3 py-1.5 text-left text-xs text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]"
+                        className="w-full px-3 py-1.5 text-left text-[0.85em] text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]"
                         onClick={() => handleMenuItemClick(child.id)}
                       >
                         {child.name}
@@ -372,13 +374,14 @@ function AdminLayout() {
               type="button"
               className={
                 adminHeaderNavButtonClass +
+                " text-[0.9em] " +
                 (isActive
                   ? " font-semibold text-[var(--primary-color)] border-b-[var(--primary-color)]"
                   : "")
               }
               onClick={() => handleSectionEntryClick(section.id)}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-[1.1em] h-[1.1em]" />
               <span>{section.name}</span>
             </button>
           );
@@ -388,9 +391,12 @@ function AdminLayout() {
   };
 
   const renderVerticalSidebar = () => (
-    <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+    <nav 
+      className="flex-1 overflow-y-auto py-4 px-3 space-y-6"
+      style={{ fontSize: "var(--nav-font-size)" }}
+    >
       <div className="space-y-2">
-        <div className="px-2 text-[11px] text-[var(--text-color-secondary)]">
+        <div className="px-2 text-[0.8em] text-[var(--text-color-secondary)]">
           管理导航
         </div>
         {adminMenuTree.map(section => {
@@ -402,7 +408,7 @@ function AdminLayout() {
               <button
                 type="button"
                 className={
-                  "w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-xs transition-colors " +
+                  "w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-[0.9em] transition-colors " +
                   (hasActiveChild
                     ? "bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] text-[var(--primary-color)]"
                     : "text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]")
@@ -410,15 +416,15 @@ function AdminLayout() {
                 onClick={() => handleSectionToggle(section.id)}
               >
                 <span className="inline-flex items-center gap-2">
-                  <Icon className="text-sm" />
+                  <Icon className="text-[1.1em]" />
                   {!sidebarCollapsed && <span>{section.name}</span>}
                 </span>
                 {!sidebarCollapsed && (
-                  <span className="text-[10px] text-[var(--text-color-secondary)]">
+                  <span className="text-[0.7em] text-[var(--text-color-secondary)]">
                     {isOpen ? (
-                      <FiChevronDown className="w-3 h-3" />
+                      <FiChevronDown className="w-[1.1em] h-[1.1em]" />
                     ) : (
-                      <FiChevronRight className="w-3 h-3" />
+                      <FiChevronRight className="w-[1.1em] h-[1.1em]" />
                     )}
                   </span>
                 )}
@@ -432,7 +438,7 @@ function AdminLayout() {
                         key={child.id}
                         type="button"
                         className={
-                          "w-full flex items-center justify-between gap-2 pl-6 pr-3 py-1.5 rounded-lg text-[11px] transition-colors border " +
+                          "w-full flex items-center justify-between gap-2 pl-6 pr-3 py-1.5 rounded-lg text-[0.85em] transition-colors border " +
                           (active
                             ? "border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
                             : "border-transparent text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]")
@@ -462,8 +468,11 @@ function AdminLayout() {
       return null;
     }
     return (
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-3">
-        <div className="px-2 text-[11px] text-[var(--text-color-secondary)]">
+      <nav 
+        className="flex-1 overflow-y-auto py-4 px-3 space-y-3"
+        style={{ fontSize: "var(--nav-font-size)" }}
+      >
+        <div className="px-2 text-[0.8em] text-[var(--text-color-secondary)]">
           {currentSection.name}
         </div>
         <div className="space-y-1">
@@ -474,7 +483,7 @@ function AdminLayout() {
                 key={child.id}
                 type="button"
                 className={
-                  "w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-[11px] transition-colors border " +
+                  "w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-[0.85em] transition-colors border " +
                   (active
                     ? "border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
                     : "border-transparent text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]")
@@ -501,7 +510,10 @@ function AdminLayout() {
       adminMenuTree.find(item => item.id === activeSectionKey) ?? adminMenuTree[0];
     if (sidebarCollapsed) {
       return (
-        <nav className="flex-1 flex flex-col items-center py-4 space-y-2">
+        <nav 
+          className="flex-1 flex flex-col items-center py-4 space-y-2"
+          style={{ fontSize: "var(--nav-font-size)" }}
+        >
           {adminMenuTree.map(section => {
             const Icon = getIcon(section.iconName);
             const isActive = section.id === activeSectionKey;
@@ -510,14 +522,14 @@ function AdminLayout() {
                 key={section.id}
                 type="button"
                 className={
-                  "w-10 h-10 rounded-xl flex items-center justify-center text-xs transition-colors " +
+                  "w-10 h-10 rounded-xl flex items-center justify-center text-[0.85em] transition-colors " +
                   (isActive
                     ? "bg-[color-mix(in_srgb,var(--primary-color)_18%,transparent)] text-[var(--primary-color)]"
                     : "text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)] hover:text-[var(--text-color)]")
                 }
                 onClick={() => handleSectionEntryClick(section.id)}
               >
-                <Icon className="text-base" />
+                <Icon className="text-[1.3em]" />
               </button>
             );
           })}
@@ -525,7 +537,10 @@ function AdminLayout() {
       );
     }
     return (
-      <div className="flex flex-1 overflow-hidden">
+      <div 
+        className="flex flex-1 overflow-hidden"
+        style={{ fontSize: "var(--nav-font-size)" }}
+      >
         <nav className="w-16 flex flex-col items-center py-4 border-r border-[var(--border-color)] space-y-2">
           {adminMenuTree.map(section => {
             const Icon = getIcon(section.iconName);
@@ -535,14 +550,14 @@ function AdminLayout() {
                 key={section.id}
                 type="button"
                 className={
-                  "w-11 h-11 rounded-xl flex flex-col items-center justify-center text-[10px] transition-colors " +
+                  "w-11 h-11 rounded-xl flex flex-col items-center justify-center text-[0.7em] transition-colors " +
                   (isActive
                     ? "bg-[color-mix(in_srgb,var(--primary-color)_18%,transparent)] text-[var(--primary-color)]"
                     : "text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)] hover:text-[var(--text-color)]")
                 }
                 onClick={() => handleSectionEntryClick(section.id)}
               >
-                <Icon className="text-base" />
+                <Icon className="text-[1.3em]" />
                 <span className="mt-0.5 truncate max-w-[2.5rem]">{section.name}</span>
               </button>
             );
@@ -558,7 +573,7 @@ function AdminLayout() {
                     key={child.id}
                     type="button"
                     className={
-                      "w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-[11px] transition-colors border " +
+                      "w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-[0.85em] transition-colors border " +
                       (active
                         ? "border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)]"
                         : "border-transparent text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--primary-color)_6%,transparent)] hover:text-[var(--text-color)]")
@@ -608,13 +623,16 @@ function AdminLayout() {
           <div className="fixed bottom-24 left-0 right-0 z-20 flex flex-col items-center justify-center gap-2 pointer-events-none">
             {/* Breadcrumbs */}
             {breadcrumbEnabled && breadcrumb && (
-              <div className="pointer-events-auto bg-[var(--bg-elevated)]/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-[var(--border-color)] shadow-sm flex items-center gap-2">
-                <span className="text-xs text-[var(--text-color-secondary)]">当前位置:</span>
+              <div 
+                className="pointer-events-auto bg-[var(--bg-elevated)]/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-[var(--border-color)] shadow-sm flex items-center gap-2"
+                style={{ fontSize: "var(--nav-font-size)" }}
+              >
+                <span className="text-[0.85em] text-[var(--text-color-secondary)]">当前位置:</span>
                 <Breadcrumbs
                   size="sm"
                   variant="light"
                   itemClasses={{
-                    item: "text-xs text-[var(--text-color-secondary)] data-[current=true]:text-[var(--text-color)]",
+                    item: "text-[0.85em] text-[var(--text-color-secondary)] data-[current=true]:text-[var(--text-color)]",
                     separator: "text-[var(--text-color-secondary)] px-1"
                   }}
                 >
@@ -627,13 +645,16 @@ function AdminLayout() {
 
             {/* Tabs */}
             {multiTabEnabled && tabs.length > 0 && (
-              <div className="pointer-events-auto max-w-[90vw] overflow-x-auto flex gap-1 p-1.5 bg-[var(--bg-elevated)]/80 backdrop-blur-md rounded-2xl border border-[var(--border-color)] shadow-sm scrollbar-hide">
+              <div 
+                className="pointer-events-auto max-w-[90vw] overflow-x-auto flex gap-1 p-1.5 bg-[var(--bg-elevated)]/80 backdrop-blur-md rounded-2xl border border-[var(--border-color)] shadow-sm scrollbar-hide"
+                style={{ fontSize: "var(--nav-font-size)" }}
+              >
                 {tabs.map(item => (
                   <button
                     key={item.key}
                     type="button"
                     className={
-                      "flex items-center gap-1 px-3 py-1 rounded-full text-xs transition-all border " +
+                      "flex items-center gap-1 px-3 py-1 rounded-full text-[0.85em] transition-all border " +
                       (item.key === activeKey
                         ? "border-[var(--primary-color)] bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] text-[var(--primary-color)] font-medium shadow-sm"
                         : "border-transparent text-[var(--text-color-secondary)] hover:bg-[var(--bg-color)] hover:text-[var(--text-color)]")
@@ -776,7 +797,8 @@ function AdminLayout() {
               <DropdownTrigger>
                 <button
                   type="button"
-                  className="inline-flex md:hidden items-center gap-2 px-2 py-1 rounded-lg border border-[var(--border-color)] text-xs"
+                  className="inline-flex md:hidden items-center gap-2 px-2 py-1 rounded-lg border border-[var(--border-color)] text-[0.85em]"
+                  style={{ fontSize: "var(--nav-font-size)" }}
                 >
                   <FiLayout className="text-sm" />
                   <span>后台菜单</span>
@@ -797,13 +819,16 @@ function AdminLayout() {
                 )}
               </DropdownMenu>
             </Dropdown>
-            <div className="hidden md:flex items-center gap-2 text-xs text-[var(--text-color-secondary)]">
+            <div 
+              className="hidden md:flex items-center gap-2 text-[var(--text-color-secondary)]"
+              style={{ fontSize: "var(--nav-font-size)" }}
+            >
               {breadcrumbEnabled && breadcrumb ? (
                 <Breadcrumbs
                   size="sm"
                   variant="light"
                   itemClasses={{
-                    item: "text-xs text-[var(--text-color-secondary)] data-[current=true]:text-[var(--text-color)]",
+                    item: "text-[0.85em] text-[var(--text-color-secondary)] data-[current=true]:text-[var(--text-color)]",
                     separator: "text-[var(--text-color-secondary)] px-1"
                   }}
                 >
@@ -940,13 +965,16 @@ function AdminLayout() {
         </header>
 
         {multiTabEnabled && (
-          <div className="h-9 flex items-center gap-2 px-6 border-b border-[var(--border-color)] bg-[var(--bg-elevated)]">
+          <div 
+            className="h-11 flex items-center gap-2 px-4 md:px-6 border-b border-[var(--border-color)] bg-[var(--bg-elevated)] overflow-x-auto overflow-y-hidden whitespace-nowrap scrollbar-hide"
+            style={{ fontSize: "var(--nav-font-size)" }}
+          >
             {tabs.map(item => (
               <button
                 key={item.key}
                 type="button"
                 className={
-                  "flex items-center gap-1 px-3 py-1 rounded-full text-xs transition-colors border " +
+                  "flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-[0.85em] transition-colors border whitespace-nowrap " +
                   (item.key === activeKey
                     ? "border-[color-mix(in_srgb,var(--primary-color)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)] font-medium"
                     : "border-transparent text-[var(--text-color-secondary)] hover:bg-[color-mix(in_srgb,var(--text-color)_6%,transparent)] hover:text-[var(--text-color)]")

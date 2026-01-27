@@ -181,13 +181,6 @@ function UserBehaviorPage() {
   );
 
   // ===== 5. 注释代码函数区 =====
-  /**
-   * handleExportBehaviorData
-   * 示例：处理导出用户行为数据的逻辑
-   */
-  // const handleExportBehaviorData = () => {
-  //   console.log("导出数据", filteredEvents);
-  // };
 
   // ===== 6. 错误处理函数区域 =====
 

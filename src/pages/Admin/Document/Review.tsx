@@ -350,14 +350,17 @@ function DocumentReviewPage() {
 
   // ===== 9. 页面初始化与事件绑定 =====
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadQueue();
+    const timer = setTimeout(() => {
+      loadQueue();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadQueue]);
 
-  // 当选中项变化时加载日志
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadLogs();
+    const timer = setTimeout(() => {
+      loadLogs();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadLogs]);
 
   return (

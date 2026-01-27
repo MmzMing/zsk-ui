@@ -145,8 +145,10 @@ function RolePage() {
 
   // 初始化与页码变更监听
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadRoleList();
+    const timer = setTimeout(() => {
+      loadRoleList();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadRoleList]);
 
   /**

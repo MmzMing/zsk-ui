@@ -59,12 +59,6 @@ function VideoDetail() {
   }, [token]);
 
   // ===== 5. 注释代码函数区 =====
-  /**
-   * 页面初始化代码容器 (不实际执行)
-   */
-  // const showPageInit = () => {
-  //   console.log("Page Initializing...");
-  // };
 
   // ===== 6. 错误处理函数区域 =====
 
@@ -326,22 +320,28 @@ function VideoDetail() {
   );
 
   // ===== 9. 页面初始化与事件绑定 =====
-  const handleFetchInitData = useCallback(async () => {
+  const handleFetchInitData = useCallback(async (getIgnore: () => boolean) => {
     if (!id) return;
 
       const res = await fetchVideoDetail(id, setLoading);
+      if (getIgnore()) return;
       if (res) setVideo(res);
 
       const commentsRes = await fetchVideoComments(id, { page: 1, pageSize: 20, sort: commentSort });
+      if (getIgnore()) return;
       if (commentsRes?.list) setComments(commentsRes.list);
-
   }, [id, commentSort]);
 
   useEffect(() => {
+    let ignore = false;
     const timer = setTimeout(() => {
-      handleFetchInitData();
+      setLoading(true);
+      handleFetchInitData(() => ignore);
     }, 0);
-    return () => clearTimeout(timer);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
   }, [handleFetchInitData]);
 
   if (loading) {

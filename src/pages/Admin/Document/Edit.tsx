@@ -353,8 +353,10 @@ export default function DocumentEditPage() {
    * 初始化加载数据
    */
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadDocumentData();
+    const timer = setTimeout(() => {
+      loadDocumentData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadDocumentData]);
 
   /**

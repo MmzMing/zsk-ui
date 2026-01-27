@@ -49,7 +49,7 @@ function AnalysisPage() {
       yField: "value",
       seriesField: "type",
       columnStyle: {
-        radius: [6, 6, 0, 0]
+        radius: [6, 6, 0, 0],fillOpacity: 0.4,
       },
       xAxis: {
         label: {
@@ -222,7 +222,10 @@ function AnalysisPage() {
 
   // ===== 9. 页面初始化与事件绑定 =====
   useEffect(() => {
-    handleFetchAnalysisData();
+    const timer = setTimeout(() => {
+      handleFetchAnalysisData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [handleFetchAnalysisData]);
 
   return (

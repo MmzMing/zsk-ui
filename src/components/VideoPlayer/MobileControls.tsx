@@ -29,8 +29,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     
     if (settingsButton) {
       settingsButton.click();
-    } else {
-      console.warn('Settings button not found');
     }
   };
 

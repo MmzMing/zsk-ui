@@ -12,7 +12,6 @@ import {
 } from "@heroui/react";
 import { FiPlay, FiEye, FiUsers, FiFileText, FiMessageSquare } from "react-icons/fi";
 
-import { Loading } from "../../components/Loading";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { routes } from "../../router/routes";
 import Shuffle from "../../components/Motion/Shuffle";
@@ -126,56 +125,55 @@ function AllSearchPage() {
 
   const PAGE_SIZE = 16;
 
-  React.useEffect(() => {
-    let cancelled = false;
-
-    async function fetchResults() {
-      const currentSearchParams = {
-        keyword: appliedKeyword || undefined,
-        type: activeType,
-        sort: activeSort,
-        duration,
-        timeRange,
-        category: activeCategory,
-        page,
-        pageSize: PAGE_SIZE,
-      };
-
-      // 使用公共 axios 实例的请求日志风格
-      console.log("► GET", "/search/all", currentSearchParams);
-
-      await searchAll(currentSearchParams, setIsLoading)
-        .then((data) => {
-          if (cancelled) return;
-
-          let list: SearchResult[] = [];
-          let totalCount = 0;
-
-          if (Array.isArray(data)) {
-            list = data;
-            totalCount = data.length;
-          } else if (data && Array.isArray(data.list)) {
-            list = data.list;
-            totalCount = data.total || 0;
-          }
-
-          setResults(list);
-          setTotal(totalCount);
-        })
-        .catch((error) => {
-          if (cancelled) return;
-          console.error("Search failed:", error);
-          // 错误提示已由 API 层处理
-          setResults([]);
-          setTotal(0);
-        });
-    }
-
-    fetchResults();
-
-    return () => {
-      cancelled = true;
+  /**
+   * 加载搜索结果数据
+   * @param signal 用于判断请求是否已被忽略
+   */
+  const loadResults = React.useCallback(async (checkIgnore: () => boolean) => {
+    const currentSearchParams = {
+      keyword: appliedKeyword || undefined,
+      type: activeType,
+      sort: activeSort,
+      duration,
+      timeRange,
+      category: activeCategory,
+      page,
+      pageSize: PAGE_SIZE,
     };
+
+    // 确保在请求真正开始前设为 loading
+    setIsLoading(true);
+
+    try {
+      // 不直接传递 setIsLoading 给 searchAll，避免它在 handleApiCall 的 finally 中过早关闭 loading
+      const data = await searchAll(currentSearchParams);
+      
+      // 如果请求已被忽略，则不更新状态
+      if (checkIgnore()) return;
+
+      let list: SearchResult[] = [];
+      let totalCount = 0;
+
+      if (Array.isArray(data)) {
+        list = data;
+        totalCount = data.length;
+      } else if (data && Array.isArray(data.list)) {
+        list = data.list;
+        totalCount = data.total || 0;
+      }
+
+      setResults(list);
+      setTotal(totalCount);
+    } catch {
+      if (checkIgnore()) return;
+      setResults([]);
+      setTotal(0);
+    } finally {
+      // 只有在非忽略的情况下才关闭 loading
+      if (!checkIgnore()) {
+        setIsLoading(false);
+      }
+    }
   }, [
     appliedKeyword,
     activeType,
@@ -185,6 +183,24 @@ function AllSearchPage() {
     activeCategory,
     page,
   ]);
+
+  // 初始化与参数变化加载
+  React.useEffect(() => {
+    let ignore = false;
+    
+    // 切换分类或搜索词时，立即进入加载状态并清空当前结果，避免展示过时数据（类似B站体验）
+    setIsLoading(true);
+    setResults([]);
+    
+    const timer = setTimeout(() => {
+      loadResults(() => ignore);
+    }, 0);
+
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [loadResults]);
 
   // Reset page when filters change
   React.useEffect(() => {
@@ -555,10 +571,22 @@ function AllSearchPage() {
       </section>
 
       {/* Results Section */}
-      <section>
+      <section className="min-h-[400px]">
         {isLoading ? (
-          <div className="py-20 flex justify-center">
-            <Loading />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="space-y-3">
+                <div className="aspect-video bg-white/5 animate-pulse rounded-lg" />
+                <div className="space-y-2 px-1">
+                  <div className="h-4 bg-white/5 animate-pulse rounded w-3/4" />
+                  <div className="flex justify-between">
+                    <div className="h-3 bg-white/5 animate-pulse rounded w-1/4" />
+                    <div className="h-3 bg-white/5 animate-pulse rounded w-1/4" />
+                  </div>
+                  <div className="h-5 bg-white/5 animate-pulse rounded w-1/4 mt-2" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : results.length > 0 ? (
           <>

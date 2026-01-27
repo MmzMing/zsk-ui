@@ -425,8 +425,10 @@ function DocumentListPage() {
 
   // --- 生命周期 ---
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadDocumentList();
+    const timer = setTimeout(() => {
+      loadDocumentList();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadDocumentList]);
 
   return (
