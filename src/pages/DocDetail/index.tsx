@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { routes } from "../../router/routes";
 import { useUserStore } from "../../store";
 import { Loading } from "../../components/Loading";
+import { ScrollProgress } from "../../components/MagicUI/ScrollProgress";
 import { 
   fetchDocDetail, 
   toggleDocLike, 
@@ -557,7 +558,9 @@ function DocDetail() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <>
+      <ScrollProgress vertical />
+      <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col lg:flex-row gap-8 relative">
         {/* 左侧内容区 (80%) */}
         <div className="lg:w-4/5 min-w-0" style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -858,6 +861,7 @@ function DocDetail() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
