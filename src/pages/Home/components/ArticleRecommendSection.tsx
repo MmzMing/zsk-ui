@@ -138,7 +138,7 @@ export default function ArticleRecommendSection() {
    * @param id 文章ID
    */
   const handleArticleJump = (id: string) => {
-    navigate(routes.docDetail.replace(":id", id));
+    window.open(routes.docDetail.replace(":id", id), "_blank");
   };
 
   // --- 生命周期与监听 ---

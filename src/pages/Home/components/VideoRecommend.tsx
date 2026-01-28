@@ -132,50 +132,90 @@ export default function VideoRecommend() {
         >
           {videoList.map((item) => (
             <div key={item.id} className="w-full flex justify-center">
-              <div className="group scroll-stack-card relative flex flex-col md:flex-row items-stretch gap-0 md:gap-6 rounded-[40px] border border-[var(--border-color)] bg-[var(--bg-elevated)]/60 backdrop-blur-xl p-0 text-[var(--text-color)] shadow-[0_32px_80px_rgba(0,0,0,0.1)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.4)] overflow-hidden h-[420px] md:h-[320px]">
-                {/* Left Info Area (35%) */}
-                <div
-                  className="flex-1 md:flex-[35] flex flex-col justify-between p-2 md:p-8 cursor-pointer w-full md:w-auto"
-                  onClick={() =>
-                    navigate(routes.videoDetail.replace(":id", item.id))
-                  }
-                >
-                  <div className="space-y-4">
-                    <h4 className="text-lg md:text-2xl font-semibold tracking-tight line-clamp-2 md:line-clamp-3">
-                      {item.title}
-                    </h4>
-                    <div className="flex flex-col gap-2 text-[11px] md:text-xs text-[var(--text-color-secondary)]">
-                      <span className="inline-flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        <span>播放量 {item.views}</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-color-secondary)]/50" />
-                        <span>{item.date}</span>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-xs text-[var(--primary-color)] font-medium">
-                    点击查看详情 &rarr;
-                  </div>
-                </div>
-
-                {/* Right Video Area (65%) */}
-                <div className="flex-1 md:flex-[65] relative bg-[var(--bg-elevated)]/30 border-t md:border-l md:border-t-0 border-[var(--border-color)] w-full md:w-auto">
+              <div className="group scroll-stack-card relative flex flex-col md:flex-row items-stretch gap-0 md:gap-6 rounded-[24px] md:rounded-[40px] border border-[var(--border-color)] bg-[var(--bg-elevated)]/60 backdrop-blur-xl p-0 text-[var(--text-color)] shadow-[0_32px_80px_rgba(0,0,0,0.1)] dark:shadow-[0_32px_80px_rgba(0,0,0,0.4)] overflow-hidden h-auto md:h-[320px]">
+                
+                {/* Image Area (Top on Mobile, Right on Desktop) */}
+                <div className="order-1 md:order-2 flex-none md:flex-[65] relative bg-[var(--bg-elevated)]/30 border-b md:border-b-0 md:border-l border-[var(--border-color)] w-full aspect-video md:aspect-auto md:h-auto overflow-hidden">
                   <img
                     src={item.cover || DEFAULT_COVER}
                     alt={item.title}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
+                  
+                  {/* Video Badge */}
+                  <div className="absolute top-3 left-3 z-20 px-2 py-1 rounded bg-black/60 backdrop-blur-md text-[10px] text-white font-medium border border-white/10">
+                    视频
+                  </div>
+
+                  {/* Play Button Overlay */}
                   <div
                     className="absolute inset-0 flex items-center justify-center cursor-pointer group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors z-10"
                     onClick={(e) => handleVideoClick(e, item.id)}
                   >
-                    <div className="w-16 h-16 rounded-full bg-[var(--bg-elevated)]/40 backdrop-blur-md flex items-center justify-center border border-[var(--border-color)] transition-transform duration-300 group-hover:scale-110">
-                      <FiPlay className="w-6 h-6 ml-1 text-[var(--primary-color)]" />
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 transition-all duration-300 group-hover:scale-110 group-hover:bg-white/30">
+                      <FiPlay className="w-5 h-5 md:w-6 md:h-6 ml-1 text-white" />
                     </div>
                   </div>
+
+                  {/* Bottom Stats Overlay (Mobile style reference) */}
+                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between text-white/90 text-[10px] md:hidden">
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1">
+                        <FiPlay size={10} /> {item.views}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        850
+                      </span>
+                    </div>
+                    <span>45:20</span>
+                  </div>
                 </div>
+
+                {/* Info Area (Bottom on Mobile, Left on Desktop) */}
+                <div
+                  className="order-2 md:order-1 flex-1 md:flex-[35] flex flex-col justify-between p-4 md:p-8 cursor-pointer w-full"
+                  onClick={() =>
+                    window.open(routes.videoDetail.replace(":id", item.id), "_blank")
+                  }
+                >
+                  <div className="space-y-3 md:space-y-4">
+                    <h4 className="text-base md:text-2xl font-semibold tracking-tight line-clamp-1 md:line-clamp-3 group-hover:text-[var(--primary-color)] transition-colors">
+                      {item.title}
+                    </h4>
+                    
+                    {/* Author & Meta */}
+                    <div className="flex items-center justify-between md:flex-col md:items-start md:gap-2 text-[11px] md:text-xs text-[var(--text-color-secondary)]">
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full bg-[var(--primary-color)]/20 flex items-center justify-center overflow-hidden border border-[var(--primary-color)]/10">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--primary-color)]"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </div>
+                        <span className="font-medium text-[var(--text-color)]">TechMaster</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="md:hidden">{item.date.split('-')[0]}</span>
+                        <div className="hidden md:flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <span>播放量 {item.views}</span>
+                        </div>
+                        <div className="hidden md:flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-color-secondary)]/50" />
+                          <span>{item.date}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tag */}
+                    <div className="inline-flex px-2 py-0.5 rounded bg-[var(--bg-elevated)] border border-[var(--border-color)] text-[10px] text-[var(--text-color-secondary)]">
+                      React
+                    </div>
+                  </div>
+                  
+                  <div className="hidden md:block text-xs text-[var(--primary-color)] font-medium mt-4">
+                    点击查看详情 &rarr;
+                  </div>
+                </div>
+
               </div>
             </div>
           ))}

@@ -1,34 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MediaPlayerInstance, useMediaState, useMediaRemote, VolumeSlider } from '@vidstack/react';
 import { FaVolumeUp, FaVolumeMute, FaCompress, FaExpand } from 'react-icons/fa';
-import { RiSettings3Line, RiAspectRatioLine } from 'react-icons/ri';
+import { RiFullscreenLine } from 'react-icons/ri';
 
 interface MobileControlsProps {
   playerRef: React.RefObject<MediaPlayerInstance | null>;
-  containerRef: React.RefObject<HTMLDivElement | null>;
-  isPageFullscreen: boolean;
-  onTogglePageFullscreen: () => void;
 }
 
 export const MobileControls: React.FC<MobileControlsProps> = ({ 
   playerRef, 
-  containerRef,
-  isPageFullscreen,
-  onTogglePageFullscreen
 }) => {
   const remote = useMediaRemote();
   const isFullscreen = useMediaState('fullscreen');
   const isMuted = useMediaState('muted');
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
 
-  const handleSettingsClick = (e: React.MouseEvent) => {
+  useEffect(() => {
+    // When exiting fullscreen, unlock orientation
+    const orientation = (screen as any).orientation;
+    if (!isFullscreen && orientation && orientation.unlock) {
+      try {
+        orientation.unlock();
+      } catch {
+        // Ignore unlock errors
+      }
+    }
+  }, [isFullscreen]);
+
+  const handleHorizontalFullscreen = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Try to find the settings button within the container
-    // Now that we used opacity: 0 instead of display: none, it should be findable
-    const settingsButton = containerRef.current?.querySelector('button[data-testid="settings-menu-button"], .vds-settings-menu-button, .vds-settings-button, .vds-menu-button') as HTMLButtonElement;
-    
-    if (settingsButton) {
-      settingsButton.click();
+    if (isFullscreen) {
+      remote.exitFullscreen();
+    } else {
+      try {
+        if (playerRef.current) {
+          await playerRef.current.enterFullscreen();
+          // Attempt to lock orientation to landscape for horizontal play
+          const orientation = (screen as any).orientation;
+          if (orientation && orientation.lock) {
+            await orientation.lock('landscape').catch(() => {
+              // Ignore lock errors
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to enter horizontal fullscreen:', err);
+      }
     }
   };
 
@@ -75,25 +92,13 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         </button>
       </div>
 
-      {/* Settings Button */}
-      <button 
-        className="vds-button w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95 transition-all"
-        onClick={handleSettingsClick}
-        aria-label="设置"
-      >
-        <RiSettings3Line size={20} />
-      </button>
-
-      {/* Page Fullscreen (Landscape) Button */}
+      {/* Horizontal Fullscreen Button */}
       <button
-        className={`vds-button w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95 transition-all ${isPageFullscreen ? 'text-primary' : ''}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onTogglePageFullscreen();
-        }}
-        aria-label="网页全屏"
+        className="vds-button w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95 transition-all"
+        onClick={handleHorizontalFullscreen}
+        aria-label="横向全屏"
       >
-        <RiAspectRatioLine size={20} />
+        <RiFullscreenLine size={24} />
       </button>
 
       {/* Fullscreen Button */}

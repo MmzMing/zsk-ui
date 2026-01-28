@@ -55,7 +55,7 @@ const initialRunDays = Math.max(
 );
 
 const headerNavButtonClass =
-  "inline-flex items-center gap-1 px-1 h-14 text-base border-b-2 border-transparent transition-colors duration-150";
+  "inline-flex items-center gap-1 px-1 h-12 text-base border-b-2 border-transparent transition-colors duration-150";
 
 const headerIconButtonClass =
   "inline-flex items-center justify-center rounded-full w-10 h-10 text-[var(--text-color-secondary)] transition-colors transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-sm hover:bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] hover:text-[var(--primary-color)]";
@@ -273,11 +273,11 @@ function BasicLayout() {
       )}
       <HsrIntroAnimation />
       <motion.header
-        className="h-20 flex flex-col border-b border-[var(--border-color)] bg-[var(--bg-elevated)] sticky top-0 z-30"
+        className="h-[60px] flex flex-col border-b border-[var(--border-color)] bg-[var(--bg-elevated)] sticky top-0 z-30"
         animate={hideHeader ? { y: -100 } : { y: 0 }}
         transition={{ duration: 0.2 }}
       >
-        <div className="flex items-center h-20 px-6">
+        <div className="flex items-center h-[60px] px-6">
           <div className="flex items-center gap-4 shrink-0">
             <button
               type="button"

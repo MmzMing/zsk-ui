@@ -221,8 +221,8 @@ function VideoDetail() {
    * 处理路由跳转
    */
   const handleNavigate = useCallback((newId: string) => {
-    navigate(routes.videoDetail.replace(":id", newId));
-  }, [navigate]);
+    window.open(routes.videoDetail.replace(":id", newId), "_blank");
+  }, []);
 
   // ===== 8. UI渲染逻辑区域 =====
   /**
@@ -269,7 +269,7 @@ function VideoDetail() {
    * 推荐列表组件
    */
   const renderRecommendationsList = () => (
-    <div className="space-y-4">
+    <div className="bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-color)] p-4 space-y-4">
       <h3 className="text-base font-bold px-1">相关推荐</h3>
       <div className="space-y-4">
         {video?.recommendations.map(item => (
@@ -278,7 +278,7 @@ function VideoDetail() {
             className="flex gap-3 group cursor-pointer"
             onClick={() => handleNavigate(item.id)}
           >
-            <div className="relative w-40 h-24 bg-slate-800 rounded-xl overflow-hidden shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
+            <div className="relative w-32 h-20 bg-slate-800 rounded-lg overflow-hidden shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
               <img 
                 src={item.coverUrl || "/DefaultImage/MyDefaultHomeVodie.png"} 
                 alt={item.title}
@@ -287,20 +287,17 @@ function VideoDetail() {
                   (e.target as HTMLImageElement).src = "/DefaultImage/MyDefaultHomeVodie.png";
                 }}
               />
-              <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+              <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] px-1 py-0.5 rounded font-medium">
                 {item.duration}
               </div>
             </div>
-            <div className="flex-1 min-w-0 flex flex-col gap-1 py-0.5">
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5 py-0.5">
               <div className="text-sm font-medium line-clamp-2 group-hover:text-[var(--primary-color)] transition-colors leading-snug">
                 {item.title}
               </div>
               <div className="space-y-0.5">
                 <div className="text-[11px] text-[var(--text-color-secondary)] truncate">
                   {item.authorName || "未知作者"}
-                </div>
-                <div className="text-[11px] text-[var(--text-color-secondary)] line-clamp-1 opacity-70">
-                  {item.description || "暂无简介"}
                 </div>
                 <div className="text-[11px] text-[var(--text-color-secondary)] flex items-center gap-2">
                   <span>{item.views} 播放</span>
@@ -382,8 +379,8 @@ function VideoDetail() {
               {video.title}
             </h1>
 
-            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4 overflow-x-auto scrollbar-hide whitespace-nowrap">
+              <div className="flex items-center gap-3 shrink-0">
                 <Avatar 
                   src={video.author.avatar} 
                   name={video.author.name.charAt(0)}
@@ -419,7 +416,7 @@ function VideoDetail() {
                 </div>
               </div>
 
-              <div className="flex gap-6 items-center">
+              <div className="flex gap-6 items-center shrink-0 ml-6">
                 <div 
                   className={`flex items-center gap-1.5 cursor-pointer transition-colors ${video.stats.isLiked ? "text-[var(--primary-color)]" : "hover:text-[var(--primary-color)]"}`}
                   onClick={handleLike}

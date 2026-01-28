@@ -791,7 +791,7 @@ function AdminLayout() {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-elevated)] px-4 md:px-6 gap-4">
+        <header className="h-11 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-elevated)] px-4 md:px-6 gap-4">
           <div className="flex items-center gap-3">
             <Dropdown>
               <DropdownTrigger>

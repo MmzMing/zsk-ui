@@ -126,9 +126,9 @@ function UserDetail() {
    */
   const handleWorkClick = (work: UserWorkItem) => {
     if (work.type === "video") {
-      navigate(routes.videoDetail.replace(":id", work.id));
+      window.open(routes.videoDetail.replace(":id", work.id), "_blank");
     } else {
-      navigate(routes.docDetail.replace(":id", work.id));
+      window.open(routes.docDetail.replace(":id", work.id), "_blank");
     }
   };
 

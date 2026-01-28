@@ -229,19 +229,19 @@ function AllSearchPage() {
 
   function handleResultClick(item: SearchResult) {
     if (item.type === "video") {
-      navigate(routes.videoDetail.replace(":id", item.id));
+      window.open(routes.videoDetail.replace(":id", item.id), "_blank");
       return;
     }
     if (item.type === "document") {
-      navigate(routes.docDetail.replace(":id", item.id));
+      window.open(routes.docDetail.replace(":id", item.id), "_blank");
       return;
     }
     if (item.type === "tool") {
-      navigate(routes.toolboxDetail.replace(":id", item.id));
+      window.open(routes.toolboxDetail.replace(":id", item.id), "_blank");
       return;
     }
     if (item.type === "user") {
-      navigate(routes.userDetail.replace(":id", item.id));
+      window.open(routes.userDetail.replace(":id", item.id), "_blank");
       return;
     }
   }

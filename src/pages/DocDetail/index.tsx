@@ -560,10 +560,11 @@ function DocDetail() {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col lg:flex-row gap-8 relative">
-        {/* 左侧内容区 (75%) */}
-        <div className="lg:w-3/4 space-y-8 min-w-0">
-          {/* 文档头部 */}
-          <div className="space-y-4 border-b border-[var(--border-color)] pb-6">
+        {/* 左侧内容区 (80%) */}
+        <div className="lg:w-4/5 min-w-0" style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+          <div className="bg-[var(--bg-elevated)]/50 backdrop-blur-sm rounded-xl p-6 md:p-10 space-y-8">
+            {/* 文档头部 */}
+            <div className="space-y-6 border-b border-[var(--border-color)] pb-8">
             <div className="flex items-center gap-2 mb-2">
               <Chip size="sm" color="primary" variant="flat">
                 {doc.category}
@@ -576,10 +577,10 @@ function DocDetail() {
               {doc.title}
             </h1>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-2 overflow-x-auto scrollbar-hide">
               <div 
-                className="flex items-center gap-3 cursor-pointer group"
-                onClick={() => navigate(routes.userDetail.replace(":id", doc.author.id))}
+                className="flex items-center gap-3 cursor-pointer group shrink-0"
+                onClick={() => window.open(routes.userDetail.replace(":id", doc.author.id), "_blank")}
               >
                 <Avatar
                   src={doc.author.avatar}
@@ -608,7 +609,7 @@ function DocDetail() {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-6 items-center">
+              <div className="flex gap-6 items-center shrink-0 ml-4">
                 <div 
                   className={`flex items-center gap-1.5 cursor-pointer transition-colors ${doc.stats.isLiked ? "text-[var(--primary-color)]" : "hover:text-[var(--primary-color)]"}`}
                   onClick={handleLike}
@@ -637,7 +638,7 @@ function DocDetail() {
           {/* 正文内容 */}
           <div 
             ref={contentRef}
-            className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-[var(--text-color)]"
+            className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-[var(--text-color)] leading-loose tracking-wide"
             dangerouslySetInnerHTML={{ __html: doc.content }}
           />
 
@@ -794,9 +795,10 @@ function DocDetail() {
             </div>
           </div>
         </div>
+        </div>
 
-        {/* 右侧侧边栏 (25%) */}
-        <div className="hidden lg:block lg:w-1/4 relative">
+        {/* 右侧侧边栏 (20%) */}
+        <div className="hidden lg:block lg:w-1/5 relative">
           <div className="sticky top-24 space-y-6">
             {/* 目录 */}
             <div className="bg-[var(--bg-elevated)]/50 backdrop-blur-sm rounded-xl p-2">
@@ -830,21 +832,23 @@ function DocDetail() {
             </div>
 
             {/* 相关推荐 */}
-            <div className="pl-2">
-              <h3 className="text-base font-bold mb-4 px-2">相关阅读</h3>
+            <div className="bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-color)] p-4 space-y-4">
+              <div className="flex items-center gap-2 font-bold text-sm px-1">
+                相关阅读
+              </div>
               <div className="space-y-2">
                 {doc.recommendations.map(item => (
                   <div
                     key={item.id}
-                    className="group cursor-pointer p-2 rounded-lg hover:bg-[var(--bg-elevated)] transition-colors"
+                    className="group cursor-pointer p-2 rounded-lg hover:bg-[var(--bg-color)] transition-colors"
                     onClick={() =>
-                      navigate(routes.docDetail.replace(":id", item.id))
+                      window.open(routes.docDetail.replace(":id", item.id), "_blank")
                     }
                   >
-                    <div className="text-sm font-medium line-clamp-2 group-hover:text-[#7E0DF5] transition-colors">
+                    <div className="text-sm font-medium line-clamp-2 group-hover:text-[var(--primary-color)] transition-colors">
                       {item.title}
                     </div>
-                    <div className="mt-1 text-xs text-[var(--text-color-secondary)]">
+                    <div className="mt-1 text-xs text-[var(--text-color-secondary)] opacity-60">
                       {item.views} 阅读
                     </div>
                   </div>

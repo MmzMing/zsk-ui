@@ -25,6 +25,7 @@ import { MobileControls } from './MobileControls';
 
 const STORAGE_KEY_VOLUME = 'video-player-volume';
 const STORAGE_KEY_TIME_PREFIX = 'video-player-time-';
+const STORAGE_KEY_RATE = 'video-player-rate';
 
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
@@ -99,9 +100,6 @@ const FullscreenGroup = ({
       {isMobile && (
             <MobileControls 
               playerRef={playerRef} 
-              containerRef={containerRef}
-              isPageFullscreen={isPageFullscreen}
-              onTogglePageFullscreen={onTogglePageFullscreen}
             />
           )}
 
@@ -168,24 +166,50 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = (props) => {
 
   const player = useRef<MediaPlayerInstance | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const hasRestored = useRef(false);
+  
+  // Separate flags for granular control
+  const timeRestored = useRef(false);
+
+  // Controlled states for Volume, Muted, and Rate to ensure immediate restoration
+  const [volume, setVolume] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_VOLUME);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return typeof parsed.volume === 'number' ? parsed.volume : 1;
+      }
+    } catch { /* ignore */ }
+    return 1;
+  });
+
+  const [muted, setMuted] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_VOLUME);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return typeof parsed.muted === 'boolean' ? parsed.muted : false;
+      }
+    } catch { /* ignore */ }
+    return false;
+  });
+
+  const [playbackRate, setPlaybackRate] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_RATE);
+      if (saved) {
+        const rate = parseFloat(saved);
+        return !isNaN(rate) ? rate : 1;
+      }
+    } catch { /* ignore */ }
+    return 1;
+  });
+
   const [isPageFullscreen, setIsPageFullscreen] = useState(false);
   const [isHovering, setIsHovering] = useState(true);
 
   useEffect(() => {
-    hasRestored.current = false;
-    
-    // Proactively restore volume on mount/url change
-    if (player.current) {
-      const savedVolume = localStorage.getItem(STORAGE_KEY_VOLUME);
-      if (savedVolume) {
-        try {
-          const { volume, muted } = JSON.parse(savedVolume);
-          if (typeof volume === 'number') player.current.volume = volume;
-          if (typeof muted === 'boolean') player.current.muted = muted;
-        } catch { /* ignore */ }
-      }
-    }
+    // Reset time flag on URL change
+    timeRestored.current = false;
   }, [url]);
 
   const saveTime = useRef(
@@ -197,35 +221,54 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = (props) => {
   ).current;
 
   const onTimeUpdate = () => {
-    if (player.current) {
+    if (player.current && timeRestored.current) {
       saveTime(player.current.currentTime);
+    }
+  };
+
+  const onPause = () => {
+    if (player.current && timeRestored.current) {
+      // Force save time on pause to be accurate
+      if (url) {
+        localStorage.setItem(STORAGE_KEY_TIME_PREFIX + url, String(player.current.currentTime));
+      }
     }
   };
 
   const onVolumeChange = () => {
     if (player.current) {
+      const newVolume = player.current.volume;
+      const newMuted = player.current.muted;
+      
+      // Only update if actually different to avoid loops
+      setVolume(newVolume);
+      setMuted(newMuted);
+      
       const settings = {
-        volume: player.current.volume,
-        muted: player.current.muted
+        volume: newVolume,
+        muted: newMuted
       };
       localStorage.setItem(STORAGE_KEY_VOLUME, JSON.stringify(settings));
     }
   };
 
+  const onRateChange = () => {
+    if (player.current) {
+      const newRate = player.current.playbackRate;
+      setPlaybackRate(newRate);
+      localStorage.setItem(STORAGE_KEY_RATE, String(newRate));
+    }
+  };
+
+  const onLoadedMetadata = () => {
+    // Volume and Rate are now controlled via props, 
+    // but we can still use this as a hook if needed.
+  };
+
   const onCanPlay = () => {
-    if (hasRestored.current || !player.current) return;
+    if (timeRestored.current || !player.current) return;
     
     const media = player.current;
-
-    // Restore volume
-    const savedVolume = localStorage.getItem(STORAGE_KEY_VOLUME);
-    if (savedVolume) {
-      try {
-        const { volume, muted } = JSON.parse(savedVolume);
-        if (typeof volume === 'number') media.volume = volume;
-        if (typeof muted === 'boolean') media.muted = muted;
-      } catch { /* ignore */ }
-    }
 
     // Restore time
     if (url) {
@@ -243,11 +286,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = (props) => {
       
       if (targetTime > 0) {
         // Use multiple ways to set time to ensure it works
-        media.currentTime = targetTime;
+        requestAnimationFrame(() => {
+          media.currentTime = targetTime;
+        });
       }
     }
     
-    hasRestored.current = true;
+    timeRestored.current = true;
   };
 
   // Handle chapters as TextTracks
@@ -274,77 +319,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = (props) => {
   return (
     <div 
       ref={containerRef}
-      className={`relative w-full h-full bg-black video-player-container ${isPageFullscreen ? '!fixed !inset-0 !z-[100]' : ''} ${!isHovering ? 'hide-controls' : ''} ${className}`}
+      className={`relative w-full h-full bg-black video-player-container overflow-hidden ${isPageFullscreen ? '!fixed !inset-0 !z-[100]' : ''} ${!isHovering ? 'hide-controls' : ''} ${className}`}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      <style>{`
-        .video-player-container .vds-controls {
-          transition: opacity 0.3s ease;
-        }
-        .video-player-container.hide-controls .vds-controls {
-          opacity: 0 !important;
-          pointer-events: none;
-        }
-        /* Gradient Shadow for Controls */
-        .vds-controls-group:last-child::before {
-          content: "";
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 120px;
-          background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-          z-index: -1;
-          pointer-events: none;
-        }
-        /* Hide Google Cast */
-        .vds-google-cast-button {
-          display: none !important;
-        }
-        @media (max-width: 768px) {
-          /* Center Play Button */
-          .vds-play-button {
-             position: absolute !important;
-             top: 50% !important;
-             left: 50% !important;
-             transform: translate(-50%, -50%) !important;
-             margin: 0 !important;
-             pointer-events: auto !important;
-             z-index: 10 !important;
-          }
-          /* Hide the entire top-right group which contains default buttons, BUT keep them in DOM for programmatic access */
-          .vds-controls-group[data-group="top-right"],
-          .vds-controls-group.vds-controls-group--top-right,
-          .vds-menu-button {
-            opacity: 0 !important;
-            pointer-events: none !important;
-            position: absolute !important;
-            width: 0 !important;
-            height: 0 !important;
-            overflow: hidden !important;
-          }
-          /* Ensure our injected buttons in bottom-right are visible and styled */
-          .vds-controls-group[data-group="bottom-right"] {
-            display: flex !important;
-            align-items: center !important;
-            gap: 2px !important;
-          }
-          /* Adjust Fullscreen button position */
-          .vds-controls-group[data-group="bottom-right"] {
-            margin-left: 0 !important;
-          }
-          /* Hide title on mobile to save space */
-          .vds-title {
-            display: none !important;
-          }
-          /* Smaller icons for mobile if needed */
-          .vds-button {
-            width: 36px !important;
-            height: 36px !important;
-          }
-        }
-      `}</style>
       
       {onClose && (
         <div className="absolute top-4 left-4 z-50">
@@ -366,11 +344,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = (props) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           src={url as any}
           poster={poster}
+          volume={volume}
+          muted={muted}
+          playbackRate={playbackRate}
           crossOrigin
           playsInline
           autoPlay={autoPlay}
           onTimeUpdate={onTimeUpdate}
+          onPause={onPause}
           onVolumeChange={onVolumeChange}
+          onRateChange={onRateChange}
+          onLoadedMetadata={onLoadedMetadata}
           onCanPlay={onCanPlay}
           className="w-full h-full"
         >
