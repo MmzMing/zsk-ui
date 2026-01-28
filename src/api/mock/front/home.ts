@@ -76,6 +76,33 @@ export const mockHomeSlides: HomeSlide[] = [
     features: [mockFeatureCards[3], mockFeatureCards[4]],
     featureList: mockFeatureCards.slice(2, 5),
     previewType: "profile"
+  },
+  {
+    id: "304",
+    tag: "社区共建",
+    title: "开源生态",
+    description: "汇聚全球开发者智慧，共同打造开放、透明、持续进化的技术生态系统。",
+    features: [mockFeatureCards[4]],
+    featureList: mockFeatureCards.slice(3, 5),
+    previewType: "list"
+  },
+  {
+    id: "305",
+    tag: "多端协作",
+    title: "云端同步",
+    description: "笔记与代码片段实时同步至云端，无论在何处，都能无缝延续你的灵感与工作进度。",
+    features: [mockFeatureCards[2]],
+    featureList: mockFeatureCards.slice(1, 4),
+    previewType: "kanban"
+  },
+  {
+    id: "306",
+    tag: "AI赋能",
+    title: "智能检索",
+    description: "深度融合 AI 语义理解，支持自然语言提问与关联内容推荐，让海量知识触手可及。",
+    features: [mockFeatureCards[0], mockFeatureCards[1]],
+    featureList: mockFeatureCards.slice(0, 3),
+    previewType: "list"
   }
 ];
 

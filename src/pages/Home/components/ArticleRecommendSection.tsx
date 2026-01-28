@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@heroui/react";
-// import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { routes } from "../../../router/routes";
 import AnimatedContent from "../../../components/Motion/AnimatedContent";
 import AnimatedList from "../../../components/Motion/AnimatedList";
@@ -40,7 +40,7 @@ const formatSummary = (summary: string, maxLength: number = 100): string => {
  */
 export default function ArticleRecommendSection() {
   // --- 导航钩子 ---
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
 
   // --- 状态与引用 ---
   /** 文章列表状态 */
@@ -141,6 +141,13 @@ export default function ArticleRecommendSection() {
     window.open(routes.docDetail.replace(":id", id), "_blank");
   };
 
+  /**
+   * 跳转到搜索页
+   */
+  const handleJumpToSearch = () => {
+    navigate(routes.allSearch);
+  };
+
   // --- 生命周期与监听 ---
   /**
    * 绑定滚动和窗口调整事件，实现动态 Sticky 效果
@@ -207,6 +214,17 @@ export default function ArticleRecommendSection() {
         <div className="mr-2 h-full w-[0.5px] bg-gradient-to-b from-transparent via-[var(--border-color)]/20 to-transparent opacity-20" />
       </div>
 
+      <div className="max-w-6xl mx-auto w-full relative z-20 flex justify-end mb-4">
+        <Button
+          size="sm"
+          variant="bordered"
+          className="rounded-full border-[var(--border-color)] text-[var(--text-color-secondary)] hover:bg-[var(--primary-color)] hover:text-white hover:border-[var(--primary-color)] transition-all px-6"
+          onPress={handleJumpToSearch}
+        >
+          View news
+        </Button>
+      </div>
+
       <div 
         ref={containerRef}
         className="max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-6 md:gap-8 relative z-10"
@@ -217,29 +235,81 @@ export default function ArticleRecommendSection() {
           className="md:basis-3/5 space-y-4 self-start md:sticky md:top-24"
         >
           <AnimatedContent activeKey={activeArticle.id} className="h-full">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)] text-[var(--primary-color)] text-[11px] px-3 py-1">
+            <motion.div 
+              className="space-y-3"
+              initial="hidden"
+              animate="visible"
+              key={activeArticle.id}
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: {
+                    staggerChildren: 0.1,
+                    delayChildren: 0.2
+                  }
+                }
+              }}
+            >
+              <motion.div 
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 }
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)] text-[var(--primary-color)] text-[11px] px-3 py-1"
+              >
                 <span>{activeArticle.category}</span>
-              </div>
-              <h4 className="text-base md:text-lg font-semibold">
+              </motion.div>
+              
+              <motion.h4 
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 }
+                }}
+                className="text-base md:text-lg font-semibold"
+              >
                 {activeArticle.title}
-              </h4>
-              <div className="text-[10px] md:text-xs text-[var(--text-color-secondary)] flex items-center gap-2">
+              </motion.h4>
+
+              <motion.div 
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 }
+                }}
+                className="text-[10px] md:text-xs text-[var(--text-color-secondary)] flex items-center gap-2"
+              >
                 <span>{activeArticle.author ?? "站长"}</span>
                 <span>·</span>
                 <span>{activeArticle.date}</span>
-              </div>
-              <div className="text-[10px] md:text-xs text-[var(--text-color-secondary)]">
+              </motion.div>
+
+              <motion.div 
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 }
+                }}
+                className="text-[10px] md:text-xs text-[var(--text-color-secondary)]"
+              >
                 {activeArticle.views} 阅读
-              </div>
-              <p className="text-xs md:text-sm leading-relaxed text-[var(--text-color-secondary)]">
+              </motion.div>
+
+              <motion.p 
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 }
+                }}
+                className="text-xs md:text-sm leading-relaxed text-[var(--text-color-secondary)]"
+              >
                 {trimmedSummary}
-              </p>
+              </motion.p>
+
               <motion.div
+                variants={{
+                  hidden: { opacity: 0, scale: 0.96, y: 15 },
+                  visible: { opacity: 1, scale: 1, y: 0 }
+                }}
+                transition={{ duration: 0.5, ease: [0.2, 0.7, 0.3, 1] }}
                 className="mt-2 aspect-video w-full rounded-[var(--radius-base)] border border-[var(--border-color)] bg-slate-900 overflow-hidden relative cursor-pointer"
-                initial={{ opacity: 0, scale: 0.96, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: [0.2, 0.7, 0.3, 1] }}
                 onClick={() => handleArticleJump(activeArticle.id)}
               >
                 <img
@@ -248,13 +318,13 @@ export default function ArticleRecommendSection() {
                   className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                 />
               </motion.div>
-            </div>
+            </motion.div>
           </AnimatedContent>
         </div>
 
         {/* 右侧列表选择区 */}
         <div className="md:basis-2/5">
-          <AnimatedList className="space-y-3 md:space-y-4">
+          <AnimatedList className="space-y-0">
             {articles.map((item, index) => {
               /** 当前项是否被选中 */
               const isActive = item.id === activeArticle.id;
@@ -264,36 +334,34 @@ export default function ArticleRecommendSection() {
                 <div
                   key={item.id}
                   ref={isSecondLast ? secondLastRef : undefined}
+                  className="py-6 first:pt-0"
                 >
                   <Button
                     type="button"
-                    className={
-                      "group w-full flex items-center gap-3 md:gap-4 rounded-[var(--radius-base)] border px-4 md:px-6 h-32 md:h-36 text-left text-xs md:text-sm transition-colors transition-transform duration-150 transform-gpu " +
-                      (isActive
-                        ? "border-[color-mix(in_srgb,var(--primary-color)_70%,transparent)] bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)]"
-                        : "bg-[color-mix(in_srgb,var(--bg-elevated)_96%,black_4%)] border-[color-mix(in_srgb,var(--border-color)_80%,transparent)] hover:border-[color-mix(in_srgb,var(--primary-color)_45%,transparent)] hover:-translate-y-0.5")
-                    }
+                    disableRipple
+                    disableAnimation
+                    className="group w-full flex items-center gap-3 md:gap-4 px-0 h-auto text-left text-xs md:text-sm bg-transparent border-none shadow-none !rounded-none min-h-[8rem] data-[hover=true]:bg-transparent hover:bg-transparent active:bg-transparent focus:bg-transparent"
                     variant="light"
                     onPress={() => handleArticleSelect(item.id)}
                   >
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <div className="truncate font-medium">
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className={`text-base md:text-lg font-semibold line-clamp-2 transition-colors duration-200 ${isActive ? 'text-[var(--primary-color)]' : 'group-hover:text-[var(--primary-color)]'}`}>
                         {item.title}
                       </div>
-                      <div className="text-[10px] text-[var(--text-color-secondary)]">
-                        {item.author ?? "站长"} · {item.date}
-                      </div>
-                      <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)] text-[var(--primary-color)] text-[10px] px-2 py-0.5 w-fit">
+                      <div className="text-[10px] md:text-xs text-[var(--text-color-secondary)] flex items-center gap-2">
+                        <span>{item.date}</span>
                         <span>{item.category}</span>
+                        <span className="flex items-center gap-1">
+                          Learn more <span className="text-xs">›</span>
+                        </span>
                       </div>
                     </div>
-                    <div className="relative w-24 h-12 md:w-28 md:h-14 shrink-0 rounded-[calc(var(--radius-base)_-_2px)] overflow-hidden bg-slate-900">
+                    <div className="relative w-24 h-24 md:w-32 md:h-32 shrink-0 rounded-2xl overflow-hidden bg-slate-900 shadow-sm">
                       <img
                         src={item.cover || DEFAULT_ARTICLE_COVER}
                         alt={item.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 group-hover:opacity-90"
                       />
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/10" />
                     </div>
                   </Button>
                 </div>

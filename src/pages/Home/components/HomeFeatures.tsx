@@ -14,13 +14,7 @@ import { ArrowRight } from "lucide-react";
 async function fetchAndDispatchSlides() {
   const data = await fetchHomeSlides();
   const sourceData = data || mockHomeSlides;
-  const extendedSlides = [
-    ...sourceData,
-    { ...sourceData[0], id: "304", title: "开源生态", tag: "社区共建" },
-    { ...sourceData[1], id: "305", title: "云端同步", tag: "多端协作" },
-    { ...sourceData[2], id: "306", title: "智能检索", tag: "AI赋能" }
-  ];
-  window.dispatchEvent(new CustomEvent("home:slides", { detail: extendedSlides }));
+  window.dispatchEvent(new CustomEvent("home:slides", { detail: sourceData }));
 }
 void fetchAndDispatchSlides();
 
@@ -38,6 +32,7 @@ export default function HomeFeatures() {
   const SMALL_WIDTH = 18; // vw
   const LARGE_WIDTH = 60; // vw
   const GAP = 4; // vw
+  const SPREAD_THRESHOLD = 0.2; // 前 20% 进度用于平铺动画
 
   // 订阅数据事件
   useEffect(() => {
@@ -57,15 +52,24 @@ export default function HomeFeatures() {
     offset: ["start start", "end end"]
   });
 
-  // 使用原始滚动进度，保证“停下来就停下来”
-  const trackedProgress = scrollYProgress;
-  const scrollVelocity = useVelocity(trackedProgress);
+  // 平铺进度：0 -> SPREAD_THRESHOLD 映射到 0 -> 1
+  const spreadProgress = useTransform(scrollYProgress, [0, SPREAD_THRESHOLD], [0, 1]);
+  // 滚动进度：SPREAD_THRESHOLD -> 1 映射到 0 -> 1
+  const scrollProgress = useTransform(scrollYProgress, [SPREAD_THRESHOLD, 1], [0, 1]);
+
+  // 使用滚动进度计算速度，用于判定展开状态
+  const scrollVelocity = useVelocity(scrollProgress);
 
   // 计算当前激活索引和展开状态
-  useMotionValueEvent(trackedProgress, "change", (latest) => {
+  useMotionValueEvent(scrollProgress, "change", (latest) => {
     const velocity = Math.abs(scrollVelocity.get());
     
-    // 1. 判定移动状态：只要速度超过起步阈值，立即收起
+    // 只有在平铺完成后才触发展开逻辑
+    if (scrollYProgress.get() < SPREAD_THRESHOLD) {
+      if (isExpanding) setIsExpanding(false);
+      setActiveIndex(0);
+      return;
+    }
     const MOVE_THRESHOLD = 0.004; 
     if (velocity > MOVE_THRESHOLD) {
       if (isExpanding) setIsExpanding(false);
@@ -123,7 +127,8 @@ export default function HomeFeatures() {
                 index={index}
                 activeIndex={activeIndex}
                 isExpanding={isExpanding}
-                progress={trackedProgress}
+                spreadProgress={spreadProgress}
+                scrollProgress={scrollProgress}
                 total={slides.length}
                 smallWidth={SMALL_WIDTH}
                 largeWidth={LARGE_WIDTH}
@@ -140,14 +145,15 @@ export default function HomeFeatures() {
 
 /**
  * 单个卡片组件
- * 采用独立的 Transform 计算，彻底杜绝闪烁和跳变
+ * 采用独立的 Transform 计算，支持堆叠到平铺的过渡
  */
 type CardItemProps = {
   slide: HomeSlide;
   index: number;
   activeIndex: number;
   isExpanding: boolean;
-  progress: MotionValue<number>;
+  spreadProgress: MotionValue<number>;
+  scrollProgress: MotionValue<number>;
   total: number;
   smallWidth: number;
   largeWidth: number;
@@ -156,7 +162,7 @@ type CardItemProps = {
 };
 
 function CardItem({ 
-  slide, index, activeIndex, isExpanding, progress, total, 
+  slide, index, activeIndex, isExpanding, spreadProgress, scrollProgress, total, 
   smallWidth, largeWidth, gap, navigate 
 }: CardItemProps) {
   
@@ -165,8 +171,6 @@ function CardItem({
   const [shouldLayoutExpand, setShouldLayoutExpand] = useState(false);
 
   useEffect(() => {
-    // 使用定时器避免 lint 错误 (react-hooks/set-state-in-effect)
-    // 展开时立即执行，收缩时延迟 150ms 留出文字淡出时间
     const timer = setTimeout(() => {
       setShouldLayoutExpand(isExpanding);
     }, isExpanding ? 0 : 150);
@@ -174,10 +178,9 @@ function CardItem({
     return () => clearTimeout(timer);
   }, [isExpanding]);
 
-  // 计算基础偏移：当 progress = 0 时，index=0 的卡片在中心
-  // 每一份 progress 变动 (1/(total-1))，轨道移动 (smallWidth + gap)
+  // 1. 轨道基础位置：平铺完成后开始水平滚动
   const trackX = useTransform(
-    progress,
+    scrollProgress,
     [0, 1],
     [
       50 - smallWidth / 2, // 初始位置：第一张居中
@@ -185,12 +188,24 @@ function CardItem({
     ]
   );
 
-  // 展开位移的动画值（tween）
+  // 2. 平铺位移：从中心 (0) 扩展到各自在轨道上的位置
+  const itemSpreadOffset = useTransform(
+    spreadProgress,
+    [0, 1],
+    [0, index * (smallWidth + gap)]
+  );
+
+  // 3. 堆叠样式：缩放、Y轴偏移、X轴微调偏移
+  const stackScale = useTransform(spreadProgress, [0, 1], [1 - (index * 0.04), 1]);
+  const stackY = useTransform(spreadProgress, [0, 1], [index * -25, 0]);
+  const stackXOffset = useTransform(spreadProgress, [0, 1], [index * 4, 0]); // 后面的卡片向右侧偏移
+  const stackOpacity = useTransform(spreadProgress, [0, 0.5, 1], [1 - (index * 0.15), 0.8, 1]);
+
+  // 4. 展开位移的动画值（tween）
   const expansionMV = useMotionValue(0);
   useEffect(() => {
     const delta = (largeWidth - smallWidth) / 2;
     let target = 0;
-    // 使用 shouldLayoutExpand 代替 isExpanding，同步布局位移
     if (shouldLayoutExpand) {
       if (index < activeIndex) target = -delta;
       else if (index > activeIndex) target = delta;
@@ -202,30 +217,29 @@ function CardItem({
     return () => controls.stop();
   }, [shouldLayoutExpand, index, activeIndex, largeWidth, smallWidth, expansionMV]);
 
-  // 最终 X 位置
+  // 最终 X 位置：轨道位置 + 自身平铺位移 + 堆叠时的 X 偏移 + 展开位移
   const x = useTransform(
-    [trackX, expansionMV] as unknown as [MotionValue<number>, MotionValue<number>],
-    ([v, expansion]) => {
-      const basePos = (v as number) + index * (smallWidth + gap);
-      return `${basePos + (expansion as number)}vw`;
+    [trackX, itemSpreadOffset, stackXOffset, expansionMV] as unknown as [MotionValue<number>, MotionValue<number>, MotionValue<number>, MotionValue<number>],
+    ([tX, sOffset, sXOff, expansion]) => {
+      return `${(tX as number) + (sOffset as number) + (sXOff as number) + (expansion as number)}vw`;
     }
   );
 
   const isActive = index === activeIndex;
-  // 文字详情的显示依然由即时的 isExpanding 控制，以便立即触发 exit 动画
   const showDetail = isExpanding && isActive;
 
   return (
     <motion.div
       style={{ 
         x,
-        zIndex: isActive ? 20 : 10 - Math.abs(index - activeIndex),
+        y: stackY,
+        scale: stackScale,
+        opacity: stackOpacity,
+        zIndex: isActive ? 50 : 20 - index, // 第一张 (index 0) 层级最高，在最前面
       }}
       animate={{
-        // 使用 shouldLayoutExpand 控制卡片宽度和视觉状态
         width: isActive ? (shouldLayoutExpand ? `${largeWidth}vw` : `${smallWidth}vw`) : `${smallWidth}vw`,
-        opacity: isActive && shouldLayoutExpand ? 1 : (isExpanding ? 0.3 : 0.8),
-        scale: isActive && shouldLayoutExpand ? 1 : (isExpanding ? 0.95 : 1),
+        // 只有平铺完成后才应用展开状态的视觉效果
         filter: isActive && shouldLayoutExpand ? "blur(0px)" : (isExpanding ? "blur(8px)" : "blur(0px)"),
       }}
       transition={{
