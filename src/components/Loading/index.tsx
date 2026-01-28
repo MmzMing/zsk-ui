@@ -1,5 +1,5 @@
 import React from "react";
-import { Spinner } from "@heroui/react";
+import { SimpleLoader, MultiStepLoader } from "../Aceternity/MultiStepLoader";
 
 interface LoadingProps {
   /**
@@ -14,7 +14,7 @@ interface LoadingProps {
   text?: string;
   /**
    * Spinner 的大小
-   * @default "lg"
+   * @default "md"
    */
   spinnerSize?: "sm" | "md" | "lg";
   /**
@@ -26,32 +26,49 @@ interface LoadingProps {
    * @default true
    */
   showSpinner?: boolean;
+  /**
+   * 多步骤加载状态列表
+   * 如果提供，将使用 MultiStepLoader
+   */
+  loadingStates?: string[];
+  /**
+   * 是否全屏显示 (仅对 MultiStepLoader 有效)
+   * @default false
+   */
+  isFullScreen?: boolean;
 }
 
 export const Loading: React.FC<LoadingProps> = ({
   height = "100%",
   text = "正在加载",
-  spinnerSize = "lg",
+  spinnerSize = "md",
   className = "",
   showSpinner = true,
+  loadingStates,
+  isFullScreen = false,
 }) => {
+  // 如果提供了 loadingStates，则使用 MultiStepLoader
+  if (loadingStates && loadingStates.length > 0) {
+    return (
+      <MultiStepLoader 
+        loadingStates={loadingStates} 
+        loading={true} 
+        isFullScreen={isFullScreen}
+        className={className}
+      />
+    );
+  }
+
   return (
     <div 
-      className={`flex flex-col items-center justify-center gap-4 ${className}`}
+      className={`flex flex-col items-center justify-center gap-6 ${className}`}
       style={{ height }}
     >
       {showSpinner && (
-        <Spinner 
-          size={spinnerSize} 
-          color="white" 
-          classNames={{
-            circle1: "border-b-[var(--primary-color)]",
-            circle2: "border-b-[var(--primary-color)]"
-          }}
-        />
+        <SimpleLoader size={spinnerSize} />
       )}
       {text && (
-        <p className={`font-medium text-[var(--text-color)] tracking-wider ${spinnerSize === 'sm' ? 'text-xs' : 'text-sm'}`}>
+        <p className={`font-medium text-[var(--text-color-secondary)] tracking-[0.2em] uppercase ${spinnerSize === 'sm' ? 'text-[10px]' : 'text-xs'}`}>
           {text}
         </p>
       )}

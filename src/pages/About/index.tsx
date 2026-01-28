@@ -3,10 +3,10 @@ import React, { useEffect, useState, useCallback } from "react";
 import { 
   Accordion, 
   AccordionItem, 
-  Card, 
   Button, 
   Avatar
 } from "@heroui/react";
+import { CardContainer, CardBody, CardItem } from "../../components/Aceternity/ThreeDCard";
 import { 
   FiMail, 
   FiPhone, 
@@ -220,63 +220,81 @@ function AboutPage() {
         {/* 右侧信息 */}
         <div className="w-full lg:w-[320px] lg:flex-none order-1 lg:order-2">
           <div className="sticky top-24 space-y-6">
-            <Card className="p-6 space-y-6 bg-[var(--bg-elevated)] border border-[var(--border-color)]">
-              <div className="flex flex-col items-center text-center space-y-3">
-                <Avatar 
-                   src="/Avatar/MyAvatar.jpg"
-                   name="博"
-                   className="w-20 h-20 text-3xl"
-                   classNames={{
-                     base: "bg-[var(--primary-color)]",
-                     name: "font-bold text-white"
-                   }}
-                 />
-                <div>
-                  <h3 className="text-xl font-bold">知库小站长</h3>
-                  <p className="text-sm text-[var(--text-color-secondary)]">Full Stack Developer</p>
-                </div>
-                <p className="text-sm text-[var(--text-color-secondary)] leading-relaxed">
-                  一位不知名的JAVA后端开发者，热爱技术，喜欢折腾AI-BOT。致力于探索更高效的知识管理方式，分享开发经验与技术见解。
-                </p>
-              </div>
+            <CardContainer className="inter-var">
+              <CardBody className="p-6 space-y-6 bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-large shadow-medium h-auto w-full group/card">
+                <CardItem translateZ="50" className="flex flex-col items-center text-center space-y-3 w-full">
+                  <Avatar 
+                    src="/Avatar/MyAvatar.jpg"
+                    name="博"
+                    className="w-20 h-20 text-3xl"
+                    classNames={{
+                      base: "bg-[var(--primary-color)]",
+                      name: "font-bold text-white"
+                    }}
+                  />
+                  <div>
+                    <h3 className="text-xl font-bold">知库小站长</h3>
+                    <p className="text-sm text-[var(--text-color-secondary)]">Full Stack Developer</p>
+                  </div>
+                  <CardItem translateZ="60" as="p" className="text-sm text-[var(--text-color-secondary)] leading-relaxed">
+                    一位不知名的JAVA后端开发者，热爱技术，喜欢折腾AI-BOT。致力于探索更高效的知识管理方式，分享开发经验与技术见解。
+                  </CardItem>
+                </CardItem>
 
-              <div className="space-y-4 pt-4 border-t border-[var(--border-color)]">
-                <div className="flex items-center gap-3 text-sm text-[var(--text-color-secondary)]">
-                  <FiMail className="text-lg" />
-                  <span>784774835@qq.com</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-[var(--text-color-secondary)]">
-                  <FiPhone className="text-lg" />
-                  <span>+86 xxx-xxxx-xxxx</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-[var(--text-color-secondary)]">
-                  <FiMapPin className="text-lg" />
-                  <span>China, GuangZhou</span>
-                </div>
-              </div>
+                <CardItem translateZ="40" className="space-y-4 pt-4 border-t border-[var(--border-color)] w-full">
+                  <div className="flex items-center gap-3 text-sm text-[var(--text-color-secondary)]">
+                    <FiMail className="text-lg" />
+                    <span>784774835@qq.com</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-[var(--text-color-secondary)]">
+                    <FiPhone className="text-lg" />
+                    <span>+86 xxx-xxxx-xxxx</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-[var(--text-color-secondary)]">
+                    <FiMapPin className="text-lg" />
+                    <span>China, GuangZhou</span>
+                  </div>
+                </CardItem>
 
-              <div className="flex justify-center gap-4 pt-2">
-                <Button 
-                  isIconOnly 
-                  variant="light" 
-                  radius="full"
-                  as="a"
-                  href="https://github.com/MmzMing/zsk-ui"
-                  target="_blank"
-                >
-                  <FiGithub className="text-xl" />
-                </Button>
-                <Button isIconOnly variant="light" radius="full">
-                  <FiTwitter className="text-xl" />
-                </Button>
-                <Button isIconOnly variant="light" radius="full">
-                  <FaQq className="text-xl" />
-                </Button>
-                <Button isIconOnly variant="light" radius="full">
-                  <FaDiscord className="text-xl" />
-                </Button>
-              </div>
-            </Card>
+                <CardItem translateZ="100" className="flex justify-center gap-4 pt-2 w-full">
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    radius="full"
+                    className="text-xl"
+                    as="a"
+                    href="https://github.com/MmzMing/zsk-ui"
+                    target="_blank"
+                  >
+                    <FiGithub />
+                  </Button>
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    radius="full"
+                    className="text-xl"
+                  >
+                    <FiTwitter />
+                  </Button>
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    radius="full"
+                    className="text-xl"
+                  >
+                    <FaQq />
+                  </Button>
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    radius="full"
+                    className="text-xl"
+                  >
+                    <FaDiscord />
+                  </Button>
+                </CardItem>
+              </CardBody>
+            </CardContainer>
             
             <div className="p-4 rounded-xl bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] border border-[color-mix(in_srgb,var(--primary-color)_20%,transparent)]">
               <h4 className="font-semibold text-[var(--primary-color)] mb-2">项目开源</h4>

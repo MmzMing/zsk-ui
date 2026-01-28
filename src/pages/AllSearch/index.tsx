@@ -18,6 +18,7 @@ import Shuffle from "../../components/Motion/Shuffle";
 import TextType from "../../components/Motion/TextType";
 import { EmptyState } from "../../components/EmptyState";
 
+import { PlaceholdersAndVanishInput } from "../../components/Aceternity/PlaceholdersAndVanishInput";
 import {
   type SearchCategory,
   type SearchSortKey as SortKey,
@@ -92,6 +93,14 @@ const timeRangeOptions = [
   { value: "7d", label: "一周内" },
   { value: "1m", label: "一月内" },
   { value: "1y", label: "一年内" },
+];
+
+const searchPlaceholders = [
+  "输入关键词，按下回车开始搜索",
+  "寻找你感兴趣的视频内容...",
+  "探索丰富的文档资源...",
+  "搜索全站知识库...",
+  "发现更多有趣的工具...",
 ];
 
 // ===== 4. 通用工具函数区域 =====
@@ -299,29 +308,11 @@ function AllSearchPage() {
       </header>
 
       <section className="space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center gap-3">
-          <div className="relative flex-1">
-            <input
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  setAppliedKeyword(keyword.trim());
-                }
-              }}
-              placeholder="输入关键词，按下回车开始搜索"
-              className="w-full rounded-full border border-[var(--border-color)] bg-[var(--bg-elevated)] px-4 py-2 text-sm outline-none focus-visible:border-[var(--primary-color)]"
-            />
-          </div>
-          <Button
-            type="button"
-            className="inline-flex items-center justify-center rounded-full border border-[var(--border-color)] bg-[var(--bg-elevated)] px-8 py-2 text-xs md:text-sm font-medium text-[var(--text-color)] hover:border-[var(--primary-color)] hover:text-[var(--primary-color)] transition-all shadow-sm"
-            onPress={() => setAppliedKeyword(keyword.trim())}
-          >
-            综合搜索
-          </Button>
-        </div>
+        <PlaceholdersAndVanishInput
+          placeholders={searchPlaceholders}
+          onChange={(e) => setKeyword(e.target.value)}
+          onSubmit={() => setAppliedKeyword(keyword.trim())}
+        />
         <div className="border-b border-[var(--border-color)]">
           <AdminTabs
             aria-label="搜索分类"

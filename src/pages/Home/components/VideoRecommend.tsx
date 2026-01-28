@@ -8,10 +8,10 @@ import {
   type HomeVideo as VideoItem,
   type VideoSource,
 } from "../../../api/front/home";
-import ScrollFloat from "../../../components/Motion/ScrollFloat";
 import ScrollStack from "../../../components/Motion/ScrollStack";
 import VideoPlayer from "../../../components/VideoPlayer";
 import { routes } from "../../../router/routes";
+import TextHoverEffect from "../../../components/Aceternity/TextHoverEffect";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -101,7 +101,7 @@ export default function VideoRecommend() {
 
   // ===== 8. UI渲染逻辑区域 =====
   return (
-    <section className="relative min-h-screen flex flex-col pt-24 pb-12 space-y-8 px-2 md:px-[var(--content-padding)]">
+    <section className="relative min-h-screen flex flex-col pt-12 pb-12 space-y-8 px-2 md:px-[var(--content-padding)]">
       {/* ===== 8.1 背景装饰区域 (Endfield Style) ===== */}
       <div className="absolute left-0 top-[-10rem] bottom-0 w-48 hidden xl:flex pointer-events-none z-0 select-none overflow-hidden">
         {/* 背景色块 - 向上延伸以覆盖父容器的 pt-40 */}
@@ -150,19 +150,16 @@ export default function VideoRecommend() {
         <div className="ml-2 h-full w-[0.5px] bg-gradient-to-b from-transparent via-[var(--border-color)]/20 to-transparent opacity-20" />
       </div>
 
-      <div className="max-w-6xl mx-auto w-full flex flex-col items-center space-y-4 py-4 relative z-10">
-        <ScrollFloat
-          containerClassName="text-lg md:text-xl font-semibold py-2"
-          textClassName="tracking-tight"
-        >
-          视频推荐
-        </ScrollFloat>
-        <ScrollFloat
-          containerClassName="text-[11px] md:text-xs text-[var(--text-color-secondary)] py-1"
-          textClassName="tracking-wide"
-        >
-          精选技术视频与实战教程
-        </ScrollFloat>
+      <div className="w-full flex flex-col items-center py-2 relative z-10 px-4">
+        <div className="w-full h-24 md:h-32 flex items-center justify-center">
+          <TextHoverEffect text="视频推荐" />
+        </div>
+        <div className="w-full h-24 md:h-32 flex items-center justify-center -mt-8">
+          <TextHoverEffect 
+            text="精选技术视频与实战教程" 
+            strokeWidth={0.3}
+          />
+        </div>
       </div>
       <div className="max-w-6xl mx-auto w-full">
         <ScrollStack

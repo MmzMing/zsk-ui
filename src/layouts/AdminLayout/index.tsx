@@ -612,7 +612,7 @@ function AdminLayout() {
         }}
       >
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto px-[var(--content-padding)] py-[var(--content-padding)] pb-32 scrollbar-hide">
+        <main className="flex-1 overflow-y-auto px-5 py-[var(--content-padding)] pb-32 scrollbar-hide">
           <PageTransitionWrapper className={containerClassName}>
             <Outlet />
           </PageTransitionWrapper>
@@ -791,7 +791,7 @@ function AdminLayout() {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-11 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-elevated)] px-4 md:px-6 gap-4">
+        <header className="h-14 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-elevated)] px-5 gap-4">
           <div className="flex items-center gap-3">
             <Dropdown>
               <DropdownTrigger>
@@ -966,7 +966,7 @@ function AdminLayout() {
 
         {multiTabEnabled && (
           <div 
-            className="h-11 flex items-center gap-2 px-4 md:px-6 border-b border-[var(--border-color)] bg-[var(--bg-elevated)] overflow-x-auto overflow-y-hidden whitespace-nowrap scrollbar-hide"
+            className="h-11 flex items-center gap-2 px-5 border-b border-[var(--border-color)] bg-[var(--bg-elevated)] overflow-x-auto overflow-y-hidden whitespace-nowrap scrollbar-hide"
             style={{ fontSize: "var(--nav-font-size)" }}
           >
             {tabs.map(item => (
@@ -1012,7 +1012,7 @@ function AdminLayout() {
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto px-[var(--content-padding)] py-[var(--content-padding)]">
+        <main className="flex-1 overflow-y-auto px-5 py-[var(--content-padding)]">
           <PageTransitionWrapper className={containerClassName}>
             <Outlet />
           </PageTransitionWrapper>
