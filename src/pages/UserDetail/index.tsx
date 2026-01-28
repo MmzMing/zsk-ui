@@ -1,6 +1,6 @@
 // ===== 1. 依赖导入区域 =====
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   Avatar, 
@@ -39,8 +39,6 @@ import Loading from "../../components/Loading";
 function UserDetail() {
   /** 路由参数ID */
   const { id } = useParams();
-  /** 路由跳转导航 */
-  const navigate = useNavigate();
   /** 用户Token */
   const { token } = useUserStore();
   

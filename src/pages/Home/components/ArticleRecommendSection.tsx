@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@heroui/react";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import { routes } from "../../../router/routes";
 import AnimatedContent from "../../../components/Motion/AnimatedContent";
 import AnimatedList from "../../../components/Motion/AnimatedList";
@@ -40,7 +40,7 @@ const formatSummary = (summary: string, maxLength: number = 100): string => {
  */
 export default function ArticleRecommendSection() {
   // --- 导航钩子 ---
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   // --- 状态与引用 ---
   /** 文章列表状态 */
@@ -166,9 +166,6 @@ export default function ArticleRecommendSection() {
         
         {/* 内容容器 */}
         <div className="relative w-16 flex flex-col items-center pt-24 pb-40 gap-12 h-full">
-          {/* 顶部贯穿线 */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[0.5px] bg-[var(--primary-color)]/10 -z-10" />
-
           {/* 顶部线条装饰 */}
           <div className="w-[3px] h-32 bg-gradient-to-b from-transparent via-[var(--primary-color)]/20 to-[var(--primary-color)]/60 rounded-full flex-none" />
           
@@ -176,7 +173,7 @@ export default function ArticleRecommendSection() {
           <div className="relative flex flex-col items-center gap-6 flex-none">
             {/* 辅助小字 */}
             <div 
-              className="text-[10px] uppercase tracking-[0.3em] opacity-30 font-mono"
+              className="text-[10px] uppercase tracking-[0.3em] font-mono text-white/80"
               style={{ writingMode: 'vertical-rl' }}
             >
               Recommended Reading
@@ -184,7 +181,7 @@ export default function ArticleRecommendSection() {
             
             {/* 主标题文字 */}
             <div 
-              className="text-4xl font-black tracking-[0.2em] opacity-15 whitespace-nowrap"
+              className="text-4xl font-black tracking-[0.2em] whitespace-nowrap"
               style={{ 
                 writingMode: 'vertical-rl',
                 color: 'var(--primary-color)',

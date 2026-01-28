@@ -83,14 +83,12 @@ const zhCNTranslations: Partial<DefaultLayoutTranslations> = {
 const FullscreenGroup = ({ 
   isPageFullscreen, 
   onTogglePageFullscreen,
-  playerRef,
-  containerRef
+  playerRef
 }: { 
   isPageFullscreen: boolean; 
-    onTogglePageFullscreen: () => void;
-    playerRef: React.RefObject<MediaPlayerInstance | null>;
-    containerRef: React.RefObject<HTMLDivElement | null>;
-  }) => {
+  onTogglePageFullscreen: () => void;
+  playerRef: React.RefObject<MediaPlayerInstance | null>;
+}) => {
   const remote = useMediaRemote();
   const isFullscreen = useMediaState('fullscreen');
   const isMobile = useIsMobile();
@@ -384,7 +382,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = (props) => {
                 isPageFullscreen={isPageFullscreen} 
                 onTogglePageFullscreen={togglePageFullscreen} 
                 playerRef={player}
-                containerRef={containerRef}
               />
             )
           }}

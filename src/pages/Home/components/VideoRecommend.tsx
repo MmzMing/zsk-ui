@@ -2,7 +2,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import { FiPlay } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
 import {
   fetchHomeVideos,
   mockHomeVideos,
@@ -36,7 +35,6 @@ const DEFAULT_COVER = "/DefaultImage/MyDefaultHomeVodie.png";
 // ===== 11. 导出区域 =====
 export default function VideoRecommend() {
   // ===== 3. 状态控制逻辑区域 =====
-  const navigate = useNavigate();
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [videoList, setVideoList] = useState<VideoItem[]>(() => mockHomeVideos);
 
@@ -118,7 +116,7 @@ export default function VideoRecommend() {
           <div className="relative flex flex-col items-center gap-6 flex-none">
             {/* 辅助小字 */}
             <div 
-              className="text-[10px] uppercase tracking-[0.3em] opacity-30 font-mono"
+              className="text-[10px] uppercase tracking-[0.3em] font-mono text-white/80"
               style={{ writingMode: 'vertical-rl' }}
             >
               Featured Content
@@ -126,7 +124,7 @@ export default function VideoRecommend() {
             
             {/* 主标题文字 */}
             <div 
-              className="text-4xl font-black tracking-[0.2em] opacity-15 whitespace-nowrap"
+              className="text-4xl font-black tracking-[0.2em] whitespace-nowrap"
               style={{ 
                 writingMode: 'vertical-rl',
                 color: 'var(--primary-color)',
@@ -145,9 +143,6 @@ export default function VideoRecommend() {
 
           {/* 底部填充线 */}
           <div className="flex-1 w-[2px] bg-gradient-to-b from-white/10 via-[var(--primary-color)]/10 to-transparent w-[1px]" />
-          
-          {/* 贯穿全高的细线 */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[0.5px] bg-[var(--primary-color)]/10 -z-10" />
         </div>
         
         {/* 次级平行装饰线 */}

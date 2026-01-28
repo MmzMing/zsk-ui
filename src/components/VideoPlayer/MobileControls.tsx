@@ -17,7 +17,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
 
   useEffect(() => {
     // When exiting fullscreen, unlock orientation
-    const orientation = (screen as any).orientation;
+    const orientation = (window.screen as unknown as { orientation?: { unlock?: () => void } }).orientation;
     if (!isFullscreen && orientation && orientation.unlock) {
       try {
         orientation.unlock();
@@ -36,7 +36,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
         if (playerRef.current) {
           await playerRef.current.enterFullscreen();
           // Attempt to lock orientation to landscape for horizontal play
-          const orientation = (screen as any).orientation;
+          const orientation = (window.screen as unknown as { orientation?: { lock?: (o: "landscape" | "portrait") => Promise<void> } }).orientation;
           if (orientation && orientation.lock) {
             await orientation.lock('landscape').catch(() => {
               // Ignore lock errors

@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+// removed unused eslint-disable directive
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -110,4 +110,3 @@ files.forEach(file => {
 // Post-process to map known category names if possible (optional)
 // Just output the JSON
 fs.writeFileSync(OUTPUT_FILE, JSON.stringify(apiData, null, 2));
-

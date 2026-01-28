@@ -1,555 +1,350 @@
 import React, { useRef, useEffect, useState } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useMotionValueEvent, useVelocity, AnimatePresence, useMotionValue, animate } from "framer-motion";
+import type { MotionValue } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { routes } from "@/router/routes";
 import { fetchHomeSlides, mockHomeSlides, type HomeSlide } from "@/api/front/home";
+import { ArrowRight } from "lucide-react";
 
-// ===== 11. 导出区域 =====
+/**
+ * DNA Capital 风格的横向滚动特性组件
+ * 修复了滑动闪烁 BUG，并增强了展开动画的平滑度
+ */
+// 组件外触发数据加载并广播事件
+async function fetchAndDispatchSlides() {
+  const data = await fetchHomeSlides();
+  const sourceData = data || mockHomeSlides;
+  const extendedSlides = [
+    ...sourceData,
+    { ...sourceData[0], id: "304", title: "开源生态", tag: "社区共建" },
+    { ...sourceData[1], id: "305", title: "云端同步", tag: "多端协作" },
+    { ...sourceData[2], id: "306", title: "智能检索", tag: "AI赋能" }
+  ];
+  window.dispatchEvent(new CustomEvent("home:slides", { detail: extendedSlides }));
+}
+void fetchAndDispatchSlides();
+
 export default function HomeFeatures() {
-  const [slides, setSlides] = useState<HomeSlide[]>(() => mockHomeSlides);
+  const [slides, setSlides] = useState<HomeSlide[]>([]);
   const navigate = useNavigate();
-  const sectionRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  
+  // 状态管理
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isExpanding, setIsExpanding] = useState(false);
+  const stopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  /**
-   * 加载幻灯片数据
-   */
-  const loadSlides = React.useCallback(async () => {
-    const data = await fetchHomeSlides();
-    if (data) {
-      setSlides(data);
-    }
+  // 常量定义
+  const SMALL_WIDTH = 18; // vw
+  const LARGE_WIDTH = 60; // vw
+  const GAP = 4; // vw
+
+  // 订阅数据事件
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<HomeSlide[]>).detail;
+      if (detail && Array.isArray(detail)) {
+        setSlides(detail);
+      }
+    };
+    window.addEventListener("home:slides", handler as EventListener);
+    return () => window.removeEventListener("home:slides", handler as EventListener);
   }, []);
 
-  // 初始化加载
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadSlides();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadSlides]);
-
+  // 滚动监听
   const { scrollYProgress } = useScroll({
-    target: sectionRef,
+    target: containerRef,
     offset: ["start start", "end end"]
   });
 
-  const totalSlides = slides.length;
-  const scrollHeight = 400; // 400vh
-  const releaseProgress = 0.85;
+  // 使用原始滚动进度，保证“停下来就停下来”
+  const trackedProgress = scrollYProgress;
+  const scrollVelocity = useVelocity(trackedProgress);
 
-  const slideWidth = 70; // 70vw
-  const slideGap = 24; // 24vw
-  const step = slideWidth + slideGap; // 每张卡片之间中心点的水平距离
-  const totalTravel = (totalSlides - 1) * step;
-  const halfTravel = totalTravel / 2;
+  // 计算当前激活索引和展开状态
+  useMotionValueEvent(trackedProgress, "change", (latest) => {
+    const velocity = Math.abs(scrollVelocity.get());
+    
+    // 1. 判定移动状态：只要速度超过起步阈值，立即收起
+    const MOVE_THRESHOLD = 0.004; 
+    if (velocity > MOVE_THRESHOLD) {
+      if (isExpanding) setIsExpanding(false);
+      // 清除停止定时器
+      if (stopTimeoutRef.current) {
+        clearTimeout(stopTimeoutRef.current);
+        stopTimeoutRef.current = null;
+      }
+    } else {
+      // 2. 判定停止状态：速度低于停止阈值，且持续一段时间才展开
+      const STOP_THRESHOLD = 0.001;
+      if (velocity < STOP_THRESHOLD && !isExpanding && !stopTimeoutRef.current) {
+        stopTimeoutRef.current = setTimeout(() => {
+          setIsExpanding(true);
+          stopTimeoutRef.current = null;
+        }, 100); // 100ms 稳定期，防止微小波动导致的反复开关
+      }
+    }
 
-  const firstPos = halfTravel; // 第一张在最右侧时居中
-  const secondPos = 0; // 中间一张在居中时为 0（轨道中心）
-  const thirdPos = -halfTravel; // 最后一张在最左侧时居中
+    // 3. 计算当前应该处于中心的索引
+    const index = Math.min(
+      Math.max(0, Math.round(latest * (slides.length - 1))),
+      slides.length - 1
+    );
 
-  const segment = releaseProgress / 7;
-  const s1 = segment;
-  const s2 = segment * 2;
-  const s3 = segment * 3;
-  const s4 = segment * 4;
-  const s5 = segment * 5;
-  const s6 = segment * 6;
-  const s7 = releaseProgress;
+    if (index !== activeIndex) {
+      setActiveIndex(index);
+    }
+  });
 
-  const trackX = useTransform(scrollYProgress, [0, s2, s3, s5, s6, 1], [
-    `${firstPos}vw`,
-    `${firstPos}vw`,
-    `${secondPos}vw`,
-    `${secondPos}vw`,
-    `${thirdPos}vw`,
-    `${thirdPos}vw`
-  ]);
-
-  const baseScale = 0.85;
-  const activeScale = 1.05;
-
-  const slideScale0 = useTransform(scrollYProgress, [0, s1, s2], [
-    baseScale,
-    activeScale,
-    baseScale
-  ]);
-
-  const slideScale1 = useTransform(scrollYProgress, [0, s3, s4, s5], [
-    baseScale,
-    baseScale,
-    activeScale,
-    baseScale
-  ]);
-
-  const slideScale2 = useTransform(scrollYProgress, [0, s6, s7, 1], [
-    baseScale,
-    baseScale,
-    activeScale,
-    activeScale
-  ]);
-
-  const slideScales = [slideScale0, slideScale1, slideScale2];
+  // 组件卸载时清除定时器
+  useEffect(() => {
+    return () => {
+      if (stopTimeoutRef.current) clearTimeout(stopTimeoutRef.current);
+    };
+  }, []);
 
   return (
     <section
-      ref={sectionRef}
-      className="relative flex items-stretch overflow-visible"
-      style={{ height: `${scrollHeight}vh` }}
+      ref={containerRef}
+      className="relative w-full bg-transparent"
+      style={{ height: `${Math.max(400, slides.length * 80)}vh` }}
     >
-      <div className="sticky top-0 flex h-screen w-full items-center justify-center overflow-hidden pointer-events-none">
-        <motion.div
-          style={{ x: trackX }}
-          className="flex h-[70vh] items-center gap-[24vw] pointer-events-auto"
-        >
+      <div className="sticky top-0 h-screen w-full flex items-center overflow-hidden">
+        
+        {/* 卡片轨道容器 */}
+        <div className="relative w-full h-full flex items-center">
           {slides.map((slide, index) => {
-            const mainFeature = slide.features[0];
-            const secondaryFeature = slide.features[1];
-            const featureList = slide.featureList;
-
+            // 核心修复：不使用 layout 属性，改用数学计算位置
+            // 我们通过计算当前进度下，该卡片相对于视口中心的位移
             return (
-              <motion.div
+              <CardItem
                 key={slide.id}
-                style={{ scale: slideScales[index], transformOrigin: "center center" }} // 强制中心缩放
-                className="shrink-0 w-[70vw] flex items-center justify-center" // 限制宽度为 70vw，不再是 w-screen
-              >
-                <div className="relative w-full px-4 md:px-8">
-                  <div className="grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] items-center">
-                    <div className="space-y-6">
-                      <div className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--border-color)_70%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black_6%)] px-3 py-1 text-[10px] tracking-[0.18em] uppercase text-[var(--text-color-secondary)]">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary-color)]" />
-                        <span>{slide.tag}</span>
-                      </div>
-                      <div className="space-y-4">
-                        <h3 className="text-xl md:text-2xl font-semibold leading-tight">
-                          {slide.title}
-                        </h3>
-                        <p className="text-xs md:text-sm text-[var(--text-color-secondary)] leading-relaxed">
-                          {slide.description}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="rounded-[calc(var(--radius-base)_-_6px)] border border-[color-mix(in_srgb,var(--border-color)_80%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_96%,black_4%)] p-4 shadow-[0_16px_40px_rgba(15,23,42,0.55)] space-y-2">
-                          <div className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] text-[var(--primary-color)] text-[10px] px-2 py-1">
-                            <span>{mainFeature.tag}</span>
-                          </div>
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-semibold">
-                              {mainFeature.title}
-                            </h4>
-                            <p className="text-[11px] leading-relaxed text-[var(--text-color-secondary)] line-clamp-3">
-                              {mainFeature.description}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="rounded-[calc(var(--radius-base)_-_6px)] border border-[color-mix(in_srgb,var(--border-color)_70%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black_6%)] p-4 space-y-2">
-                          <div className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)] text-[var(--primary-color)] text-[10px] px-2 py-1">
-                            <span>{secondaryFeature.tag}</span>
-                          </div>
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-semibold">
-                              {secondaryFeature.title}
-                            </h4>
-                            <p className="text-[11px] leading-relaxed text-[var(--text-color-secondary)] line-clamp-3">
-                              {secondaryFeature.description}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (index === 2) {
-                              navigate(routes.resume);
-                            } else {
-                              navigate(routes.allSearch);
-                            }
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--primary-color),transparent_85%)] px-4 py-2 text-xs font-medium text-[var(--primary-color)] transition-all duration-300 hover:bg-[var(--primary-color)] hover:text-black"
-                        >
-                          <span>立即体验</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="relative h-[320px] md:h-[380px] lg:h-[420px]">
-                      <div className="absolute -inset-10 rounded-[40px] bg-gradient-to-br from-sky-500/30 via-emerald-400/12 to-purple-500/35 opacity-60 blur-3xl" />
-                      <motion.div
-                        className="relative h-full w-full rounded-[32px] overflow-hidden"
-                        initial={{ opacity: 0, y: 40 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.4 }}
-                        transition={{ duration: 0.6, ease: "easeOut" }}
-                      >
-                        <div className="h-9 flex items-center justify-between bg-gradient-to-r from-white/6 via-white/10 to-white/6 px-4">
-                          <div className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                          </div>
-                          <div className="flex items-center gap-2 text-[10px] text-[var(--text-color-secondary)]">
-                            <span className="hidden md:inline-flex">
-                              小破站 · {slide.title}
-                            </span>
-                            <span className="inline-flex rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[9px] uppercase tracking-[0.2em]">
-                              demo
-                            </span>
-                          </div>
-                        </div>
-                        {slide.previewType === "kanban" && (
-                          <div className="flex h-full flex-col md:flex-row gap-4 md:gap-5 p-4 md:p-6 bg-black/20">
-                            <div className="relative flex-1 rounded-2xl border border-[color-mix(in_srgb,var(--border-color)_80%,transparent)] bg-black/40 overflow-hidden p-3 md:p-4">
-                              <div className="flex items-center justify-between text-[10px] text-white/70 mb-3">
-                                <div className="inline-flex items-center gap-1">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                                  <span>知识库看板视图</span>
-                                </div>
-                                <span className="inline-flex items-center rounded-full bg-white/8 px-2 py-0.5 text-[9px]">
-                                  实时预览
-                                </span>
-                              </div>
-                              <div className="space-y-3">
-                                <div className="h-9 rounded-xl bg-gradient-to-r from-emerald-400/25 via-sky-400/35 to-purple-500/25" />
-                                <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-2">
-                                  <div className="space-y-1.5">
-                                    {Array.from({ length: 4 }).map(
-                                      (_, itemIndex) => (
-                                        <div
-                                          key={itemIndex}
-                                          className="h-4 rounded-full bg-white/10"
-                                        />
-                                      )
-                                    )}
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    {Array.from({ length: 4 }).map(
-                                      (_, itemIndex) => (
-                                        <div
-                                          key={itemIndex}
-                                          className="h-4 rounded-md bg-white/6"
-                                        />
-                                      )
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 pt-1">
-                                  {Array.from({ length: 3 }).map(
-                                    (_, itemIndex) => (
-                                      <div
-                                        key={itemIndex}
-                                        className="h-10 rounded-xl bg-gradient-to-br from-white/10 via-white/5 to-transparent"
-                                      />
-                                    )
-                                  )}
-                                </div>
-                              </div>
-                              <motion.div
-                                className="pointer-events-none absolute inset-x-6 bottom-3 h-10 rounded-xl bg-gradient-to-t from-black/60 via-black/0 to-transparent"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 1, delay: 0.3 }}
-                              />
-                            </div>
-                            <div className="flex-1 space-y-3 md:space-y-4">
-                              <div className="space-y-1">
-                                <div className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] px-2 py-0.5 text-[10px] text-[var(--primary-color)]">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary-color)]" />
-                                  <span>帮助你轻松搞定</span>
-                                </div>
-                                <p className="text-[11px] text-[var(--text-color-secondary)]">
-                                  从内容收纳到输出发布，一块“预览图”解释整个能力闭环。
-                                </p>
-                              </div>
-                              <div className="space-y-3">
-                                {featureList.map((card, featureIndex) => (
-                                  <div key={card.title} className="flex gap-3">
-                                    <div className="mt-0.5 h-5 w-5 flex items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,black_90%)] text-[10px] text-[var(--primary-color)]">
-                                      {featureIndex + 1}
-                                    </div>
-                                    <div className="space-y-0.5">
-                                      <div className="text-[11px] font-medium">
-                                        {card.title}
-                                      </div>
-                                      <div className="text-[10px] text-[var(--text-color-secondary)] leading-relaxed line-clamp-2">
-                                        {card.description}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                              <div className="flex items-center gap-2 text-[10px] text-[var(--text-color-secondary)]">
-                                <span className="inline-flex h-6 items-center rounded-full border border-[color-mix(in_srgb,var(--border-color)_75%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_94%,black_6%)] px-2">
-                                  支持主题切换 · 动效适配深浅色背景
-                                </span>
-                                <span className="hidden md:inline-flex">
-                                  也可以在移动端获得近似体验
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        {slide.previewType === "list" && (
-                          <div className="flex h-full flex-col md:flex-row gap-4 md:gap-6 p-5 md:p-7 bg-gradient-to-br from-purple-800/40 via-slate-900/60 to-sky-700/40">
-                            <div className="flex-1 space-y-3">
-                              <div className="inline-flex items-center gap-1 rounded-full bg-white/6 px-2 py-0.5 text-[9px] uppercase tracking-[0.2em] text-white/70">
-                                <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
-                                <span>STEP-BY-STEP</span>
-                              </div>
-                              <div className="space-y-2">
-                                {featureList.map((card, indexStep) => (
-                                  <div
-                                    key={card.title}
-                                    className="relative overflow-hidden rounded-2xl bg-black/40 border border-white/8 px-3.5 py-3"
-                                  >
-                                    <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-sky-400 via-violet-400 to-emerald-400" />
-                                    <div className="pl-3.5 space-y-1">
-                                      <div className="flex items-center justify-between">
-                                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[10px] text-white/80">
-                                          {indexStep + 1}
-                                        </span>
-                                        <span className="text-[10px] text-white/40">
-                                          教程节点
-                                        </span>
-                                      </div>
-                                      <div className="text-[11px] font-medium text-white/90">
-                                        {card.title}
-                                      </div>
-                                      <div className="text-[10px] text-white/60 leading-relaxed line-clamp-2">
-                                        {card.description}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="flex-1 flex flex-col justify-between space-y-3">
-                              <div className="rounded-3xl bg-black/40 border border-sky-500/40 px-4 py-3 space-y-2">
-                                <div className="flex items-center justify-between text-[10px] text-sky-100/80">
-                                  <span className="inline-flex items-center gap-1">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-                                    实时进度面板
-                                  </span>
-                                  <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[9px]">
-                                    新手友好
-                                  </span>
-                                </div>
-                                <div className="space-y-2">
-                                  <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
-                                    <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-sky-400 via-violet-400 to-fuchsia-400" />
-                                  </div>
-                                  <div className="flex justify-between text-[10px] text-white/60">
-                                    <span>基础入门 · 已完成</span>
-                                    <span>67%</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="rounded-3xl bg-white/5 border border-white/10 px-4 py-3 space-y-2">
-                                <div className="flex items-center justify-between text-[10px] text-white/80">
-                                  <span className="inline-flex items-center gap-1">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                                    视频连播队列
-                                  </span>
-                                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px]">
-                                    连续学习
-                                  </span>
-                                </div>
-                                <div className="space-y-1.5">
-                                  {Array.from({ length: 3 }).map(
-                                    (_, videoIndex) => (
-                                      <div
-                                        key={videoIndex}
-                                        className="flex items-center justify-between rounded-2xl bg-black/40 px-2.5 py-1.5"
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <div className="h-6 w-9 rounded-lg bg-gradient-to-br from-purple-500/50 via-sky-500/40 to-emerald-400/40" />
-                                          <div className="space-y-0.5">
-                                            <div className="text-[10px] text-white/80">
-                                              实战演示 {videoIndex + 1}
-                                            </div>
-                                            <div className="text-[9px] text-white/50">
-                                              10:2{videoIndex}
-                                            </div>
-                                          </div>
-                                        </div>
-                                        <span className="text-[9px] text-emerald-400">
-                                          ▶
-                                        </span>
-                                      </div>
-                                    )
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        {slide.previewType === "profile" && (
-                          <div className="flex h-full flex-col md:flex-row gap-4 md:gap-6 p-5 md:p-7 bg-gradient-to-br from-slate-900/80 via-indigo-900/70 to-fuchsia-800/50">
-                            <div className="flex-1 flex items-center justify-center">
-                              <div className="relative w-full max-w-xs md:max-w-sm rounded-[28px] bg-black/60 border border-white/10 px-5 py-6 space-y-4">
-                                <div className="absolute -inset-8 rounded-[32px] bg-gradient-to-br from-fuchsia-500/25 via-sky-500/12 to-emerald-400/24 blur-2xl" />
-                                <div className="relative flex items-center gap-3">
-                                  <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-sky-400 flex items-center justify-center text-lg font-semibold">
-                                    CV
-                                    <div className="absolute -inset-1 rounded-2xl border border-white/20" />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <div className="text-[12px] font-semibold text-white">
-                                      多模板 · 在线简历
-                                    </div>
-                                    <div className="text-[10px] text-white/60">
-                                      一份配置，多端输出，随时一键更新。
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="relative space-y-2">
-                                  <div className="flex items-center justify-between text-[10px] text-white/70">
-                                    <span>目标岗位</span>
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5">
-                                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                                      前端工程师
-                                    </span>
-                                  </div>
-                                  <div className="grid grid-cols-3 gap-2 pt-1">
-                                    <div className="h-16 rounded-2xl bg-gradient-to-br from-sky-500/40 via-sky-400/30 to-transparent px-3 py-2 text-[10px] text-white/90 space-y-1">
-                                      <div className="text-[9px] uppercase tracking-[0.18em] text-white/70">
-                                        SKILLS
-                                      </div>
-                                      <div>React · TypeScript</div>
-                                    </div>
-                                    <div className="h-16 rounded-2xl bg-gradient-to-br from-emerald-500/35 via-emerald-400/25 to-transparent px-3 py-2 text-[10px] text-white/90 space-y-1">
-                                      <div className="text-[9px] uppercase tracking-[0.18em] text-white/70">
-                                        PROJECTS
-                                      </div>
-                                      <div>3 个精选项目</div>
-                                    </div>
-                                    <div className="h-16 rounded-2xl bg-gradient-to-br from-fuchsia-500/35 via-fuchsia-400/25 to-transparent px-3 py-2 text-[10px] text-white/90 space-y-1">
-                                      <div className="text-[9px] uppercase tracking-[0.18em] text-white/70">
-                                        EXPORT
-                                      </div>
-                                      <div>PDF / PNG</div>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="relative space-y-2">
-                                  <div className="flex items-center justify-between text-[10px] text-white/70">
-                                    <span>开源社区绑定</span>
-                                    <span className="text-[9px] text-emerald-300">
-                                      已关联 2 个仓库
-                                    </span>
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    {slide.features.map((card) => (
-                                      <div
-                                        key={card.title}
-                                        className="flex items-center justify-between rounded-2xl bg-white/5 px-3 py-2"
-                                      >
-                                        <div className="space-y-0.5">
-                                          <div className="text-[10px] text-white/80">
-                                            {card.title}
-                                          </div>
-                                          <div className="text-[9px] text-white/60 line-clamp-1">
-                                            {card.description}
-                                          </div>
-                                        </div>
-                                        <span className="text-[9px] text-fuchsia-300">
-                                          详情
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex-1 flex flex-col justify-between space-y-3">
-                              <div className="rounded-3xl bg-black/50 border border-white/10 px-4 py-3 space-y-2">
-                                <div className="flex items-center justify-between text-[10px] text-white/80">
-                                  <span className="inline-flex items-center gap-1">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-                                    多版本管理
-                                  </span>
-                                  <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[9px]">
-                                    草稿 · 投递版
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="h-16 rounded-2xl bg-gradient-to-br from-sky-500/25 via-sky-400/15 to-transparent px-3 py-2 space-y-1">
-                                    <div className="text-[9px] text-white/70">
-                                      当前版本
-                                    </div>
-                                    <div className="text-[10px] text-white/90">
-                                      校招 JD 定制版
-                                    </div>
-                                  </div>
-                                  <div className="h-16 rounded-2xl bg-gradient-to-br from-emerald-500/25 via-emerald-400/15 to-transparent px-3 py-2 space-y-1">
-                                    <div className="text-[9px] text-white/70">
-                                      上次投递
-                                    </div>
-                                    <div className="text-[10px] text-white/90">
-                                      三天前更新
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="rounded-3xl bg-white/5 border border-white/10 px-4 py-3 space-y-2">
-                                <div className="flex items-center justify-between text-[10px] text-white/80">
-                                  <span className="inline-flex items-center gap-1">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                                    一键导出
-                                  </span>
-                                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px]">
-                                    无水印
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-[10px] text-white/70">
-                                  <div className="flex-1 h-9 rounded-2xl bg-gradient-to-r from-fuchsia-400/40 via-sky-400/40 to-emerald-400/40 flex items-center justify-center">
-                                    <span>导出为 PDF</span>
-                                  </div>
-                                  <div className="flex-1 h-9 rounded-2xl bg-white/10 flex items-center justify-center">
-                                    <span>生成分享链接</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </motion.div>
-                      <motion.div
-                        className="pointer-events-none absolute -left-2 bottom-10 hidden md:block w-40 rounded-2xl border border-[color-mix(in_srgb,var(--border-color)_70%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_96%,black_4%)]/90 px-3 py-2 text-[10px] shadow-[0_14px_40px_rgba(15,23,42,0.75)]"
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.4 }}
-                        transition={{ duration: 0.6, delay: 0.4 }}
-                      >
-                        <div className="mb-1 flex items-center gap-1.5 text-[var(--primary-color)]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary-color)]" />
-                          <span>自动保存</span>
-                        </div>
-                        <div className="text-[10px] text-[var(--text-color-secondary)] leading-relaxed">
-                          草稿实时同步，不怕浏览器崩溃或误刷新。
-                        </div>
-                      </motion.div>
-                      <motion.div
-                        className="pointer-events-none absolute -right-0 top-6 hidden md:block w-40 rounded-2xl border border-[color-mix(in_srgb,var(--border-color)_70%,transparent)] bg-[color-mix(in_srgb,var(--bg-elevated)_96%,black_4%)]/90 px-3 py-2 text-[10px] shadow-[0_14px_40px_rgba(15,23,42,0.75)]"
-                        initial={{ opacity: 0, y: -10 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.4 }}
-                        transition={{ duration: 0.6, delay: 0.6 }}
-                      >
-                        <div className="mb-1 flex items-center gap-1.5 text-[var(--primary-color)]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary-color)]" />
-                          <span>一键输出</span>
-                        </div>
-                        <div className="text-[10px] text-[var(--text-color-secondary)] leading-relaxed">
-                          支持导出为文档、图片或简历素材，方便复用。
-                        </div>
-                      </motion.div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+                slide={slide}
+                index={index}
+                activeIndex={activeIndex}
+                isExpanding={isExpanding}
+                progress={trackedProgress}
+                total={slides.length}
+                smallWidth={SMALL_WIDTH}
+                largeWidth={LARGE_WIDTH}
+                gap={GAP}
+                navigate={navigate}
+              />
             );
           })}
-        </motion.div>
+        </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * 单个卡片组件
+ * 采用独立的 Transform 计算，彻底杜绝闪烁和跳变
+ */
+type CardItemProps = {
+  slide: HomeSlide;
+  index: number;
+  activeIndex: number;
+  isExpanding: boolean;
+  progress: MotionValue<number>;
+  total: number;
+  smallWidth: number;
+  largeWidth: number;
+  gap: number;
+  navigate: (to: string) => void;
+};
+
+function CardItem({ 
+  slide, index, activeIndex, isExpanding, progress, total, 
+  smallWidth, largeWidth, gap, navigate 
+}: CardItemProps) {
+  
+  // ===== 3. 状态控制逻辑区域 =====
+  // 增加布局延迟状态，确保收缩时文字先淡出，卡片后缩小
+  const [shouldLayoutExpand, setShouldLayoutExpand] = useState(false);
+
+  useEffect(() => {
+    // 使用定时器避免 lint 错误 (react-hooks/set-state-in-effect)
+    // 展开时立即执行，收缩时延迟 150ms 留出文字淡出时间
+    const timer = setTimeout(() => {
+      setShouldLayoutExpand(isExpanding);
+    }, isExpanding ? 0 : 150);
+    
+    return () => clearTimeout(timer);
+  }, [isExpanding]);
+
+  // 计算基础偏移：当 progress = 0 时，index=0 的卡片在中心
+  // 每一份 progress 变动 (1/(total-1))，轨道移动 (smallWidth + gap)
+  const trackX = useTransform(
+    progress,
+    [0, 1],
+    [
+      50 - smallWidth / 2, // 初始位置：第一张居中
+      50 - smallWidth / 2 - (total - 1) * (smallWidth + gap) // 结束位置：最后一张居中
+    ]
+  );
+
+  // 展开位移的动画值（tween）
+  const expansionMV = useMotionValue(0);
+  useEffect(() => {
+    const delta = (largeWidth - smallWidth) / 2;
+    let target = 0;
+    // 使用 shouldLayoutExpand 代替 isExpanding，同步布局位移
+    if (shouldLayoutExpand) {
+      if (index < activeIndex) target = -delta;
+      else if (index > activeIndex) target = delta;
+      else target = 0;
+    } else {
+      target = 0;
+    }
+    const controls = animate(expansionMV, target, { duration: 0.45, ease: [0.22, 1, 0.36, 1] });
+    return () => controls.stop();
+  }, [shouldLayoutExpand, index, activeIndex, largeWidth, smallWidth, expansionMV]);
+
+  // 最终 X 位置
+  const x = useTransform(
+    [trackX, expansionMV] as unknown as [MotionValue<number>, MotionValue<number>],
+    ([v, expansion]) => {
+      const basePos = (v as number) + index * (smallWidth + gap);
+      return `${basePos + (expansion as number)}vw`;
+    }
+  );
+
+  const isActive = index === activeIndex;
+  // 文字详情的显示依然由即时的 isExpanding 控制，以便立即触发 exit 动画
+  const showDetail = isExpanding && isActive;
+
+  return (
+    <motion.div
+      style={{ 
+        x,
+        zIndex: isActive ? 20 : 10 - Math.abs(index - activeIndex),
+      }}
+      animate={{
+        // 使用 shouldLayoutExpand 控制卡片宽度和视觉状态
+        width: isActive ? (shouldLayoutExpand ? `${largeWidth}vw` : `${smallWidth}vw`) : `${smallWidth}vw`,
+        opacity: isActive && shouldLayoutExpand ? 1 : (isExpanding ? 0.3 : 0.8),
+        scale: isActive && shouldLayoutExpand ? 1 : (isExpanding ? 0.95 : 1),
+        filter: isActive && shouldLayoutExpand ? "blur(0px)" : (isExpanding ? "blur(8px)" : "blur(0px)"),
+      }}
+      transition={{
+        type: "tween",
+        duration: 0.45,
+        ease: [0.22, 1, 0.36, 1]
+      }}
+      className={`
+        absolute h-[50vh] md:h-[60vh] rounded-3xl overflow-hidden
+        border border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl
+        ${isActive && shouldLayoutExpand ? 'shadow-[0_0_100px_rgba(0,0,0,0.6)]' : ''}
+      `}
+    >
+      {/* 始终居中的 Logo 视图 - 使用绝对定位脱离文档流，防止宽度变化导致布局重排 */}
+      <motion.div
+        initial={false}
+        animate={{ 
+          opacity: showDetail ? 0 : 1,
+          scale: showDetail ? 0.8 : 1,
+          y: showDetail ? -50 : 0
+        }}
+        transition={{
+          duration: 0.3,
+          delay: showDetail ? 0 : 0.2 // 收缩时延迟显示 Logo，确保文字先消失
+        }}
+        className="absolute inset-0 flex flex-col items-center justify-center gap-8 pointer-events-none"
+      >
+        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl shrink-0">
+          <span className="text-3xl md:text-4xl font-bold text-white/90">{slide.title.charAt(0)}</span>
+        </div>
+        <span className="text-sm md:text-base font-bold text-white tracking-[0.4em] uppercase text-center px-6 whitespace-nowrap">
+          {slide.title}
+        </span>
+      </motion.div>
+
+      {/* 展开详情视图 */}
+      <AnimatePresence mode="wait">
+        {showDetail && (
+          <motion.div
+            key="detail-container"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ 
+              opacity: 0, 
+              scale: 0.95,
+              transition: { duration: 0.15, ease: "easeIn" } 
+            }}
+            className="absolute inset-0 p-12 md:p-20 flex flex-col justify-between z-30"
+          >
+            <div className="flex flex-col items-start gap-12 h-full justify-center">
+              {/* Layer 1: Tag & Icon - Delay 0.55s (0.45s expansion + 0.1s buffer) */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.55, duration: 0.5, ease: "easeOut" }}
+                className="flex items-center gap-6"
+              >
+                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center border border-white/10">
+                  <span className="font-bold text-white text-xl">{slide.title.charAt(0)}</span>
+                </div>
+                <span className="text-xs uppercase tracking-[0.4em] text-[var(--primary-color)] font-black">{slide.tag}</span>
+              </motion.div>
+
+              <div className="max-w-2xl">
+                {/* Layer 2: Title - Delay 0.65s */}
+                <motion.h2
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.65, duration: 0.5, ease: "easeOut" }}
+                  className="text-5xl md:text-8xl font-black text-white mb-10 leading-[0.9] tracking-tighter"
+                >
+                  {slide.title}
+                </motion.h2>
+                
+                {/* Layer 3: Description - Delay 0.75s */}
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.75, duration: 0.5, ease: "easeOut" }}
+                  className="text-xl md:text-2xl text-white leading-relaxed mb-16 font-medium"
+                >
+                  {slide.description}
+                </motion.p>
+                
+                {/* Layer 4: Button - Delay 0.85s */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.85, duration: 0.5, ease: "easeOut" }}
+                >
+                  <button
+                    onClick={() => navigate(routes.allSearch)}
+                    className="group flex items-center gap-6 text-white"
+                  >
+                    <span className="text-sm font-black tracking-[0.4em] uppercase border-b-2 border-white/10 group-hover:border-[var(--primary-color)] pb-3 transition-colors">
+                      Explore Project
+                    </span>
+                    <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
+                      <ArrowRight className="w-6 h-6" />
+                    </div>
+                  </button>
+                </motion.div>
+              </div>
+            </div>
+
+            {/* 背景装饰图形 - Fade in gently */}
+            <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               transition={{ delay: 0.6, duration: 0.8 }}
+               className="absolute right-0 top-0 bottom-0 w-1/2 overflow-hidden pointer-events-none"
+            >
+              <div className="absolute top-1/2 right-[-10%] -translate-y-1/2 w-[600px] h-[600px] border border-white/5 rounded-full" />
+              <div className="absolute top-1/2 right-[5%] -translate-y-1/2 w-[400px] h-[400px] border border-white/5 rounded-full" />
+              <div className="absolute top-1/2 right-[20%] -translate-y-1/2 w-[200px] h-[200px] border border-white/5 rounded-full" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

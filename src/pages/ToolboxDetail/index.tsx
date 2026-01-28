@@ -18,7 +18,6 @@ import {
   FiHeart, 
   FiEye, 
   FiBarChart2,
-  FiArrowLeft,
   FiBox
 } from "react-icons/fi";
 import { getToolboxDetail, type ToolboxDetail } from "../../api/front/toolbox";
@@ -114,19 +113,6 @@ export default function ToolboxDetailPage() {
 
   return (
     <div className="min-h-screen pb-20">
-      {/* 返回按钮 */}
-      <div className="sticky top-20 z-10 px-6 py-4 bg-[var(--bg-color)]/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto">
-          <Button 
-            variant="light" 
-            startContent={<FiArrowLeft />}
-            onPress={() => navigate(-1)}
-          >
-            返回
-          </Button>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-6 space-y-10">
         {/* 头部区域 */}
         <div className="flex flex-col md:flex-row gap-8 items-start">
