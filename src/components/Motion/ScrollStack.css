@@ -12,8 +12,13 @@
   will-change: scroll-position;
 }
 
+.scroll-stack-scroller.use-window-scroll {
+  height: auto;
+  overflow: visible;
+}
+
 .scroll-stack-inner {
-  padding: 20vh 5rem 50rem;
+  padding: 10vh 5rem 30rem;
   min-height: 100vh;
 }
 

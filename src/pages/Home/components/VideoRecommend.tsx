@@ -103,8 +103,59 @@ export default function VideoRecommend() {
 
   // ===== 8. UI渲染逻辑区域 =====
   return (
-    <section className="min-h-screen flex flex-col pt-24 pb-12 space-y-8 px-2 md:px-[var(--content-padding)]">
-      <div className="max-w-6xl mx-auto w-full flex flex-col items-center space-y-4 py-4">
+    <section className="relative min-h-screen flex flex-col pt-24 pb-12 space-y-8 px-2 md:px-[var(--content-padding)]">
+      {/* ===== 8.1 背景装饰区域 (Endfield Style) ===== */}
+      <div className="absolute left-0 top-[-10rem] bottom-0 w-48 hidden xl:flex pointer-events-none z-0 select-none overflow-hidden">
+        {/* 背景色块 - 向上延伸以覆盖父容器的 pt-40 */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 bg-[var(--primary-color)]/5 border-r border-[var(--primary-color)]/10" />
+        
+        {/* 内容容器 */}
+        <div className="relative w-16 flex flex-col items-center pt-56 gap-12 h-full">
+          {/* 顶部线条 - 增加高度并调整渐变 */}
+          <div className="w-[3px] h-48 bg-gradient-to-b from-transparent via-[var(--primary-color)]/20 to-[var(--primary-color)]/60 rounded-full flex-none" />
+          
+          {/* 垂直文字容器 */}
+          <div className="relative flex flex-col items-center gap-6 flex-none">
+            {/* 辅助小字 */}
+            <div 
+              className="text-[10px] uppercase tracking-[0.3em] opacity-30 font-mono"
+              style={{ writingMode: 'vertical-rl' }}
+            >
+              Featured Content
+            </div>
+            
+            {/* 主标题文字 */}
+            <div 
+              className="text-4xl font-black tracking-[0.2em] opacity-15 whitespace-nowrap"
+              style={{ 
+                writingMode: 'vertical-rl',
+                color: 'var(--primary-color)',
+                textShadow: '0 0 20px var(--primary-color)'
+              }}
+            >
+              热门视频推荐
+            </div>
+          </div>
+
+          {/* 白色装饰线条 */}
+          <div className="w-[1.5px] h-64 bg-gradient-to-b from-white/5 via-white/20 to-white/5 relative flex-none">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/40 blur-[1px]" />
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/40 blur-[1px]" />
+          </div>
+
+          {/* 底部填充线 */}
+          <div className="flex-1 w-[2px] bg-gradient-to-b from-white/10 via-[var(--primary-color)]/10 to-transparent w-[1px]" />
+          
+          {/* 贯穿全高的细线 */}
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[0.5px] bg-[var(--primary-color)]/10 -z-10" />
+        </div>
+        
+        {/* 次级平行装饰线 */}
+        <div className="ml-4 h-full w-[1px] bg-gradient-to-b from-transparent via-[var(--border-color)]/40 to-transparent opacity-30" />
+        <div className="ml-2 h-full w-[0.5px] bg-gradient-to-b from-transparent via-[var(--border-color)]/20 to-transparent opacity-20" />
+      </div>
+
+      <div className="max-w-6xl mx-auto w-full flex flex-col items-center space-y-4 py-4 relative z-10">
         <ScrollFloat
           containerClassName="text-lg md:text-xl font-semibold py-2"
           textClassName="tracking-tight"

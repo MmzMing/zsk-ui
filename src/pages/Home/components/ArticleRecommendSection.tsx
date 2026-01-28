@@ -158,10 +158,61 @@ export default function ArticleRecommendSection() {
   if (!activeArticle) return null;
 
   return (
-    <section className="space-y-8 px-[var(--content-padding)] pb-12">
+    <section className="relative space-y-8 px-[var(--content-padding)] pb-12">
+      {/* ===== 8.1 背景装饰区域 (Endfield Style - Right Side) ===== */}
+      <div className="absolute right-0 top-0 bottom-[-15rem] w-48 hidden xl:flex flex-row-reverse pointer-events-none z-0 select-none overflow-hidden">
+        {/* 背景色块 - 延伸至底部以覆盖父容器的 pb-40 */}
+        <div className="absolute right-0 top-0 bottom-0 w-16 bg-[var(--primary-color)]/5 border-l border-[var(--primary-color)]/10" />
+        
+        {/* 内容容器 */}
+        <div className="relative w-16 flex flex-col items-center pt-24 pb-40 gap-12 h-full">
+          {/* 顶部贯穿线 */}
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[0.5px] bg-[var(--primary-color)]/10 -z-10" />
+
+          {/* 顶部线条装饰 */}
+          <div className="w-[3px] h-32 bg-gradient-to-b from-transparent via-[var(--primary-color)]/20 to-[var(--primary-color)]/60 rounded-full flex-none" />
+          
+          {/* 垂直文字容器 */}
+          <div className="relative flex flex-col items-center gap-6 flex-none">
+            {/* 辅助小字 */}
+            <div 
+              className="text-[10px] uppercase tracking-[0.3em] opacity-30 font-mono"
+              style={{ writingMode: 'vertical-rl' }}
+            >
+              Recommended Reading
+            </div>
+            
+            {/* 主标题文字 */}
+            <div 
+              className="text-4xl font-black tracking-[0.2em] opacity-15 whitespace-nowrap"
+              style={{ 
+                writingMode: 'vertical-rl',
+                color: 'var(--primary-color)',
+                textShadow: '0 0 20px var(--primary-color)'
+              }}
+            >
+              精选文章推荐
+            </div>
+          </div>
+
+          {/* 白色装饰线条 */}
+          <div className="w-[1.5px] h-64 bg-gradient-to-b from-white/5 via-white/20 to-white/5 relative flex-none">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/40 blur-[1px]" />
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/40 blur-[1px]" />
+          </div>
+
+          {/* 底部填充渐变线 - 延长渐变以自然消失 */}
+          <div className="flex-1 w-[2px] bg-gradient-to-b from-white/10 via-[var(--primary-color)]/10 to-transparent w-[1px] mb-20" />
+        </div>
+        
+        {/* 次级平行装饰线 - 镜像排列 */}
+        <div className="mr-4 h-full w-[1px] bg-gradient-to-b from-transparent via-[var(--border-color)]/40 to-transparent opacity-30" />
+        <div className="mr-2 h-full w-[0.5px] bg-gradient-to-b from-transparent via-[var(--border-color)]/20 to-transparent opacity-20" />
+      </div>
+
       <div 
         ref={containerRef}
-        className="max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-6 md:gap-8"
+        className="max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-6 md:gap-8 relative z-10"
       >
         {/* 左侧详情展示区 */}
         <div

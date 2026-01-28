@@ -342,7 +342,10 @@ const ScrollStack: React.FC<ScrollStackProps> = ({
   ]);
 
   return (
-    <div className={`scroll-stack-scroller ${className}`.trim()} ref={scrollerRef}>
+    <div 
+      className={`scroll-stack-scroller ${useWindowScroll ? 'use-window-scroll' : ''} ${className}`.trim()} 
+      ref={scrollerRef}
+    >
       <div className="scroll-stack-inner">
         {children}
         {/* Spacer so the last pin can release cleanly */}
