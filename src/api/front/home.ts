@@ -6,7 +6,6 @@ import {
   mockHomeArticles,
   mockHomeReviews,
   mockHomeSlides,
-  mockHomeHero,
 } from "../mock/front/home";
 
 // ===== 2. TODO待处理导入区域 =====
@@ -17,28 +16,7 @@ import {
  */
 export const DEFAULT_ARTICLE_COVER = "/DefaultImage/MyDefaultImage.jpg";
 
-/**
- * 首页英雄区数据类型定义
- */
-export type HomeHero = {
-  /** 徽标文本 */
-  badge: string;
-  /** 主标题第一行 */
-  titleLine1: string;
-  /** 主标题第二行 */
-  titleLine2: string;
-  /** 描述文本 */
-  description: string;
-  /** 按钮文本 */
-  buttonText: string;
-  /** 特性列表 */
-  features: {
-    /** 特性名称 */
-    label: string;
-    /** 特性图标名称 (lucide-react) */
-    iconName: "Box" | "Layers" | "Zap";
-  }[];
-};
+
 
 // ===== 4. 通用工具函数区域 =====
 
@@ -63,7 +41,6 @@ export {
   mockHomeVideos,
   mockHomeArticles,
   mockHomeReviews,
-  mockHomeHero,
   mockHomeSlides,
 } from "../mock/front/home";
 
@@ -263,20 +240,3 @@ export async function fetchHomeSlides() {
   });
 }
 
-/**
- * 获取首页英雄区数据
- * @returns 首页英雄区数据响应
- */
-export async function fetchHomeHero() {
-  return handleApiCall({
-    requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<HomeHero>>("/home/hero")
-            .then((r) => r.data),
-        mockHomeHero,
-        "fetchHomeHero"
-      ).then((res) => res.data),
-  });
-}

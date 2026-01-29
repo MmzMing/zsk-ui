@@ -510,7 +510,7 @@ export default function VideoReviewPage() {
           </Card>
 
           {/* 右侧内容区域 */}
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-0">
             {activeModule === "video" && (
               <>
                 {/* 队列卡片 */}
@@ -650,14 +650,20 @@ export default function VideoReviewPage() {
                       </div>
                     </div>
 
-                    <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
-                      <Table
-                        aria-label="视频审核队列表格"
-                        className="min-w-full text-xs"
-                        selectionMode="multiple"
-                        selectedKeys={selectedIds.length === queue.length && queue.length > 0 ? "all" : new Set(selectedIds)}
-                        onSelectionChange={handleTableSelectionChange}
-                      >
+                    <div className="overflow-x-auto border border-[var(--border-color)] rounded-lg bg-[var(--bg-elevated)]/50 w-full">
+                      <div className="min-w-[900px] w-full">
+                        <Table
+                          aria-label="视频审核队列表格"
+                          removeWrapper
+                          className="min-w-full text-xs"
+                          selectionMode="multiple"
+                          selectedKeys={selectedIds.length === queue.length && queue.length > 0 ? "all" : new Set(selectedIds)}
+                          onSelectionChange={handleTableSelectionChange}
+                          classNames={{
+                            th: "whitespace-nowrap",
+                            td: "whitespace-nowrap"
+                          }}
+                        >
                         <TableHeader className="bg-[var(--bg-elevated)]/80">
                           <TableColumn className="px-3 py-2 text-left font-medium">标题</TableColumn>
                           <TableColumn className="px-3 py-2 text-left font-medium">上传人</TableColumn>
@@ -779,6 +785,7 @@ export default function VideoReviewPage() {
                         </TableBody>
                       </Table>
                     </div>
+                  </div>
 
                     <div className="mt-3 flex flex-col gap-2 text-[0.6875rem] md:flex-row md:items-center md:justify-between">
                       <div className="flex items-center gap-2">
@@ -811,11 +818,17 @@ export default function VideoReviewPage() {
                     </Chip>
                   </div>
                   <div className="p-3">
-                    <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
-                      <Table
-                        aria-label="视频审核日志表格"
-                        className="min-w-full text-xs"
-                      >
+                    <div className="overflow-x-auto border border-[var(--border-color)] rounded-lg bg-[var(--bg-elevated)]/50 w-full">
+                      <div className="min-w-[800px] w-full">
+                        <Table
+                          aria-label="视频审核日志表格"
+                          removeWrapper
+                          className="min-w-full text-xs"
+                          classNames={{
+                            th: "whitespace-nowrap",
+                            td: "whitespace-nowrap"
+                          }}
+                        >
                         <TableHeader className="bg-[var(--bg-elevated)]/80">
                           <TableColumn className="px-3 py-2 text-left font-medium">视频 ID/标题</TableColumn>
                           <TableColumn className="px-3 py-2 text-left font-medium">审核人</TableColumn>
@@ -869,7 +882,8 @@ export default function VideoReviewPage() {
                       </Table>
                     </div>
                   </div>
-                </Card>
+                </div>
+              </Card>
               </>
             )}
 

@@ -10,6 +10,7 @@ import {
   mockReviewQueueItems,
   mockAdminDocument,
   mockDocumentReviewLogs,
+  mockDocumentComments,
 } from "../mock/admin/document";
 
 // ===== 2. TODO待处理导入区域 =====
@@ -281,6 +282,24 @@ export type DocumentDetail = {
   };
 };
 
+/**
+ * 文档评论项类型
+ */
+export type DocCommentItem = {
+  /** 评论ID */
+  id: string;
+  /** 文档ID */
+  docId: string;
+  /** 用户名 */
+  username: string;
+  /** 用户头像 */
+  avatar?: string;
+  /** 评论内容 */
+  content: string;
+  /** 创建时间 */
+  createdAt: string;
+};
+
 // --- API 函数 ---
 
 /**
@@ -502,10 +521,34 @@ export async function batchUpdateDocumentStatus(data: {
   return handleRequestWithMock(
     () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/content/doc/status/batch", data)
+        .post<ApiResponse<boolean>>("/admin/content/doc/batch-update-status", data)
         .then((r) => r.data),
     true,
     "batchUpdateDocumentStatus"
+  );
+}
+
+/**
+ * 获取文档评论列表
+ * @param docId 文档ID
+ */
+export async function fetchDocumentComments(docId: string): Promise<ApiResponse<DocCommentItem[]>> {
+  return handleRequestWithMock(
+    () => request.instance.get<ApiResponse<DocCommentItem[]>>(`/admin/content/doc/${docId}/comments`).then(r => r.data),
+    mockDocumentComments.filter(c => c.docId === docId),
+    "fetchDocumentComments"
+  );
+}
+
+/**
+ * 删除文档评论
+ * @param commentId 评论ID
+ */
+export async function deleteDocumentComment(commentId: string): Promise<ApiResponse<boolean>> {
+  return handleRequestWithMock(
+    () => request.instance.delete<ApiResponse<boolean>>(`/admin/content/doc/comments/${commentId}`).then(r => r.data),
+    true,
+    "deleteDocumentComment"
   );
 }
 

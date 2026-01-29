@@ -15,36 +15,37 @@ import {
   TableHeader,
   TableRow,
   Tooltip,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Switch,
+  useDisclosure,
   addToast
 } from "@heroui/react";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
-import { Column } from "@ant-design/plots";
 import {
-  FiBarChart2,
   FiEdit2,
   FiEye,
-  FiFilter,
-  FiSlash,
-  FiGrid,
-  FiList,
   FiTrash2,
-  FiMove,
-  FiCheckSquare,
   FiPlus,
   FiRotateCcw,
-  FiX
+  FiMessageSquare
 } from "react-icons/fi";
 
 import {
   fetchDocumentList,
   batchUpdateDocumentStatus,
   deleteDocument,
-  moveDocumentCategory,
   updateDocument,
+  fetchDocumentComments,
+  deleteDocumentComment,
   type DocumentItem,
-  type DocumentStatus
+  type DocumentStatus,
+  type DocCommentItem
 } from "../../../api/admin/document";
 import { useAppStore } from "../../../store";
 import { handleApiCall } from "../../../api/axios";
@@ -63,19 +64,6 @@ type StatusFilter = "all" | DocumentStatus;
  * 文档分类选项
  */
 const documentCategories = ["前端基础", "工程实践", "效率方法", "个人成长", "系统设计"];
-
-/**
- * 图表示例数据
- */
-const chartData = [
-  { date: "01-12", reads: 120 },
-  { date: "01-13", reads: 268 },
-  { date: "01-14", reads: 356 },
-  { date: "01-15", reads: 412 },
-  { date: "01-16", reads: 298 },
-  { date: "01-17", reads: 520 },
-  { date: "01-18", reads: 489 }
-];
 
 // ===== 4. 通用工具函数区域 =====
 
@@ -142,27 +130,23 @@ function DocumentListPage() {
   const [page, setPage] = useState<number>(1);
   /** 已选中文档 ID 列表 */
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  /** 当前选中的文档 ID (用于侧边栏) */
+  /** 当前选中的文档 ID (用于侧边栏或弹窗) */
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
-  /** 侧边栏可见性 */
-  const [sidebarVisible, setSidebarVisible] = useState<boolean>(false);
-  /** 视图模式 (列表/网格) */
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  /** 评论列表 */
+  const [comments, setComments] = useState<DocCommentItem[]>([]);
+  /** 评论加载状态 */
+  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
+
+  const { isOpen: isCommentOpen, onOpen: onCommentOpen, onClose: onCommentClose } = useDisclosure();
+  const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
 
   const navigate = useNavigate();
-  const { themeMode } = useAppStore();
+  const { fontSize } = useAppStore();
 
   /** 每页显示条数 */
   const pageSize = 8;
 
   // --- 计算属性 ---
-
-  /** 图表主题 */
-  const chartTheme = useMemo(() => {
-    if (themeMode === "dark") return "classicDark";
-    if (themeMode === "light") return "classic";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "classicDark" : "classic";
-  }, [themeMode]);
 
   /** 过滤后的文档列表 */
   const filteredDocuments = useMemo(() => {
@@ -197,9 +181,6 @@ function DocumentListPage() {
   const pinnedDocuments = useMemo(() => documents.filter(item => item.pinned), [documents]);
   /** 推荐文档 */
   const recommendedDocuments = useMemo(() => documents.filter(item => item.recommended), [documents]);
-
-  /** 当前活动的文档详情 */
-  const activeDocument = useMemo(() => documents.find(item => item.id === activeDocumentId) ?? null, [documents, activeDocumentId]);
 
   // --- 事件处理 ---
 
@@ -277,29 +258,6 @@ function DocumentListPage() {
   };
 
   /**
-   * 批量移动分类
-   */
-  const handleBatchMove = async () => {
-    if (!hasSelection) return;
-    const category = window.prompt("请输入目标分类名称：", "前端基础");
-    if (!category) return;
-
-    const res = await handleApiCall({
-      requestFn: () => moveDocumentCategory(selectedIds, category)
-    });
-
-    if (res && res.code === 200) {
-      addToast({
-        title: "批量移动成功",
-        description: `已成功移动 ${selectedIds.length} 个文档至「${category}」。`,
-        color: "success"
-      });
-      loadDocumentList();
-      setSelectedIds([]);
-    }
-  };
-
-  /**
    * 批量操作状态
    */
   const handleBatchStatusUpdate = async (status: "published" | "offline") => {
@@ -364,63 +322,51 @@ function DocumentListPage() {
   };
 
   /**
-   * 打开侧边栏
+   * 加载文档评论
+   * @param docId 文档ID
    */
-  const handleOpenSidebar = (id: string) => {
+  const loadComments = async (docId: string) => {
+    setActiveDocumentId(docId);
+    onCommentOpen();
+    setIsCommentsLoading(true);
+    try {
+      const res = await fetchDocumentComments(docId);
+      if (res && res.code === 200) {
+        setComments(res.data);
+      }
+    } finally {
+      setIsCommentsLoading(false);
+    }
+  };
+
+  /**
+   * 删除评论
+   * @param commentId 评论ID
+   */
+  const handleDeleteComment = async (commentId: string) => {
+    if (!window.confirm("确定要删除这条评论吗？")) return;
+    const res = await deleteDocumentComment(commentId);
+    if (res && res.code === 200) {
+      addToast({
+        title: "删除成功",
+        description: "该评论已被移除",
+        color: "success"
+      });
+      if (activeDocumentId) {
+        const resList = await fetchDocumentComments(activeDocumentId);
+        if (resList && resList.code === 200) {
+          setComments(resList.data);
+        }
+      }
+    }
+  };
+
+  /**
+   * 打开预览
+   */
+  const handleOpenPreview = (id: string) => {
     setActiveDocumentId(id);
-    setSidebarVisible(true);
-  };
-
-  /**
-   * 关闭侧边栏
-   */
-  const handleCloseSidebar = () => {
-    setSidebarVisible(false);
-  };
-
-  /**
-   * 图表配置
-   */
-  const chartConfig = {
-    data: chartData,
-    xField: "date",
-    yField: "reads",
-    height: 180,
-    autoFit: true,
-    columnStyle: {
-      radiusTopLeft: 4,
-      radiusTopRight: 4
-    },
-    color: "var(--primary-color)",
-    padding: [12, 12, 32, 32],
-    xAxis: {
-      label: {
-        style: {
-          fill: "var(--text-color-secondary)",
-          fontSize: 10
-        }
-      }
-    },
-    yAxis: {
-      label: {
-        style: {
-          fill: "var(--text-color-secondary)",
-          fontSize: 10
-        }
-      },
-      grid: {
-        line: {
-          style: {
-            stroke: "var(--border-color)",
-            lineWidth: 0.5
-          }
-        }
-      }
-    },
-    tooltip: {
-      showTitle: false
-    },
-    theme: chartTheme
+    onPreviewOpen();
   };
 
   // --- 生命周期 ---
@@ -432,17 +378,17 @@ function DocumentListPage() {
   }, [loadDocumentList]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" style={{ fontFamily: "ArkPixel-12px", fontSize: `${fontSize}px` }}>
       {/* 头部区域 */}
       <div className="space-y-1">
-        <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] px-3 py-1 text-[0.6875rem] text-[var(--primary-color)]">
+        <div className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] px-3 py-1 text-[var(--primary-color)]">
           <span>文档管理 · 文档列表</span>
         </div>
-        <h1 className="text-lg md:text-xl font-semibold tracking-tight">
+        <h1 className="text-lg md:text-xl font-semibold tracking-tight" style={{ fontFamily: "inherit" }}>
           统一管理知识库文档的状态与核心指标
         </h1>
         <p className="text-xs text-[var(--text-color-secondary)] max-w-2xl">
-          支持按分类、状态与关键字筛选文档列表，后续可与实际内容中心接口对接，实现上架、下架与数据分析。
+          支持按分类、状态与关键字筛选文档列表，对接内容中心接口，实现上架、下架与数据分析。
         </p>
       </div>
 
@@ -451,15 +397,15 @@ function DocumentListPage() {
         <div className="p-3 border-b border-[var(--border-color)]">
           <div className="flex items-center justify-between">
             <div className="text-xs font-medium">推荐位与置顶文档</div>
-            <div className="text-[0.6875rem] text-[var(--text-color-secondary)]">
-              顶部预留 3 个推荐位，便于在前台突出重要文档。
+            <div className="text-[var(--text-color-secondary)]">
+              顶部预留 4 个推荐位，对应前台页面的文档推荐区。
             </div>
           </div>
         </div>
         <div className="p-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            {[0, 1, 2].map(index => {
-              const item = pinnedDocuments[index] ?? recommendedDocuments[index] ?? null;
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            {[0, 1, 2, 3].map(index => {
+              const item = [...pinnedDocuments, ...recommendedDocuments.filter(r => !r.pinned)][index] ?? null;
               if (!item) {
                 return (
                   <Card
@@ -467,17 +413,17 @@ function DocumentListPage() {
                     className="border border-dashed border-[var(--border-color)] bg-[var(--bg-elevated)]/60"
                   >
                     <div className="p-3 flex items-center justify-center text-[0.6875rem] text-[var(--text-color-secondary)]">
-                      空推荐位，可在列表中设置文档为置顶或推荐后填充。
+                      空推荐位
                     </div>
                   </Card>
                 );
               }
               return (
                 <Card
-                  key={item.id}
+                  key={`recommend-${item.id}`}
                   className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/90"
                 >
-                  <div className="p-3 flex flex-col gap-2 text-[0.6875rem]">
+                  <div className="p-3 flex flex-col gap-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-0.5">
                         <div className="text-xs font-medium line-clamp-2">
@@ -524,35 +470,56 @@ function DocumentListPage() {
         </div>
       </Card>
 
-      {/* 列表/操作区域 */}
+      {/* 筛选与操作区域 */}
       <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-        <div className="p-3 space-y-3 text-xs border-b border-[var(--border-color)]">
+        <div className="p-3 space-y-3 border-b border-[var(--border-color)]">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
-                className="h-8 text-[0.6875rem]"
-                startContent={<FiPlus className="text-xs" />}
+                className="h-8"
+                startContent={<FiPlus />}
                 onPress={() => navigate("/admin/document/edit/new")}
               >
                 新建文档
               </Button>
               <Button
                 size="sm"
-                variant="light"
-                className="h-8 text-[0.6875rem]"
-                startContent={<FiFilter className="text-xs" />}
+                variant="flat"
+                className="h-8"
+                isDisabled={!hasSelection}
+                onPress={() => handleBatchStatusUpdate("published")}
               >
-                导入外部文档占位
+                批量上架
+              </Button>
+              <Button
+                size="sm"
+                variant="flat"
+                className="h-8"
+                isDisabled={!hasSelection}
+                onPress={() => handleBatchStatusUpdate("offline")}
+              >
+                批量下架
+              </Button>
+              <Button
+                size="sm"
+                color="danger"
+                variant="flat"
+                className="h-8"
+                isDisabled={!hasSelection}
+                startContent={<FiTrash2 />}
+                onPress={handleBatchDelete}
+              >
+                批量删除
               </Button>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-[0.6875rem] text-[var(--text-color-secondary)]">
-              <span>当前操作仅更新前端示例数据，后续与内容服务接口联动。</span>
+            <div className="flex flex-wrap items-center gap-2 text-[var(--text-color-secondary)]">
+              <span>当前操作将同步更新后台数据与前台展示。</span>
             </div>
           </div>
         </div>
 
-        <div className="p-3 space-y-4 text-xs">
+        <div className="p-3 space-y-4">
           {/* 筛选区域第一层：搜索与分类 */}
           <div className="flex flex-wrap items-center gap-3">
             <AdminSearchInput
@@ -620,426 +587,381 @@ function DocumentListPage() {
               <Tab key="rejected" title="已驳回" />
               <Tab key="offline" title="已下架" />
               <Tab key="scheduled" title="定时发布" />
+              <Tab key="published" title="已发布" />
             </AdminTabs>
           </div>
 
-          {/* 操作区域：批量操作与视图切换 */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-[0.6875rem]"
-                isDisabled={!hasSelection}
-                startContent={<FiCheckSquare className="text-xs" />}
-                onPress={() => handleBatchStatusUpdate("published")}
-              >
-                批量上架
-              </Button>
-              <Button
-                size="sm"
-                variant="light"
-                color="warning"
-                className="h-8 text-[0.6875rem]"
-                isDisabled={!hasSelection}
-                startContent={<FiSlash className="text-xs" />}
-                onPress={() => handleBatchStatusUpdate("offline")}
-              >
-                批量下架
-              </Button>
-              <Button
-                size="sm"
-                variant="light"
-                className="h-8 text-[0.6875rem]"
-                isDisabled={!hasSelection}
-                startContent={<FiMove className="text-xs" />}
-                onPress={handleBatchMove}
-              >
-                批量移动
-              </Button>
-              <Button
-                size="sm"
-                variant="light"
-                color="danger"
-                className="h-8 text-[0.6875rem]"
-                isDisabled={!hasSelection}
-                startContent={<FiTrash2 className="text-xs" />}
-                onPress={handleBatchDelete}
-              >
-                批量删除
-              </Button>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button 
-                isIconOnly 
-                size="sm" 
-                variant={viewMode === "list" ? "solid" : "light"} 
-                onPress={() => setViewMode("list")}
-              >
-                <FiList />
-              </Button>
-              <Button 
-                isIconOnly 
-                size="sm" 
-                variant={viewMode === "grid" ? "solid" : "light"} 
-                onPress={() => setViewMode("grid")}
-              >
-                <FiGrid />
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 text-[0.6875rem] text-[var(--text-color-secondary)]">
-            <span>可根据业务需要扩展更多筛选条件，例如标签、难度、可见范围等。</span>
-          </div>
-        </div>
-
-        {/* 内容展示区域 */}
-        <div className="p-3 space-y-3">
-          {viewMode === "list" ? (
-            <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
+          {/* 表格区域 */}
+          <div className="rounded-xl border border-[var(--border-color)] overflow-x-auto bg-[var(--bg-elevated)]/50">
+            <div className="min-w-[800px]">
               <Table
-                aria-label="文档列表"
-                className="min-w-full text-xs"
+                aria-label="文档列表表格"
+                removeWrapper
                 selectionMode="multiple"
                 selectedKeys={new Set(selectedIds)}
                 onSelectionChange={handleTableSelectionChange}
+                classNames={{
+                  th: "bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] font-medium h-10 border-b border-[var(--border-color)]",
+                  td: "py-3 border-b border-[var(--border-color)]/50",
+                }}
               >
-                <TableHeader className="bg-[var(--bg-elevated)]/80">
-                  <TableColumn className="px-3 py-2 text-left font-medium">封面</TableColumn>
-                  <TableColumn className="px-3 py-2 text-left font-medium">标题</TableColumn>
-                  <TableColumn className="px-3 py-2 text-left font-medium">分类</TableColumn>
-                  <TableColumn className="px-3 py-2 text-left font-medium">标签</TableColumn>
-                  <TableColumn className="px-3 py-2 text-left font-medium">状态</TableColumn>
-                  <TableColumn className="px-3 py-2 text-right font-medium">阅读量</TableColumn>
-                  <TableColumn className="px-3 py-2 text-right font-medium">点赞</TableColumn>
-                  <TableColumn className="px-3 py-2 text-right font-medium">评论</TableColumn>
-                  <TableColumn className="px-3 py-2 text-left font-medium">最近更新时间</TableColumn>
-                  <TableColumn className="px-3 py-2 text-left font-medium">操作</TableColumn>
-                </TableHeader>
-                <TableBody
-                  items={loading ? [] : pageItems}
-                  emptyContent="暂未找到文档记录，可先在文档上传页面创建新内容。"
-                  isLoading={loading}
-                  loadingContent={<Loading height={200} text="获取文档列表数据中..." />}
-                >
-                  {item => (
-                    <TableRow key={item.id}>
-                      <TableCell className="px-3 py-2 align-top">
-                        {item.cover ? (
-                          <img
-                            src={item.cover}
-                            alt={item.title}
-                            className="w-10 h-10 object-cover rounded border border-[var(--border-color)]"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 bg-[var(--bg-content)] rounded border border-[var(--border-color)] flex items-center justify-center text-[var(--text-color-secondary)] text-[0.5rem]">
-                            无封面
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 align-top">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium">{item.title}</span>
-                            {item.pinned && (
-                              <Chip size="sm" variant="flat" color="danger" className="text-[0.625rem]" radius="full">
-                                置顶
-                              </Chip>
-                            )}
-                            {item.recommended && (
-                              <Chip size="sm" variant="flat" color="primary" className="text-[0.625rem]" radius="full">
-                                推荐
-                              </Chip>
-                            )}
-                          </div>
-                          <div className="text-[0.6875rem] text-[var(--text-color-secondary)]">
-                            文档 ID：{item.id}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-3 py-2 align-top">
-                        <Chip size="sm" variant="flat" className="text-[0.625rem]" radius="full">
-                          {item.category}
-                        </Chip>
-                      </TableCell>
-                      <TableCell className="px-3 py-2 align-top">
-                        <div className="flex flex-wrap gap-1 max-w-[150px]">
-                          {item.tags?.length ? (
-                            item.tags.map((tag, idx) => (
-                              <Chip
-                                key={idx}
-                                size="sm"
-                                variant="flat"
-                                className="text-[0.625rem] bg-[var(--bg-content)]"
-                                radius="full"
-                              >
-                                {tag}
-                              </Chip>
-                            ))
+              <TableHeader>
+                <TableColumn width={300}>文档信息</TableColumn>
+                <TableColumn>分类与标签</TableColumn>
+                <TableColumn>状态</TableColumn>
+                <TableColumn>核心指标</TableColumn>
+                <TableColumn>置顶/推荐</TableColumn>
+                <TableColumn>更新时间</TableColumn>
+                <TableColumn align="center" width={150}>操作</TableColumn>
+              </TableHeader>
+              <TableBody
+                loadingContent={<Loading />}
+                isLoading={loading}
+                emptyContent={!loading && "暂无文档数据"}
+              >
+                {pageItems.map((item) => (
+                  <TableRow key={item.id} className="group hover:bg-[var(--primary-color)]/5 transition-colors">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-8 rounded bg-[var(--bg-elevated)] border border-[var(--border-color)] overflow-hidden flex-shrink-0">
+                          {item.cover ? (
+                            <img src={item.cover} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-[var(--text-color-secondary)] text-[0.625rem]">-</span>
+                            <div className="w-full h-full flex items-center justify-center text-[0.625rem] text-[var(--text-color-secondary)]">
+                              Doc
+                            </div>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell className="px-3 py-2 align-top">
-                        <Chip
-                          size="sm"
-                          variant="flat"
-                          color={getStatusColor(item.status)}
-                          className="text-[0.625rem]"
-                          radius="full"
-                        >
-                          {getStatusLabel(item.status)}
-                        </Chip>
-                      </TableCell>
-                      <TableCell className="px-3 py-2 align-top text-right">
-                        {item.readCount.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 align-top text-right">
-                        {item.likeCount.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 align-top text-right">
-                        {item.commentCount.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 align-top">
-                        {item.updatedAt}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 align-top">
-                        <div className="flex flex-wrap items-center gap-1.5">
+                        <div className="min-w-0 flex-1">
+                          <div 
+                            className="font-medium text-[var(--text-color)] truncate mb-0.5 text-[14px] cursor-pointer hover:text-[var(--primary-color)] transition-colors"
+                            onClick={() => handleOpenPreview(item.id)}
+                          >
+                            {item.title}
+                          </div>
+                          <div className="text-[var(--text-color-secondary)] flex items-center gap-2">
+                            <span>ID: {item.id}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1.5">
+                        <div className="text-[var(--text-color)]">{item.category}</div>
+                        <div className="flex flex-wrap gap-1">
+                          {item.tags?.map(tag => (
+                            <Chip key={tag} size="sm" variant="flat" radius="sm" className="h-4 px-1 bg-[var(--bg-elevated)]">
+                              {tag}
+                            </Chip>
+                          ))}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="sm"
+                        variant="dot"
+                        color={getStatusColor(item.status)}
+                        className="border-none bg-transparent"
+                      >
+                        {getStatusLabel(item.status)}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1 text-[var(--text-color-secondary)]">
+                        <div className="flex items-center gap-1">
+                          <span>阅读量:</span>
+                          <span className="text-[var(--text-color)] font-medium">{item.readCount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span>点赞量:</span>
+                          <span className="text-[var(--text-color)] font-medium">{item.likeCount.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            size="sm"
+                            isSelected={item.pinned}
+                            onValueChange={() => handleTogglePinned(item.id, !!item.pinned)}
+                            classNames={{ wrapper: "h-4 w-8", thumb: "w-3 h-3 group-data-[selected=true]:ml-4" }}
+                          />
+                          <span className="text-[var(--text-color-secondary)]">置顶</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            size="sm"
+                            isSelected={item.recommended}
+                            onValueChange={() => handleToggleRecommended(item.id, !!item.recommended)}
+                            classNames={{ wrapper: "h-4 w-8", thumb: "w-3 h-3 group-data-[selected=true]:ml-4" }}
+                          />
+                          <span className="text-[var(--text-color-secondary)]">推荐</span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-[var(--text-color-secondary)] leading-tight">
+                        {item.updatedAt.split(" ")[0]}
+                        <br />
+                        <span className="opacity-60">{item.updatedAt.split(" ")[1]}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        <Tooltip content="编辑详情">
                           <Button
+                            isIconOnly
                             size="sm"
                             variant="light"
-                            color="success"
-                            className="h-7 text-[0.625rem]"
-                            startContent={<FiEdit2 className="text-[0.6875rem]" />}
+                            className="h-7 w-7"
                             onPress={() => navigate(`/admin/document/edit/${item.id}`)}
                           >
-                            编辑
+                            <FiEdit2 className="text-sm" />
                           </Button>
+                        </Tooltip>
+                        <Tooltip content="查看评论">
                           <Button
+                            isIconOnly
                             size="sm"
                             variant="light"
-                            color="primary"
-                            className="h-7 text-[0.625rem]"
-                            startContent={<FiEye className="text-[0.6875rem]" />}
-                            onPress={() => handleOpenSidebar(item.id)}
+                            className="h-7 w-7"
+                            onPress={() => loadComments(item.id)}
                           >
-                            详情
+                            <FiMessageSquare className="text-sm" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="light"
-                            className="h-7 text-[0.625rem]"
-                            onPress={() => handleTogglePinned(item.id, !!item.pinned)}
-                          >
-                            {item.pinned ? "取消置顶" : "设为置顶"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="light"
-                            className="h-7 text-[0.625rem]"
-                            onPress={() => handleToggleRecommended(item.id, !!item.recommended)}
-                          >
-                            {item.recommended ? "取消推荐" : "设为推荐"}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          ) : loading ? (
-            <Loading height={400} text="获取文档数据中..." />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {pageItems.map(item => (
-                <Card key={item.id} className="p-4 hover:shadow-md transition-shadow border border-[var(--border-color)]">
-                  <div className="flex justify-between items-start mb-3">
-                    <Chip
-                      size="sm"
-                      color={getStatusColor(item.status)}
-                      variant="flat"
-                      className="text-[0.625rem]"
-                      radius="full"
-                    >
-                      {getStatusLabel(item.status)}
-                    </Chip>
-                    <div className="flex gap-1">
-                      <Button 
-                        isIconOnly 
-                        size="sm" 
-                        variant="light" 
-                        color="success" 
-                        className="h-6 w-6 min-w-6" 
-                        onPress={() => navigate(`/admin/document/edit/${item.id}`)}
-                      >
-                        <FiEdit2 className="text-xs" />
-                      </Button>
-                      <Button 
-                        isIconOnly 
-                        size="sm" 
-                        variant="light" 
-                        color="primary" 
-                        className="h-6 w-6 min-w-6" 
-                        onPress={() => handleOpenSidebar(item.id)}
-                      >
-                        <FiBarChart2 className="text-xs" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="mb-2">
-                    <h3 className="font-bold text-sm mb-1 line-clamp-1" title={item.title}>{item.title}</h3>
-                    <div className="text-[0.6875rem] text-[var(--text-color-secondary)] flex gap-2">
-                      <span>{item.category}</span>
-                      <span>{item.updatedAt.split(" ")[0]}</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center text-[0.6875rem] text-[var(--text-color-secondary)] border-t border-[var(--border-color)] pt-2 mt-2">
-                    <div className="flex gap-3">
-                      <div className="flex items-center gap-1">
-                        <FiEye size={14} />
-                        <span>{item.readCount}</span>
+                        </Tooltip>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <FiBarChart2 size={14} />
-                        <span>{item.likeCount}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      {item.pinned && <span className="text-danger">置顶</span>}
-                      {item.recommended && <span className="text-primary">推荐</span>}
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
 
-          {/* 分页控制 */}
-          <div className="mt-3 flex flex-col gap-2 text-[0.6875rem] md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2">
-              <span>
-                共 {total} 篇文档，当前第 {currentPage} / {totalPages} 页
-              </span>
+        {/* 分页区域 */}
+          <div className="flex items-center justify-between px-2 pt-2">
+            <div className="text-[var(--text-color-secondary)]">
+              共找到 <span className="text-[var(--primary-color)] font-medium mx-1">{total}</span> 个文档
             </div>
-            <div className="flex items-center gap-2">
-              <Pagination
-                size="sm"
-                total={totalPages}
-                page={currentPage}
-                onChange={handlePageChange}
-                showControls
-              />
-            </div>
+            <Pagination
+              total={totalPages}
+              page={currentPage}
+              onChange={handlePageChange}
+              size="sm"
+              radius="full"
+              classNames={{
+                wrapper: "gap-1",
+                item: "bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:bg-[var(--primary-color)]/10 min-w-8 h-8",
+                cursor: "bg-[var(--primary-color)] text-white font-medium",
+              }}
+              showControls
+            />
           </div>
         </div>
       </Card>
 
-      {/* 数据详情侧边栏 */}
-      {sidebarVisible && activeDocument && (
-        <div className="fixed inset-0 z-40 flex items-end md:items-stretch justify-end bg-black/40">
-          <div className="w-full md:max-w-md h-[70vh] md:h-full bg-[var(--bg-elevated)] border-l border-[var(--border-color)] shadow-xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="px-4 py-3 border-b border-[var(--border-color)] flex items-center justify-between">
-              <div className="space-y-0.5">
-                <div className="text-sm font-medium flex items-center gap-2">
-                  <FiBarChart2 className="text-[0.9375rem]" />
-                  <span>文档数据详情</span>
-                </div>
-                <div className="text-[0.6875rem] text-[var(--text-color-secondary)]">
-                  用于展示阅读趋势与核心转化指标，后续可与埋点系统数据对接。
-                </div>
-              </div>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                className="h-8 w-8 text-[var(--text-color-secondary)]"
-                onPress={handleCloseSidebar}
-              >
-                <FiX className="text-sm" />
-              </Button>
-            </div>
+      {/* 评论管理弹窗 */}
+      <Modal
+        isOpen={isCommentOpen}
+        onOpenChange={onCommentClose}
+        size="2xl"
+        scrollBehavior="inside"
+      >
+        <ModalContent>
+          {() => {
+            const doc = documents.find(d => d.id === activeDocumentId);
+            return (
+              <>
+                <ModalHeader className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold">文档评论管理</span>
+                  {doc && (
+                    <span className="text-[0.625rem] text-[var(--text-color-secondary)] font-normal">
+                      正在查看文档「{doc.title}」的评论
+                    </span>
+                  )}
+                </ModalHeader>
+                <ModalBody>
+                  {isCommentsLoading ? (
+                    <div className="h-40 flex items-center justify-center">
+                      <Loading />
+                    </div>
+                  ) : comments.length > 0 ? (
+                    <div className="space-y-4 py-2">
+                      {comments.map(comment => (
+                        <div key={comment.id} className="group flex gap-3 p-3 rounded-lg bg-[var(--bg-elevated)]/50 border border-[var(--border-color)]">
+                          <div className="w-8 h-8 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-color)] overflow-hidden flex-shrink-0">
+                            {comment.avatar ? (
+                              <img src={comment.avatar} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[0.625rem] text-[var(--text-color-secondary)]">
+                                {comment.username.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium">{comment.username}</span>
+                              <span className="text-[0.625rem] text-[var(--text-color-secondary)]">{comment.createdAt}</span>
+                            </div>
+                            <p className="text-[0.6875rem] text-[var(--text-color-secondary)] leading-relaxed">
+                              {comment.content}
+                            </p>
+                          </div>
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            color="danger"
+                            className="h-7 w-7"
+                            onPress={() => handleDeleteComment(comment.id)}
+                          >
+                            <FiTrash2 className="text-xs" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-40 flex flex-col items-center justify-center gap-2 text-[var(--text-color-secondary)]">
+                      <FiMessageSquare className="text-2xl opacity-20" />
+                      <span className="text-xs">该文档目前没有评论</span>
+                    </div>
+                  )}
+                </ModalBody>
+                <ModalFooter>
+                  <Button variant="light" size="sm" onPress={onCommentClose}>关闭</Button>
+                </ModalFooter>
+              </>
+            );
+          }}
+        </ModalContent>
+      </Modal>
 
-            <div className="flex-1 overflow-auto p-4 space-y-4 text-xs">
-              <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-                <div className="p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="space-y-0.5">
-                      <div className="text-sm font-medium">{activeDocument.title}</div>
-                      <div className="text-[0.6875rem] text-[var(--text-color-secondary)]">
-                        文档 ID：{activeDocument.id}
-                      </div>
-                    </div>
-                    <Chip
-                      size="sm"
-                      variant="flat"
-                      color={getStatusColor(activeDocument.status)}
-                      className="text-[0.625rem]"
-                      radius="full"
-                    >
-                      {getStatusLabel(activeDocument.status)}
-                    </Chip>
+      {/* 预览弹窗 */}
+      <Modal
+        isOpen={isPreviewOpen}
+        onOpenChange={onPreviewClose}
+        size="4xl"
+        scrollBehavior="inside"
+      >
+        <ModalContent>
+          {() => {
+            const doc = documents.find(d => d.id === activeDocumentId);
+            return (
+              <>
+                <ModalHeader className="border-b border-[var(--border-color)]">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-semibold">{doc?.title || "文档预览"}</span>
+                    <span className="text-[0.625rem] text-[var(--text-color-secondary)] font-normal">
+                      ID: {doc?.id} · 分类: {doc?.category}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-[0.6875rem]">
-                    <div className="space-y-0.5">
-                      <div className="text-[var(--text-color-secondary)]">阅读量</div>
-                      <div className="text-base font-semibold">
-                        {activeDocument.readCount.toLocaleString()}
+                </ModalHeader>
+                <ModalBody className="p-0">
+                  <div className="flex h-[600px]">
+                    {/* 左侧详情 */}
+                    <div className="w-80 border-r border-[var(--border-color)] bg-[var(--bg-elevated)]/30 p-4 space-y-6 overflow-y-auto">
+                      <div className="space-y-4">
+                        <div className="aspect-video rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-color)] overflow-hidden">
+                          {doc?.cover ? (
+                            <img src={doc.cover} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[var(--text-color-secondary)]">
+                              暂无封面
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-medium">核心指标</h3>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-color)]">
+                              <div className="text-[0.625rem] text-[var(--text-color-secondary)]">阅读量</div>
+                              <div className="text-sm font-semibold">{doc?.readCount.toLocaleString()}</div>
+                            </div>
+                            <div className="p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-color)]">
+                              <div className="text-[0.625rem] text-[var(--text-color-secondary)]">点赞量</div>
+                              <div className="text-sm font-semibold">{doc?.likeCount.toLocaleString()}</div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-0.5">
-                      <div className="text-[var(--text-color-secondary)]">收藏数</div>
-                      <div className="text-base font-semibold">1,204</div>
-                    </div>
-                    <div className="space-y-0.5">
-                      <div className="text-[var(--text-color-secondary)]">点赞</div>
-                      <div className="text-base font-semibold">
-                        {activeDocument.likeCount.toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="space-y-0.5">
-                      <div className="text-[var(--text-color-secondary)]">评论</div>
-                      <div className="text-base font-semibold">
-                        {activeDocument.commentCount.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
 
-              <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-                <div className="p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium flex items-center gap-2">
-                      <FiBarChart2 className="text-sm" />
-                      <span>最近 7 日阅读趋势</span>
-                    </div>
-                    <Chip size="sm" variant="flat" className="text-[0.625rem]" radius="full">
-                      示例数据
-                    </Chip>
-                  </div>
-                  <div className="h-48">
-                    <Column {...chartConfig} />
-                  </div>
-                </div>
-              </Card>
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-medium">基本信息</h3>
+                        <div className="space-y-2 text-[0.6875rem]">
+                          <div className="flex justify-between">
+                            <span className="text-[var(--text-color-secondary)]">当前状态</span>
+                            <Chip size="sm" variant="flat" color={getStatusColor(doc?.status || "offline")} className="h-5">
+                              {getStatusLabel(doc?.status || "offline")}
+                            </Chip>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-[var(--text-color-secondary)]">文档分类</span>
+                            <span>{doc?.category}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-[var(--text-color-secondary)]">最后更新</span>
+                            <span>{doc?.updatedAt}</span>
+                          </div>
+                        </div>
+                      </div>
 
-              <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
-                <div className="p-3 space-y-2">
-                  <div className="text-sm font-medium">运营建议</div>
-                  <ul className="list-disc list-inside space-y-1 text-[0.6875rem] text-[var(--text-color-secondary)]">
-                    <li>结合文档详情页与评论区分析用户反馈，优化章节结构与示例内容。</li>
-                    <li>可以在阅读高峰前后搭配推送相关视频或工具，提升整体转化。</li>
-                    <li>与审核模块联动，对被频繁投诉的文档加强规则校验与复核频次。</li>
-                  </ul>
-                </div>
-              </Card>
-            </div>
-          </div>
-        </div>
-      )}
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-medium">标签集合</h3>
+                        <div className="flex flex-wrap gap-1">
+                          {doc?.tags?.map(tag => (
+                            <Chip key={tag} size="sm" variant="flat" className="h-5">
+                              {tag}
+                            </Chip>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 右侧内容预览 */}
+                    <div className="flex-1 flex flex-col bg-[var(--bg-elevated)]/10">
+                      <div className="p-4 border-b border-[var(--border-color)] bg-[var(--bg-elevated)]/50 flex items-center justify-between">
+                        <div className="text-xs font-medium flex items-center gap-2">
+                          <FiEye className="text-[var(--primary-color)]" />
+                          内容预览
+                        </div>
+                      </div>
+                      <div className="flex-1 p-6 overflow-y-auto">
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <div className="flex flex-col items-center justify-center h-full py-20 text-[var(--text-color-secondary)] gap-4">
+                            <div className="w-16 h-16 rounded-full bg-[var(--bg-elevated)] border border-dashed border-[var(--border-color)] flex items-center justify-center">
+                              <FiEdit2 className="text-xl opacity-20" />
+                            </div>
+                            <div className="text-center space-y-1">
+                              <p className="text-sm font-medium">文档内容渲染区域</p>
+                              <p className="text-xs opacity-60">预览模式下仅展示核心元数据，完整内容请点击「去编辑」查看</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </ModalBody>
+                <ModalFooter className="border-t border-[var(--border-color)]">
+                  <Button variant="light" size="sm" onPress={onPreviewClose}>关闭</Button>
+                  <Button 
+                    color="primary" 
+                    size="sm" 
+                    onPress={() => {
+                      onPreviewClose();
+                      navigate(`/admin/document/edit/${doc?.id}`);
+                    }}
+                  >
+                    去编辑
+                  </Button>
+                </ModalFooter>
+              </>
+            );
+          }}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

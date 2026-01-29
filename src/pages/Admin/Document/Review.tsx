@@ -457,7 +457,7 @@ function DocumentReviewPage() {
           </Card>
 
           {/* 右侧内容 */}
-          <div className="space-y-3">
+          <div className="space-y-3 min-w-0">
             {activeModule === "document" && (
               <>
               <Card className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95">
@@ -594,10 +594,8 @@ function DocumentReviewPage() {
                     </div>
                   </div>
 
-                  {loading ? (
-                    <Loading />
-                  ) : (
-                    <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
+                  <div className="overflow-x-auto border border-[var(--border-color)] rounded-lg bg-[var(--bg-elevated)]/50 w-full">
+                    <div className="min-w-[900px] w-full">
                       <Table
                         aria-label="文档审核队列表格"
                         className="min-w-full text-xs"
@@ -605,124 +603,132 @@ function DocumentReviewPage() {
                         selectedKeys={selectedIds.length === queue.length && queue.length > 0 ? "all" : new Set(selectedIds)}
                         onSelectionChange={handleTableSelectionChange}
                         removeWrapper
+                        classNames={{
+                          th: "whitespace-nowrap",
+                          td: "whitespace-nowrap"
+                        }}
                       >
-                        <TableHeader className="bg-[var(--bg-elevated)]/80">
-                          <TableColumn className="px-3 py-2 text-left font-medium">标题</TableColumn>
-                          <TableColumn className="px-3 py-2 text-left font-medium">上传人</TableColumn>
-                          <TableColumn className="px-3 py-2 text-left font-medium">分类</TableColumn>
-                          <TableColumn className="px-3 py-2 text-left font-medium">风险等级</TableColumn>
-                          <TableColumn className="px-3 py-2 text-left font-medium">AI 预审核</TableColumn>
-                          <TableColumn className="px-3 py-2 text-left font-medium">审核状态</TableColumn>
-                          <TableColumn className="px-3 py-2 text-left font-medium">提交时间</TableColumn>
-                          <TableColumn className="px-3 py-2 text-center font-medium">操作</TableColumn>
-                        </TableHeader>
-                        <TableBody emptyContent="暂无审核任务">
-                          {queue.map(item => (
-                            <TableRow key={item.id}>
-                              <TableCell className="px-3 py-2 align-top">
-                                <div className="flex flex-col gap-1">
-                                  <span className="font-medium text-[var(--text-color)]">
-                                    {item.title}
-                                  </span>
-                                  <span className="text-[10px] text-[var(--text-color-secondary)] font-mono">
-                                    ID: {item.id}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <span className="text-[var(--text-color-secondary)]">{item.uploader}</span>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <Chip size="sm" variant="flat" className="text-[0.625rem]" radius="full">
-                                  {item.category}
-                                </Chip>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <Chip
-                                  size="sm"
-                                  variant="flat"
-                                  color={getRiskColor(item.riskLevel)}
-                                  className="text-[0.625rem]"
-                                  radius="full"
-                                >
-                                  {getRiskLabel(item.riskLevel)}风险
-                                </Chip>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <Chip
-                                  size="sm"
-                                  variant="flat"
-                                  className="text-[0.625rem]"
-                                  radius="full"
-                                >
-                                  {item.isAiChecked ? "AI 已审" : "待 AI"}
-                                </Chip>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <Chip
-                                  size="sm"
-                                  variant="flat"
-                                  className="text-[0.625rem]"
-                                  radius="full"
-                                  color={
-                                    item.status === "pending" 
-                                      ? "warning" 
-                                      : item.status === "approved"
-                                      ? "success"
-                                      : "danger"
-                                  }
-                                >
-                                  {getStatusLabel(item.status)}
-                                </Chip>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <span className="text-[var(--text-color-secondary)] text-[10px]">
-                                  {item.createdAt}
+                      <TableHeader className="bg-[var(--bg-elevated)]/80">
+                        <TableColumn className="px-3 py-2 text-left font-medium">标题</TableColumn>
+                        <TableColumn className="px-3 py-2 text-left font-medium">上传人</TableColumn>
+                        <TableColumn className="px-3 py-2 text-left font-medium">分类</TableColumn>
+                        <TableColumn className="px-3 py-2 text-left font-medium">风险等级</TableColumn>
+                        <TableColumn className="px-3 py-2 text-left font-medium">AI 预审核</TableColumn>
+                        <TableColumn className="px-3 py-2 text-left font-medium">审核状态</TableColumn>
+                        <TableColumn className="px-3 py-2 text-left font-medium">提交时间</TableColumn>
+                        <TableColumn className="px-3 py-2 text-center font-medium">操作</TableColumn>
+                      </TableHeader>
+                      <TableBody 
+                        emptyContent="暂无审核任务"
+                        isLoading={loading}
+                        loadingContent={<Loading height={200} text="加载审核队列中..." />}
+                      >
+                        {queue.map(item => (
+                          <TableRow key={item.id}>
+                            <TableCell className="px-3 py-2 align-top">
+                              <div className="flex flex-col gap-1">
+                                <span className="font-medium text-[var(--text-color)]">
+                                  {item.title}
                                 </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <div className="flex items-center justify-center gap-1">
-                                  <Tooltip content="审核">
-                                    <Button
-                                      isIconOnly
-                                      size="sm"
-                                      variant="light"
-                                      className="h-7 w-7 text-[var(--primary-color)] hover:bg-[var(--primary-color)]/10"
-                                      onClick={() => handleAuditClick(item)}
-                                    >
-                                      <FiSearch className="text-sm" />
-                                    </Button>
-                                  </Tooltip>
-                                  <Tooltip content="通过">
-                                    <Button
-                                      isIconOnly
-                                      size="sm"
-                                      variant="light"
-                                      className="h-7 w-7 text-success hover:bg-success/10"
-                                      onClick={() => handleUpdateStatus(item.id, "approved")}
-                                    >
-                                      <FiCheck className="text-sm" />
-                                    </Button>
-                                  </Tooltip>
-                                  <Tooltip content="驳回">
-                                    <Button
-                                      isIconOnly
-                                      size="sm"
-                                      variant="light"
-                                      className="h-7 w-7 text-danger hover:bg-danger/10"
-                                      onClick={() => handleUpdateStatus(item.id, "rejected")}
-                                    >
-                                      <FiX className="text-sm" />
-                                    </Button>
-                                  </Tooltip>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
+                                <span className="text-[10px] text-[var(--text-color-secondary)] font-mono">
+                                  ID: {item.id}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <span className="text-[var(--text-color-secondary)]">{item.uploader}</span>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <Chip size="sm" variant="flat" className="text-[0.625rem]" radius="full">
+                                {item.category}
+                              </Chip>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <Chip
+                                size="sm"
+                                variant="flat"
+                                color={getRiskColor(item.riskLevel)}
+                                className="text-[0.625rem]"
+                                radius="full"
+                              >
+                                {getRiskLabel(item.riskLevel)}风险
+                              </Chip>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <Chip
+                                size="sm"
+                                variant="flat"
+                                className="text-[0.625rem]"
+                                radius="full"
+                              >
+                                {item.isAiChecked ? "AI 已审" : "待 AI"}
+                              </Chip>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <Chip
+                                size="sm"
+                                variant="flat"
+                                className="text-[0.625rem]"
+                                radius="full"
+                                color={
+                                  item.status === "pending" 
+                                    ? "warning" 
+                                    : item.status === "approved"
+                                    ? "success"
+                                    : "danger"
+                                }
+                              >
+                                {getStatusLabel(item.status)}
+                              </Chip>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <span className="text-[var(--text-color-secondary)] text-[10px]">
+                                {item.createdAt}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <div className="flex items-center justify-center gap-1">
+                                <Tooltip content="审核">
+                                  <Button
+                                    isIconOnly
+                                    size="sm"
+                                    variant="light"
+                                    className="h-7 w-7 text-[var(--primary-color)] hover:bg-[var(--primary-color)]/10"
+                                    onClick={() => handleAuditClick(item)}
+                                  >
+                                    <FiSearch className="text-sm" />
+                                  </Button>
+                                </Tooltip>
+                                <Tooltip content="通过">
+                                  <Button
+                                    isIconOnly
+                                    size="sm"
+                                    variant="light"
+                                    className="h-7 w-7 text-success hover:bg-success/10"
+                                    onClick={() => handleUpdateStatus(item.id, "approved")}
+                                  >
+                                    <FiCheck className="text-sm" />
+                                  </Button>
+                                </Tooltip>
+                                <Tooltip content="驳回">
+                                  <Button
+                                    isIconOnly
+                                    size="sm"
+                                    variant="light"
+                                    className="h-7 w-7 text-danger hover:bg-danger/10"
+                                    onClick={() => handleUpdateStatus(item.id, "rejected")}
+                                  >
+                                    <FiX className="text-sm" />
+                                  </Button>
+                                </Tooltip>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
 
                   <div className="flex items-center justify-between px-2 py-4 border-t border-zinc-800/50">
                     <div className="text-xs text-zinc-400">
@@ -929,72 +935,78 @@ function DocumentReviewPage() {
                   </Chip>
                 </div>
                 <div className="p-3">
-                  {logsLoading ? (
-                    <Loading />
-                  ) : (
-                    <div className="overflow-auto border border-[var(--border-color)] rounded-lg">
-                      <Table
-                        aria-label="审核日志表格"
-                        className="min-w-full text-xs"
-                        removeWrapper
+                  <div className="overflow-x-auto border border-[var(--border-color)] rounded-lg bg-[var(--bg-elevated)]/50 w-full">
+                     <div className="min-w-[800px] w-full">
+                       <Table
+                         aria-label="审核日志表格"
+                         className="min-w-full text-xs"
+                         removeWrapper
+                         classNames={{
+                           th: "whitespace-nowrap",
+                           td: "whitespace-nowrap"
+                         }}
+                       >
+                      <TableHeader className="bg-[var(--bg-elevated)]/80">
+                        <TableColumn className="px-3 py-2 text-left font-medium">日志 ID</TableColumn>
+                        <TableColumn className="px-3 py-2 text-left font-medium">文档 ID</TableColumn>
+                        <TableColumn className="px-3 py-2 text-left font-medium">审核人</TableColumn>
+                        <TableColumn className="px-3 py-2 text-left font-medium">审核结果</TableColumn>
+                        <TableColumn className="px-3 py-2 text-left font-medium">备注</TableColumn>
+                        <TableColumn className="px-3 py-2 text-left font-medium">审核时间</TableColumn>
+                      </TableHeader>
+                      <TableBody 
+                        emptyContent={hasSelection ? "选中项暂无日志" : "请在上方表格选择文档以查看日志"}
+                        isLoading={logsLoading}
+                        loadingContent={<Loading height={100} text="获取审核日志中..." />}
                       >
-                        <TableHeader className="bg-[var(--bg-elevated)]/80">
-                          <TableColumn className="px-3 py-2 text-left font-medium">日志 ID</TableColumn>
-                          <TableColumn className="px-3 py-2 text-left font-medium">文档 ID</TableColumn>
-                          <TableColumn className="px-3 py-2 text-left font-medium">审核人</TableColumn>
-                          <TableColumn className="px-3 py-2 text-left font-medium">审核结果</TableColumn>
-                          <TableColumn className="px-3 py-2 text-left font-medium">备注</TableColumn>
-                          <TableColumn className="px-3 py-2 text-left font-medium">审核时间</TableColumn>
-                        </TableHeader>
-                        <TableBody emptyContent={hasSelection ? "选中项暂无日志" : "请在上方表格选择文档以查看日志"}>
-                          {logs.map(log => (
-                            <TableRow key={log.id}>
-                              <TableCell className="px-3 py-2 align-top">
-                                <span className="font-mono text-[var(--text-color-secondary)] text-[10px]">
-                                  {log.id}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <span className="font-mono text-[var(--text-color-secondary)] text-[10px]">
-                                  {log.docId}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <span className="text-[var(--text-color)]">{log.reviewer}</span>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <Chip
-                                  size="sm"
-                                  variant="flat"
-                                  className="text-[0.625rem]"
-                                  radius="full"
-                                  color={
-                                    log.result === "approved"
-                                      ? "success"
-                                      : log.result === "rejected"
-                                      ? "danger"
-                                      : "default"
-                                  }
-                                >
-                                  {log.result === "approved" ? "已通过" : log.result === "rejected" ? "已驳回" : "待审核"}
-                                </Chip>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <span className="text-[var(--text-color-secondary)] line-clamp-1 max-w-[200px]" title={log.remark}>
-                                  {log.remark || "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-3 py-2 align-top">
-                                <span className="text-[var(--text-color-secondary)] text-[10px]">
-                                  {log.reviewedAt}
-                                </span>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
+                        {logs.map(log => (
+                          <TableRow key={log.id}>
+                            <TableCell className="px-3 py-2 align-top">
+                              <span className="font-mono text-[var(--text-color-secondary)] text-[10px]">
+                                {log.id}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <span className="font-mono text-[var(--text-color-secondary)] text-[10px]">
+                                {log.docId}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <span className="text-[var(--text-color)]">{log.reviewer}</span>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <Chip
+                                size="sm"
+                                variant="flat"
+                                className="text-[0.625rem]"
+                                radius="full"
+                                color={
+                                  log.result === "approved"
+                                    ? "success"
+                                    : log.result === "rejected"
+                                    ? "danger"
+                                    : "default"
+                                }
+                              >
+                                {log.result === "approved" ? "已通过" : log.result === "rejected" ? "已驳回" : "待审核"}
+                              </Chip>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <span className="text-[var(--text-color-secondary)] line-clamp-1 max-w-[200px]" title={log.remark}>
+                                {log.remark || "-"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-3 py-2 align-top">
+                              <span className="text-[var(--text-color-secondary)] text-[10px]">
+                                {log.reviewedAt}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
                 </div>
               </Card>
               </>

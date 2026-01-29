@@ -1,17 +1,40 @@
 // ===== 1. 依赖导入区域 =====
 import React, { useMemo, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Button } from "@heroui/react";
 import { useNavigate } from "react-router-dom";
 import { routes } from "../../../router/routes";
+import { ShinyButton } from "../../../components/MagicUI/ShinyButton";
 import { ArrowRight, Box, Layers, Zap, type LucideProps } from "lucide-react";
 import ParticleBanner from "../../../components/Three/ParticleBanner";
-import { fetchHomeHero, mockHomeHero, type HomeHero } from "../../../api/front/home";
 import ColourfulText from "../../../components/Aceternity/ColourfulText";
 
 // ===== 2. TODO待处理导入区域 =====
 
 // ===== 3. 状态控制逻辑区域 =====
+/**
+ * 首页英雄区数据类型
+ */
+interface HomeHero {
+  titleLine1: string;
+  titleLine2: string;
+  buttonText: string;
+  features: Array<{ label: string; iconName: string }>;
+}
+
+/**
+ * 首页英雄区静态数据
+ */
+const HERO_DATA: HomeHero = {
+  titleLine1: ">_让 知 识",
+  titleLine2: "不再 散 落 无 章",
+  buttonText: "开启我的知识整理之旅",
+  features: [
+    { label: "结构化", iconName: "Box" },
+    { label: "多维度", iconName: "Layers" },
+    { label: "高效能", iconName: "Zap" }
+  ]
+};
+
 /**
  * 图标映射配置
  */
@@ -36,37 +59,13 @@ const ICON_MAP: Record<string, React.ForwardRefExoticComponent<LucideProps & Rea
  */
 export default function HomeBanner() {
   // --- 状态控制 ---
-  const [hero, setHero] = useState<HomeHero>(() => mockHomeHero);
+  const hero = HERO_DATA;
 
   // --- 导航钩子 ---
   const navigate = useNavigate();
 
-  // --- 数据获取 ---
-  /**
-   * 加载英雄区数据
-   */
-  const loadHero = React.useCallback(async () => {
-    const data = await fetchHomeHero();
-    if (data) {
-      setHero(data);
-    }
-  }, []);
-
-  // 初始化加载
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadHero();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadHero]);
-
   // --- 动画变体配置 ---
   const bannerAnimations = useMemo(() => ({
-    badge: {
-      initial: { opacity: 0, y: 20 },
-      animate: { opacity: 1, y: 0 },
-      transition: { delay: 0.1, duration: 0.5 }
-    },
     title1: {
       initial: { opacity: 0, x: -20 },
       animate: { opacity: 1, x: 0 },
@@ -77,20 +76,15 @@ export default function HomeBanner() {
       animate: { opacity: 1, x: 0 },
       transition: { delay: 0.3, duration: 0.5 }
     },
-    description: {
-      initial: { opacity: 0, y: 10 },
-      animate: { opacity: 1, y: 0 },
-      transition: { delay: 0.4, duration: 0.5 }
-    },
     actions: {
-      initial: { opacity: 0, y: 10 },
+      initial: { opacity: 0, y: 20 },
       animate: { opacity: 1, y: 0 },
-      transition: { delay: 0.5, duration: 0.5 }
+      transition: { delay: 0.5, duration: 0.6 }
     },
     features: {
-      initial: { opacity: 0 },
-      animate: { opacity: 1 },
-      transition: { delay: 0.7, duration: 0.8 }
+      initial: { opacity: 0, y: 20 },
+      animate: { opacity: 1, y: 0 },
+      transition: { delay: 0.4, duration: 0.6 }
     }
   }), []);
 
@@ -121,42 +115,46 @@ export default function HomeBanner() {
             </h2>
           </div>
 
-          {/* 操作按钮区域 */}
-          <motion.div 
-            {...bannerAnimations.actions}
-            className="flex flex-col sm:flex-row items-start sm:items-center gap-6"
-          >
-            <Button
-              size="lg"
-              color="primary"
-              variant="shadow"
-              className="font-semibold px-8 h-12 rounded-full"
-              endContent={<ArrowRight className="w-4 h-4" />}
-              onPress={() => navigate(routes.allSearch)}
-            >
-              {hero.buttonText}
-            </Button>
-            
-            <div className="flex items-center gap-4 text-sm text-default-400">
-              <div className="h-px w-8 bg-default-300 hidden sm:block"></div>
-              <span>或从下方推荐内容开始随便逛逛</span>
-            </div>
-          </motion.div>
-
-          {/* 特性亮点展示 */}
+          {/* 特性亮点展示 - 移除背景和边框，悬停仅变色 */}
           <motion.div 
             {...bannerAnimations.features}
-            className="pt-8 grid grid-cols-3 gap-6 max-w-md border-t border-default-100"
+            className="flex items-center gap-6 max-w-fit"
           >
             {hero.features.map((item, idx) => {
               const IconComponent = ICON_MAP[item.iconName] || Box;
               return (
-                <div key={idx} className="flex items-center gap-2 text-default-600">
-                  <IconComponent className="w-4 h-4 text-[var(--primary-color)]/80" />
-                  <span className="text-xs font-medium">{item.label}</span>
-                </div>
+                <React.Fragment key={idx}>
+                  <div className="flex items-center gap-2 text-[#475569] hover:text-[#537bf9] transition-colors cursor-default group">
+                    <IconComponent className="w-4 h-4 text-inherit opacity-70 group-hover:opacity-100 transition-opacity" />
+                    <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
+                  </div>
+                  {idx < hero.features.length - 1 && (
+                    <div className="h-4 w-px bg-[#cbd5e1]" />
+                  )}
+                </React.Fragment>
               );
             })}
+          </motion.div>
+
+          {/* 操作按钮区域 - 移至下方 */}
+          <motion.div 
+            {...bannerAnimations.actions}
+            className="flex flex-col gap-6"
+          >
+            <ShinyButton
+              className="h-10 px-8 rounded-full text-base font-semibold shadow-lg hover:shadow-xl w-fit"
+              onClick={() => navigate(routes.allSearch)}
+            >
+              <div className="flex items-center gap-2">
+                <span>{hero.buttonText}</span>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </ShinyButton>
+            
+            <div className="flex items-center gap-4 text-sm text-[#475569] hover:text-[#537bf9] transition-colors cursor-default pl-4 group">
+              <div className="h-px w-8 bg-[#cbd5e1] group-hover:bg-[#537bf9] transition-colors hidden sm:block opacity-50"></div>
+              <span>或从下方推荐内容开始随便逛逛</span>
+            </div>
           </motion.div>
         </div>
 

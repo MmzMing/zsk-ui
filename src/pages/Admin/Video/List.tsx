@@ -1,5 +1,6 @@
 // ===== 1. 依赖导入区域 =====
 import React, { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -35,7 +36,8 @@ import {
   FiRotateCcw,
   FiPlayCircle,
   FiPlus,
-  FiTrash2
+  FiTrash2,
+  FiMessageSquare
 } from "react-icons/fi";
 import ReactPlayer from "react-player";
 import { useAppStore } from "../../../store";
@@ -43,6 +45,7 @@ import { useAppStore } from "../../../store";
 // 修复 ReactPlayer 类型问题
 const Player = ReactPlayer as unknown as React.ComponentType<Record<string, unknown>>;
 
+import { routes } from "../../../router/routes";
 import {
   fetchVideoList,
   updateVideo,
@@ -50,8 +53,11 @@ import {
   toggleVideoPinned,
   toggleVideoRecommended,
   batchUpdateVideoStatus,
+  fetchVideoComments,
+  deleteVideoComment,
   type VideoItem,
-  type VideoStatus
+  type VideoStatus,
+  type CommentItem
 } from "@/api/admin/video";
 import { Loading } from "@/components/Loading";
 
@@ -183,11 +189,16 @@ function VideoListPage() {
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const [editingVideo, setEditingVideo] = useState<VideoFormState | null>(null);
+  const [commentVideoId, setCommentVideoId] = useState<string | null>(null);
+  const [comments, setComments] = useState<CommentItem[]>([]);
+  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
   
   const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
   const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
+  const { isOpen: isCommentOpen, onOpen: onCommentOpen, onClose: onCommentClose } = useDisclosure();
   const { themeMode } = useAppStore();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const navigate = useNavigate();
 
   // --- 逻辑计算 ---
   const pageSize = 8;
@@ -422,12 +433,51 @@ function VideoListPage() {
   };
 
   /**
-   * 预览视频
-   * @param url 视频地址
+   * 处理截图与预览
    */
   const handlePreviewVideo = (url: string) => {
     setPreviewVideoUrl(url);
     onPreviewOpen();
+  };
+
+  /**
+   * 加载视频评论
+   * @param videoId 视频ID
+   */
+  const loadComments = async (videoId: string) => {
+    setCommentVideoId(videoId);
+    onCommentOpen();
+    setIsCommentsLoading(true);
+    try {
+      const res = await fetchVideoComments(videoId);
+      if (res && res.code === 200) {
+        setComments(res.data);
+      }
+    } finally {
+      setIsCommentsLoading(false);
+    }
+  };
+
+  /**
+   * 删除评论
+   * @param commentId 评论ID
+   */
+  const handleDeleteComment = async (commentId: string) => {
+    if (!window.confirm("确定要删除这条评论吗？")) return;
+    const res = await deleteVideoComment(commentId);
+    if (res && res.code === 200) {
+      addToast({
+        title: "删除成功",
+        description: "该评论已被移除",
+        color: "success"
+      });
+      if (commentVideoId) {
+        const resList = await fetchVideoComments(commentVideoId);
+        if (resList && resList.code === 200) {
+          setComments(resList.data);
+        }
+      }
+    }
   };
 
   /**
@@ -612,6 +662,7 @@ function VideoListPage() {
                 size="sm"
                 className="h-8 text-[0.6875rem]"
                 startContent={<FiPlus className="text-xs" />}
+                onPress={() => navigate(`${routes.admin}/video/upload`)}
               >
                 新建视频
               </Button>
@@ -840,6 +891,17 @@ function VideoListPage() {
                             onPress={() => setActiveVideoId(item.id)}
                           >
                             <FiPlayCircle className="text-sm" />
+                          </Button>
+                        </Tooltip>
+                        <Tooltip content="查看评论">
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            className="h-7 w-7"
+                            onPress={() => loadComments(item.id)}
+                          >
+                            <FiMessageSquare className="text-sm" />
                           </Button>
                         </Tooltip>
                         <Tooltip content="编辑详情">
@@ -1122,6 +1184,82 @@ function VideoListPage() {
               </div>
             </ModalBody>
           )}
+        </ModalContent>
+      </Modal>
+
+      {/* 评论管理弹窗 */}
+      <Modal
+        isOpen={isCommentOpen}
+        onOpenChange={onCommentClose}
+        size="2xl"
+        scrollBehavior="inside"
+      >
+        <ModalContent>
+          {() => {
+            const video = videos.find(v => v.id === commentVideoId);
+            return (
+              <>
+                <ModalHeader className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold">视频评论管理</span>
+                  {video && (
+                    <span className="text-[0.625rem] text-[var(--text-color-secondary)] font-normal">
+                      正在查看视频「{video.title}」的评论
+                    </span>
+                  )}
+                </ModalHeader>
+                <ModalBody>
+                  {isCommentsLoading ? (
+                    <div className="h-40 flex items-center justify-center">
+                      <Loading />
+                    </div>
+                  ) : comments.length > 0 ? (
+                    <div className="space-y-4 py-2">
+                      {comments.map(comment => (
+                         <div key={comment.id} className="group flex gap-3 p-3 rounded-lg bg-[var(--bg-elevated)]/50 border border-[var(--border-color)]">
+                            <div className="w-8 h-8 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-color)] overflow-hidden flex-shrink-0">
+                            {comment.avatar ? (
+                              <img src={comment.avatar} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[0.625rem] text-[var(--text-color-secondary)]">
+                                {comment.username.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium">{comment.username}</span>
+                              <span className="text-[0.625rem] text-[var(--text-color-secondary)]">{comment.createdAt}</span>
+                            </div>
+                            <p className="text-[0.6875rem] text-[var(--text-color-secondary)] leading-relaxed">
+                              {comment.content}
+                            </p>
+                          </div>
+                          <Button
+                            isIconOnly
+                            size="sm"
+                            variant="light"
+                            color="danger"
+                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onPress={() => handleDeleteComment(comment.id)}
+                          >
+                            <FiTrash2 className="text-xs" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-40 flex flex-col items-center justify-center gap-2 text-[var(--text-color-secondary)]">
+                      <FiMessageSquare className="text-2xl opacity-20" />
+                      <span className="text-xs">该视频目前没有评论</span>
+                    </div>
+                  )}
+                </ModalBody>
+                <ModalFooter>
+                  <Button variant="light" size="sm" onPress={onCommentClose}>关闭</Button>
+                </ModalFooter>
+              </>
+            );
+          }}
         </ModalContent>
       </Modal>
     </div>

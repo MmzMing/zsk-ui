@@ -48,6 +48,33 @@ export const mockDocumentUploadTasks: DocumentUploadTaskItem[] = [
   }
 ];
 
+export const mockDocumentComments = [
+  {
+    id: "dc1",
+    docId: "3001",
+    username: "文档控",
+    avatar: "https://i.pravatar.cc/150?u=dc1",
+    content: "这篇文章总结得太到位了，对我的学习效率提升很大！",
+    createdAt: "2026-01-12 10:30:00"
+  },
+  {
+    id: "dc2",
+    docId: "3001",
+    username: "笔记达人",
+    avatar: "https://i.pravatar.cc/150?u=dc2",
+    content: "很有启发，期待作者分享更多的拆解方法。",
+    createdAt: "2026-01-13 14:20:00"
+  },
+  {
+    id: "dc3",
+    docId: "3002",
+    username: "架构学徒",
+    avatar: "https://i.pravatar.cc/150?u=dc3",
+    content: "知识库的前端实现确实有很多细节，这篇文章讲得很透彻。",
+    createdAt: "2026-01-14 09:15:00"
+  }
+];
+
 export const mockDocumentCategories = [
   {
     id: "1",

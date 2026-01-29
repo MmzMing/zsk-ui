@@ -22,7 +22,8 @@ export const ScrollProgress: React.FC<ScrollProgressProps> = ({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // 获取页面滚动进度 (0 到 1)

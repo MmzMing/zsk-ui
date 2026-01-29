@@ -1,17 +1,5 @@
-import { HomeVideo, HomeArticle, HomeReview, FeatureCard, HomeSlide, HomeHero } from "../../front/home";
+import { HomeVideo, HomeArticle, HomeReview, FeatureCard, HomeSlide } from "../../front/home";
 
-export const mockHomeHero: HomeHero = {
-  badge: "开放探索 · 主动学习 · 趣味成长",
-  titleLine1: "让知识",
-  titleLine2: "不再散落角落",
-  description: "打造属于开发者的轻量化知识库与成长记录空间。无论是代码片段、学习笔记，还是灵感草稿，都能在这里被温柔地收纳、组织与回顾。",
-  buttonText: "立即整理我的知识库",
-  features: [
-    { label: "结构化", iconName: "Box" },
-    { label: "多维度", iconName: "Layers" },
-    { label: "高效能", iconName: "Zap" }
-  ]
-};
 
 export const mockFeatureCards: FeatureCard[] = [
   {

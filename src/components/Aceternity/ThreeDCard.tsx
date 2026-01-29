@@ -205,7 +205,7 @@ export const CardItem = ({
     handleAnimations();
   }, [handleAnimations]);
 
-  const TagElement = Tag as any;
+  const TagElement = Tag as "div";
 
   return (
     <TagElement

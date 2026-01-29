@@ -10,6 +10,7 @@ import {
   mockVideoDrafts,
   mockReviewLogs,
   mockViolationReasons,
+  mockComments,
 } from "../mock/admin/video";
 
 // ===== 2. TODO待处理导入区域 =====
@@ -960,6 +961,48 @@ export async function toggleVideoRecommended(
       ),
     setLoading,
   });
+}
+
+/**
+ * 评论项类型
+ */
+export type CommentItem = {
+  /** 评论ID */
+  id: string;
+  /** 视频ID */
+  videoId: string;
+  /** 用户名 */
+  username: string;
+  /** 用户头像 */
+  avatar?: string;
+  /** 评论内容 */
+  content: string;
+  /** 创建时间 */
+  createdAt: string;
+};
+
+/**
+ * 获取视频评论列表
+ * @param videoId 视频ID
+ */
+export async function fetchVideoComments(videoId: string): Promise<ApiResponse<CommentItem[]>> {
+  return handleRequestWithMock(
+    () => request.instance.get<ApiResponse<CommentItem[]>>(`/admin/content/video/${videoId}/comments`).then(r => r.data),
+    mockComments.filter(c => c.videoId === videoId),
+    "fetchVideoComments"
+  );
+}
+
+/**
+ * 删除视频评论
+ * @param commentId 评论ID
+ */
+export async function deleteVideoComment(commentId: string): Promise<ApiResponse<boolean>> {
+  return handleRequestWithMock(
+    () => request.instance.delete<ApiResponse<boolean>>(`/admin/content/video/comments/${commentId}`).then(r => r.data),
+    true,
+    "deleteVideoComment"
+  );
 }
 
 /**

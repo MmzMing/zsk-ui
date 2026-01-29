@@ -8,7 +8,10 @@ import {
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
-  DropdownItem
+  DropdownItem,
+  Popover,
+  PopoverTrigger,
+  PopoverContent
 } from "@heroui/react";
 import {
   FiHome,
@@ -131,12 +134,21 @@ function AdminLayout() {
   const currentPath = location.pathname;
 
   const activeChild = useMemo(() => {
+    // 1. 完全匹配路径
     const found = adminMenuTree
       .flatMap(section => section.children || [])
       .find(child => child.path === currentPath);
     if (found) {
       return found;
     }
+
+    // 2. 匹配文档编辑/新建页面的前缀，使其高亮“文档列表”
+    if (currentPath.includes(`${routes.admin}/document/edit/`)) {
+      return adminMenuTree
+        .flatMap(section => section.children || [])
+        .find(child => child.id === "006002") ?? null;
+    }
+
     return adminMenuTree[0]?.children?.[0] ?? null;
   }, [currentPath]);
 
@@ -153,6 +165,17 @@ function AdminLayout() {
   }, [activeChild, activeKey]);
 
   const activeSectionKey = activeParent?.id ?? "001";
+  
+  // 手机端菜单分类选中状态
+  const [mobileActiveSectionId, setMobileActiveSectionId] = useState<string>(activeSectionKey);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // 当活跃分类变化时，同步手机端菜单的选中分类
+  useEffect(() => {
+    if (activeSectionKey) {
+      setMobileActiveSectionId(activeSectionKey);
+    }
+  }, [activeSectionKey]);
 
   // Keep track of tabs based on navigation
   useEffect(() => {
@@ -793,32 +816,75 @@ function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 flex items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-elevated)] px-5 gap-4">
           <div className="flex items-center gap-3">
-            <Dropdown>
-              <DropdownTrigger>
-                <button
-                  type="button"
-                  className="inline-flex md:hidden items-center gap-2 px-2 py-1 rounded-lg border border-[var(--border-color)] text-[0.85em]"
-                  style={{ fontSize: "var(--nav-font-size)" }}
+            <Popover 
+              isOpen={isMobileMenuOpen} 
+              onOpenChange={setIsMobileMenuOpen}
+              placement="bottom-start"
+              classNames={{
+                content: "p-0 bg-[var(--bg-elevated)] border border-[var(--border-color)] shadow-xl overflow-hidden rounded-xl",
+              }}
+            >
+              <PopoverTrigger>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  radius="full"
+                  variant="light"
+                  className="inline-flex md:hidden"
+                  aria-label="后台菜单"
                 >
-                  <FiLayout className="text-sm" />
-                  <span>后台菜单</span>
-                </button>
-              </DropdownTrigger>
-              <DropdownMenu
-                aria-label="后台菜单"
-                onAction={key => {
-                  handleMenuItemClick(String(key));
-                }}
-              >
-                {adminMenuTree.flatMap(section =>
-                  (section.children || []).map(child => (
-                    <DropdownItem key={child.id}>
-                      {child.name}
-                    </DropdownItem>
-                  ))
-                )}
-              </DropdownMenu>
-            </Dropdown>
+                  <FiLayout className="text-base" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="flex w-[280px] h-[400px]">
+                  {/* 左侧分类列 */}
+                  <div className="w-[120px] bg-[color-mix(in_srgb,var(--primary-color)_3%,transparent)] border-r border-[var(--border-color)] overflow-y-auto py-2">
+                    {adminMenuTree.map(section => {
+                      const isActive = section.id === mobileActiveSectionId;
+                      const Icon = getIcon(section.iconName);
+                      return (
+                        <button
+                          key={section.id}
+                          type="button"
+                          className={`w-full flex items-center gap-2 px-3 py-3 text-left transition-colors ${
+                            isActive 
+                              ? "bg-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] text-[var(--primary-color)] font-medium" 
+                              : "text-[var(--text-color-secondary)] hover:text-[var(--text-color)]"
+                          }`}
+                          onClick={() => setMobileActiveSectionId(section.id)}
+                        >
+                          <Icon className="text-sm shrink-0" />
+                          <span className="text-xs truncate">{section.name}</span>
+                          {isActive && <FiChevronRight className="ml-auto text-[10px]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* 右侧子项列 */}
+                  <div className="flex-1 bg-[var(--bg-elevated)] overflow-y-auto py-2">
+                    {adminMenuTree
+                      .find(s => s.id === mobileActiveSectionId)
+                      ?.children?.map(child => (
+                        <button
+                          key={child.id}
+                          type="button"
+                          className="w-full flex items-center justify-between px-4 py-3 text-left text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] hover:bg-[color-mix(in_srgb,var(--primary-color)_8%,transparent)] transition-colors"
+                          onClick={() => {
+                            handleMenuItemClick(child.id);
+                            setIsMobileMenuOpen(false);
+                          }}
+                        >
+                          <span className="text-xs">{child.name}</span>
+                          {child.id === activeKey && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--primary-color)]" />
+                          )}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
             <div 
               className="hidden md:flex items-center gap-2 text-[var(--text-color-secondary)]"
               style={{ fontSize: "var(--nav-font-size)" }}

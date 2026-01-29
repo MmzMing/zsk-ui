@@ -310,6 +310,33 @@ export const mockViolationReasons = [
   { id: "v7", label: "其他违规" }
 ];
 
+export const mockComments = [
+  {
+    id: "c1",
+    videoId: "4001",
+    username: "前端小白",
+    avatar: "https://i.pravatar.cc/150?u=c1",
+    content: "非常有用的教程，学到了很多工程化实践！",
+    createdAt: "2026-01-15 10:30:00",
+  },
+  {
+    id: "c2",
+    videoId: "4001",
+    username: "React架构师",
+    avatar: "https://i.pravatar.cc/150?u=c2",
+    content: "期待下一期关于性能优化的分享。",
+    createdAt: "2026-01-16 14:20:00",
+  },
+  {
+    id: "c3",
+    videoId: "4002",
+    username: "效率达人",
+    avatar: "https://i.pravatar.cc/150?u=c3",
+    content: "这个笔记整理法真的很赞，已经开始用了。",
+    createdAt: "2026-01-17 09:15:00",
+  },
+];
+
 export const mockVideos: VideoItem[] = [
   {
     id: "4001",

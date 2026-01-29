@@ -184,11 +184,7 @@ export default function VideoRecommend() {
                     alt={item.title}
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  
-                  {/* Video Badge */}
-                  <div className="absolute top-3 left-3 z-20 px-2 py-1 rounded bg-black/60 backdrop-blur-md text-[10px] text-white font-medium border border-white/10">
-                    视频
-                  </div>
+                
 
                   {/* Play Button Overlay */}
                   <div
