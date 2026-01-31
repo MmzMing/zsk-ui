@@ -7,12 +7,11 @@ import { useNavigate } from "react-router-dom";
 import { routes } from "../../router/routes";
 
 function ProfilePage() {
-  const { userId, setToken, setUserId } = useUserStore();
+  const { userId, avatar, reset: resetUser } = useUserStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    setToken(null);
-    setUserId(null);
+    resetUser();
     navigate(routes.home);
   };
 
@@ -23,7 +22,12 @@ function ProfilePage() {
         <div className="md:w-80 space-y-6">
           <Card className="p-6 flex flex-col items-center text-center space-y-4 bg-[var(--bg-elevated)] border border-[var(--border-color)]">
             <div className="relative">
-              <Avatar className="w-24 h-24 text-3xl" name={userId?.charAt(0).toUpperCase() || "U"} />
+              <Avatar 
+                className="w-24 h-24 text-3xl" 
+                src={avatar || undefined}
+                name={userId?.charAt(0).toUpperCase() || "U"} 
+                showFallback
+              />
               <Button isIconOnly size="sm" radius="full" className="absolute bottom-0 right-0 bg-[var(--primary-color)] text-white">
                 <FiEdit2 />
               </Button>

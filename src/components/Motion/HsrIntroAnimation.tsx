@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, FileUser, Cpu, User } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import Cookies from "js-cookie";
 import AnimatedContent from "./AnimatedContent";
 
 interface HsrIntroAnimationProps {
@@ -22,27 +23,16 @@ const HsrIntroAnimation: React.FC<HsrIntroAnimationProps> = ({ onComplete }) => 
 
     // 0. If coming from Auth pages, ALWAYS show animation (ignoring other checks)
     if (fromAuth) {
-      // Clear the state to prevent loop if user refreshes? 
-      // Actually state is preserved on refresh in some browsers, but usually okay.
-      // We might want to clear the sessionStorage key too if we want to force it.
       sessionStorage.removeItem("hasSeenHsrIntro");
       return true;
     }
 
     // 1. Check if user is already logged in (Skip intro for logged-in users)
-    try {
-      const authSession = localStorage.getItem("auth_session");
-      if (authSession) {
-        const { token } = JSON.parse(authSession);
-        if (token) return false;
-      }
-    } catch {
-      // Ignore parse error
-    }
+    // Now checking Cookie instead of localStorage
+    const token = Cookies.get("token");
+    if (token) return false;
 
     // 2. Check if animation has been seen in this session
-    // We use sessionStorage to ensure it plays once per session for non-logged-in users,
-    // but the login check above prevents re-triggering when returning from login.
     const hasSeenIntro = sessionStorage.getItem("hasSeenHsrIntro");
     return !hasSeenIntro;
   });

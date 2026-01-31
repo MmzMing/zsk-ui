@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { routes } from "../../../router/routes";

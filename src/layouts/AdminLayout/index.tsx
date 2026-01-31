@@ -49,7 +49,7 @@ const getIcon = (iconName: string) => {
 function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { token, reset: resetUser } = useUserStore();
+  const { token, avatar, reset: resetUser } = useUserStore();
   const {
     layoutMode,
     boxBorderEnabled,
@@ -59,8 +59,20 @@ function AdminLayout() {
     sidebarAccordion,
     menuWidth,
     fontSize,
-    showTopNav
+    showTopNav,
+    isLoading,
+    setIsLoading
   } = useAppStore();
+
+  // Handle PageTransition for login flow
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 2000); // Show transition for 2 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, setIsLoading]);
 
   // Check authentication status
   useEffect(() => {
@@ -171,24 +183,18 @@ function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // 当活跃分类变化时，同步手机端菜单的选中分类
-  useEffect(() => {
-    if (activeSectionKey) {
-      setMobileActiveSectionId(activeSectionKey);
-    }
-  }, [activeSectionKey]);
+  if (activeSectionKey && mobileActiveSectionId !== activeSectionKey) {
+    setMobileActiveSectionId(activeSectionKey);
+  }
 
   // Keep track of tabs based on navigation
-  useEffect(() => {
-    if (activeChild) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTabs(previous => {
-        const exists = previous.some(tab => tab.key === activeChild.id);
-        if (exists) return previous;
-        const next = [...previous, { key: activeChild.id, label: activeChild.name, path: activeChild.path }];
-        return next.slice(-8); // Keep last 8
-      });
+  if (activeChild) {
+    const exists = tabs.some(tab => tab.key === activeChild.id);
+    if (!exists) {
+      const next = [...tabs, { key: activeChild.id, label: activeChild.name, path: activeChild.path }];
+      setTabs(next.slice(-8));
     }
-  }, [activeChild]);
+  }
 
   const handleLogoClick = () => {
     navigate(routes.home);
@@ -196,7 +202,6 @@ function AdminLayout() {
 
   const handleLogout = () => {
     try {
-      window.localStorage.removeItem("token");
       window.localStorage.removeItem("permissions");
       window.localStorage.removeItem("userInfo");
     } catch {
@@ -963,7 +968,7 @@ function AdminLayout() {
                   >
                     <Avatar
                       size="sm"
-                      name="管理员"
+                      src={avatar || undefined}
                       classNames={{
                         base:
                           "w-7 h-7 text-xs bg-[color-mix(in_srgb,var(--primary-color)_20%,transparent)] text-[var(--primary-color)]",

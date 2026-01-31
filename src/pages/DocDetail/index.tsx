@@ -171,7 +171,7 @@ const TocNode = ({
  */
 function DocDetail() {
   const { id } = useParams();
-  const { token } = useUserStore();
+  const { token, avatar } = useUserStore();
   
   // 状态变量
   const [doc, setDoc] = useState<DocDetailType | null>(null);
@@ -670,7 +670,11 @@ function DocDetail() {
 
             {/* 评论输入框 */}
             <div className="flex gap-4">
-              <Avatar className="w-10 h-10 shrink-0" />
+              <Avatar 
+                src={avatar || undefined} 
+                className="w-10 h-10 shrink-0" 
+                showFallback
+              />
               <div className="flex-1 space-y-2">
                 <Textarea
                   placeholder={

@@ -36,12 +36,17 @@ function createRequestInstance(baseURL: string) {
     baseURL,
     timeout: API_CONFIG.timeout,
     headers: API_CONFIG.headers,
+    withCredentials: true, // 允许携带 Cookie
   });
 
   // 请求拦截器
   instance.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-      const token = Cookies.get("token") || localStorage.getItem("token");
+      // 优先从 Cookie 获取 Token
+      // 注意：如果是 HttpOnly Cookie，JS 无法读取，此处 token 为 undefined
+      // 但由于设置了 withCredentials: true，浏览器会自动在请求中携带 Cookie
+      const token = Cookies.get("token");
+      
       if (token) {
         config.headers.set("Authorization", `Bearer ${token}`);
       }
@@ -79,7 +84,7 @@ function createRequestInstance(baseURL: string) {
       if (res.code === 401) {
         if (!window.location.pathname.includes("/login")) {
           Cookies.remove("token");
-          localStorage.removeItem("token");
+          // window.localStorage.removeItem("auth_session"); // Optional: clear store state?
           window.location.href = `/auth/login?redirect=${encodeURIComponent(
             window.location.pathname + window.location.search
           )}`;
@@ -117,7 +122,6 @@ function createRequestInstance(baseURL: string) {
       if (status === 401) {
         if (!window.location.pathname.includes("/login")) {
           Cookies.remove("token");
-          localStorage.removeItem("token");
           window.location.href = `/auth/login?redirect=${encodeURIComponent(
             window.location.pathname + window.location.search
           )}`;

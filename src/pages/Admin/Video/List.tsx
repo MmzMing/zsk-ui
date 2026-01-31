@@ -1,6 +1,6 @@
 // ===== 1. 依赖导入区域 =====
 import React, { useMemo, useState, useRef, useEffect, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Card,

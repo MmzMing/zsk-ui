@@ -28,7 +28,7 @@ function VideoDetail() {
   /** 路径参数 */
   const { id } = useParams();
   /** 用户信息 */
-  const { token } = useUserStore();
+  const { token, avatar } = useUserStore();
   /** 简介展开状态 */
   const [isExpanded, setIsExpanded] = useState(false);
   /** 视频详情数据 */
@@ -488,7 +488,11 @@ function VideoDetail() {
 
             {/* Comment Input */}
             <div className="flex gap-4">
-              <Avatar className="w-10 h-10 shrink-0" />
+              <Avatar 
+                src={avatar || undefined} 
+                className="w-10 h-10 shrink-0" 
+                showFallback
+              />
               <div className="flex-1 space-y-2">
                 <Textarea
                   placeholder={

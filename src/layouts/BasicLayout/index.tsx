@@ -77,7 +77,7 @@ function BasicLayout() {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [agreementVisible, setAgreementVisible] = useState(false);
   const [privacyVisible, setPrivacyVisible] = useState(false);
-  const { token, reset: resetUser } = useUserStore();
+  const { token, avatar, reset: resetUser } = useUserStore();
   const {
     boxBorderEnabled,
     boxShadowEnabled,
@@ -90,8 +90,20 @@ function BasicLayout() {
     language,
     setLanguage,
     primaryColor,
-    setPrimaryColor
+    setPrimaryColor,
+    isLoading,
+    setIsLoading
   } = useAppStore();
+
+  // Handle PageTransition for login/nav flow
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 2000); // Show transition for 2 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, setIsLoading]);
 
   const navItems: NavItem[] = useMemo(
     () => [
@@ -397,7 +409,7 @@ function BasicLayout() {
                 >
                   <Avatar
                     size="sm"
-                    name="用户"
+                    src={avatar || undefined}
                     classNames={{
                       base:
                         "w-7 h-7 text-xs bg-[color-mix(in_srgb,var(--primary-color)_20%,transparent)] text-[var(--primary-color)]",
@@ -428,7 +440,6 @@ function BasicLayout() {
                     navigate(routes.profile);
                   } else if (key === "logout") {
                     try {
-                      window.localStorage.removeItem("token");
                       window.localStorage.removeItem("permissions");
                       window.localStorage.removeItem("userInfo");
                     } catch {

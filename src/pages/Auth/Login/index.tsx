@@ -18,6 +18,7 @@ import {
 import { routes } from "@/router/routes";
 import InteractiveHoverButton from "@/components/Motion/InteractiveHoverButton";
 import { useUserStore } from "@/store/modules/userStore";
+import { useAppStore } from "@/store";
 import { UserAgreementModal, PrivacyPolicyModal } from "@/components/AgreementModals";
 import { verifySliderCaptcha, preCheckAndGetCaptcha, login, type SliderCaptchaData } from "@/api/auth";
 import Shuffle from "@/components/Motion/Shuffle";
@@ -99,7 +100,8 @@ const validateCaptcha = (value: string, required: boolean): string => {
  */
 function LoginPage() {
   const navigate = useNavigate();
-  const { setToken, setUserId } = useUserStore();
+  const { setToken, setUserId, setAvatar } = useUserStore();
+  const { setIsLoading } = useAppStore();
 
   // --- 状态定义 ---
   const [account, setAccount] = React.useState("");
@@ -331,15 +333,11 @@ function LoginPage() {
 
       setToken(res.token);
       setUserId(res.user.id);
-      try {
-        window.localStorage.setItem("token", res.token);
-      } catch {
-        // ignore
-      }
+      setAvatar(res.user.avatar);
       resetLoginFail();
 
-      // 直接跳转，移除冗余的 setTimeout 和 setIsLoading
-      navigate(routes.admin);
+      setIsLoading(true);
+      navigate(routes.admin, { state: { fromAuth: true } });
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "网络异常，请稍后再试");
       recordLoginFail();
@@ -385,7 +383,10 @@ function LoginPage() {
               variant="light"
               className="group text-white/70 transition-all hover:bg-transparent data-[hover=true]:bg-transparent"
               aria-label="返回前台"
-              onPress={() => navigate(routes.home, { state: { fromAuth: true } })}
+              onPress={() => {
+                setIsLoading(true);
+                navigate(routes.home, { state: { fromAuth: true } });
+              }}
             >
               <RiHome4Line className="h-6 w-6 transition-all duration-500 group-hover:rotate-[360deg] group-hover:text-[var(--primary-color)]" />
             </Button>

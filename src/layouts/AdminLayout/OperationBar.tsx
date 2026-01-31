@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tooltip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
+import { Tooltip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Avatar } from "@heroui/react";
 import { FiGrid, FiBell, FiSettings, FiHome, FiUser, FiLogOut, FiEye, FiEyeOff, FiMaximize2, FiMinimize2 } from "react-icons/fi";
 import { Dock, DockIcon } from "../../components/MagicUI/Dock";
 import MainMenu from "./MainMenu";
@@ -35,7 +35,7 @@ const OperationBar = ({ onOpenSettings, isFullscreen, toggleFullscreen }: Operat
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const { showTopNav, setShowTopNav } = useAppStore();
-  const { reset: resetUser } = useUserStore();
+  const { avatar, reset: resetUser } = useUserStore();
 
   const handleMenuSelect = (path: string) => {
     navigate(path);
@@ -44,7 +44,6 @@ const OperationBar = ({ onOpenSettings, isFullscreen, toggleFullscreen }: Operat
 
   const handleLogout = () => {
     try {
-      window.localStorage.removeItem("token");
       window.localStorage.removeItem("permissions");
       window.localStorage.removeItem("userInfo");
     } catch {
@@ -109,9 +108,15 @@ const OperationBar = ({ onOpenSettings, isFullscreen, toggleFullscreen }: Operat
                >
                 <DropdownTrigger>
                   <div className="w-full h-full flex items-center justify-center outline-none cursor-pointer">
-                    <div className="w-8 h-8 rounded-full bg-[var(--primary-color)] flex items-center justify-center text-white text-xs font-bold shadow-lg transform transition-transform hover:scale-110 active:scale-95">
-                      管
-                    </div>
+                    <Avatar
+                      size="sm"
+                      src={avatar || undefined}
+                      classNames={{
+                        base: "w-8 h-8 text-xs bg-[color-mix(in_srgb,var(--primary-color)_20%,transparent)] text-[var(--primary-color)] transform transition-transform hover:scale-110 active:scale-95 shadow-lg",
+                        name: "text-xs font-bold"
+                      }}
+                      showFallback
+                    />
                   </div>
                 </DropdownTrigger>
                 <DropdownMenu 

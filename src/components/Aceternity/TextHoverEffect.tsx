@@ -95,8 +95,8 @@ export default function TextHoverEffect({
         preserveAspectRatio="xMidYMid meet"
       >
         <defs>
-          {/* 线性渐变配置 */}
-          <linearGradient
+          {/* 径向渐变配置 */}
+          <radialGradient
             id="textGradient"
             gradientUnits="userSpaceOnUse"
             cx="50%"
@@ -112,16 +112,17 @@ export default function TextHoverEffect({
                 <stop offset="100%" stopColor="var(--violet-500)" />
               </>
             )}
-          </linearGradient>
+          </radialGradient>
 
           {/* 径向渐变跟随效果 */}
           <motion.radialGradient
             id="revealMask"
             gradientUnits="userSpaceOnUse"
             r="20%"
+            initial={{ cx: 0, cy: 0 }}
             animate={{
-              cx: cursor.x,
-              cy: cursor.y,
+              cx: cursor.x ?? 0,
+              cy: cursor.y ?? 0,
             }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
