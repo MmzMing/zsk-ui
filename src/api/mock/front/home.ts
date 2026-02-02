@@ -97,6 +97,8 @@ export const mockHomeSlides: HomeSlide[] = [
 export const mockHomeVideos: HomeVideo[] = [
   {
     id: "101",
+    category: "Tutorial",
+    duration: "45:20",
     title: "从 0 搭建个人知识库前端",
     description: "本视频将带你从零开始，使用 React + Tailwind CSS 搭建一个现代化的个人知识库前端界面。涵盖响应式布局、动态路由与交互动效设计。",
     views: "1.2k",
@@ -106,6 +108,8 @@ export const mockHomeVideos: HomeVideo[] = [
   },
   {
     id: "107",
+    category: "Tech Insights",
+    duration: "12:45",
     title: "用 Three.js 打造首页 3D Banner",
     description: "探索 Three.js 的奥秘，学习如何为你的网站首页添加引人入胜的 3D 视觉效果。我们将实现一个粒子背景和简单的几何体交互。",
     views: "856",
@@ -115,6 +119,8 @@ export const mockHomeVideos: HomeVideo[] = [
   },
   {
     id: "108",
+    category: "React",
+    duration: "28:15",
     title: "一文吃透 React Router 7 新特性",
     description: "React Router 7 带来了许多激动人心的新功能，包括数据加载优化、简化的 API 以及更好的类型支持。本视频将一一为你拆解。",
     views: "2.1k",
@@ -124,6 +130,8 @@ export const mockHomeVideos: HomeVideo[] = [
   },
   {
     id: "109",
+    category: "Best Practice",
+    duration: "32:10",
     title: "前端工程化下的内容管理最佳实践",
     description: "在大型前端项目中，如何高效地管理内容与元数据？我们将探讨内容模型设计、自动化发布流程以及与 Headless CMS 的集成。",
     views: "964",

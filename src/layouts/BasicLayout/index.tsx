@@ -47,6 +47,7 @@ import {
 } from "react-icons/fa";
 
 import HsrIntroAnimation from "../../components/Motion/HsrIntroAnimation";
+import SmoothScroll from "../../components/Motion/SmoothScroll";
 
 const launchedAt = new Date("2026-01-01T00:00:00Z").getTime();
 const initialRunDays = Math.max(
@@ -273,16 +274,17 @@ function BasicLayout() {
   );
 
   return (
-    <div className={`min-h-screen flex flex-col icon-rotate-global relative ${location.pathname === routes.home ? 'bg-transparent text-gray-200' : 'bg-[var(--bg-color)] text-[var(--text-color)]'}`}>
-      {location.pathname === routes.home && (
-        <Particles
-          className="fixed inset-0 z-0 bg-black"
-          quantity={100}
-          ease={80}
-          color="#ffffff"
-          refresh
-        />
-      )}
+    <SmoothScroll>
+      <div className={`min-h-screen flex flex-col icon-rotate-global relative ${location.pathname === routes.home ? 'bg-transparent text-gray-200' : 'bg-[var(--bg-color)] text-[var(--text-color)]'}`}>
+        {location.pathname === routes.home && (
+          <Particles
+            className="fixed inset-0 z-0 bg-black"
+            quantity={100}
+            ease={80}
+            color="#ffffff"
+            refresh
+          />
+        )}
       <HsrIntroAnimation />
       <motion.header
         className="h-[60px] flex flex-col border-b border-[var(--border-color)] bg-[var(--bg-elevated)] sticky top-0 z-30"
@@ -746,6 +748,7 @@ function BasicLayout() {
         )}
       </AnimatePresence>
     </div>
+    </SmoothScroll>
   );
 }
 

@@ -74,6 +74,10 @@ export type Subtitle = {
 export type HomeVideo = {
   /** 视频ID */
   id: string;
+  /** 视频分类 */
+  category: string;
+  /** 视频时长 (如 12:45) */
+  duration: string;
   /** 视频标题 */
   title: string;
   /** 视频描述 */

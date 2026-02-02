@@ -43,11 +43,12 @@ export default function TextHoverEffect({
 
   /**
    * 根据文本长度计算 viewBox 宽度
-   * 紧凑计算：每个中文字符约占 72 个单位，英文字符约 36 个单位
+   * 增加缓冲空间以防止水平截断
    */
   const viewBoxWidth = text.split('').reduce((acc, char) => {
-    return acc + (/[^\u0020-\u00ff]/.test(char) ? 72 : 36);
-  }, 10);
+    // 增加字符单位宽度：中文字符约 80，英文字符约 45
+    return acc + (/[^\u0020-\u00ff]/.test(char) ? 80 : 45);
+  }, 40); // 增加初始偏移量作为左右内边距
 
   /**
    * 鼠标移动处理
@@ -86,7 +87,7 @@ export default function TextHoverEffect({
         ref={svgRef}
         width="100%"
         height="100%"
-        viewBox={`0 0 ${viewBoxWidth} 100`}
+        viewBox={`0 0 ${viewBoxWidth} 120`}
         xmlns="http://www.w3.org/2000/svg"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -122,7 +123,7 @@ export default function TextHoverEffect({
             initial={{ cx: 0, cy: 0 }}
             animate={{
               cx: cursor.x ?? 0,
-              cy: cursor.y ?? 0,
+              cy: cursor.y ?? (120 / 2),
             }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
@@ -150,7 +151,7 @@ export default function TextHoverEffect({
           dominantBaseline="middle"
           strokeWidth={strokeWidth}
           style={{ opacity: hovered ? 0.7 : 1 }}
-          className="font-[helvetica] font-bold fill-transparent stroke-black/30 dark:stroke-white/30 text-[70px]"
+          className="font-[helvetica] font-bold fill-transparent stroke-black/30 dark:stroke-white/30 text-[75px]"
         >
           {text}
         </text>
@@ -162,7 +163,7 @@ export default function TextHoverEffect({
           textAnchor="middle"
           dominantBaseline="middle"
           strokeWidth={strokeWidth}
-          className="font-[helvetica] font-bold fill-transparent stroke-cyan-500 text-[70px]"
+          className="font-[helvetica] font-bold fill-transparent stroke-cyan-500 text-[75px]"
           initial={{ strokeDasharray: 0, strokeDashoffset: 100 }}
           animate={{
             strokeDasharray: hovered ? "100 0" : "0 100",
@@ -182,7 +183,7 @@ export default function TextHoverEffect({
           stroke="url(#textGradient)"
           strokeWidth={strokeWidth}
           mask="url(#textMask)"
-          className="font-[helvetica] font-bold fill-transparent text-[70px]"
+          className="font-[helvetica] font-bold fill-transparent text-[75px]"
         >
           {text}
         </text>
