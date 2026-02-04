@@ -185,35 +185,38 @@ function VideoDetail() {
       return;
     }
 
-    const newComment = await postVideoComment({
+    const res = await postVideoComment({
       videoId: id!,
       content: commentText.trim(),
       parentId: replyingTo?.parentId || replyingTo?.id,
       replyToId: replyingTo?.id
     });
 
-    if (newComment) {
-      if (replyingTo?.parentId) {
+    if (res && res.data) {
+      const newComment = res.data;
+      addToast({ title: "评论成功", color: "success" });
+      setCommentText("");
+      setReplyingTo(null);
+
+      if (replyingTo) {
         setComments(prev => prev.map(c => {
           if (c.id === replyingTo.parentId) {
-            return { ...c, replies: [...(c.replies || []), newComment] };
+            return {
+              ...c,
+              replies: [...(c.replies || []), newComment]
+            };
           }
-          return c;
-        }));
-      } else if (replyingTo) {
-        setComments(prev => prev.map(c => {
           if (c.id === replyingTo.id) {
-            return { ...c, replies: [...(c.replies || []), newComment] };
+             return {
+              ...c,
+              replies: [...(c.replies || []), newComment]
+            };
           }
           return c;
         }));
       } else {
         setComments(prev => [newComment, ...prev]);
       }
-      
-      setCommentText("");
-      setReplyingTo(null);
-      addToast({ title: "评论发布成功", color: "success" });
     }
   }, [id, commentText, replyingTo, handleCheckLogin]);
 
@@ -322,11 +325,11 @@ function VideoDetail() {
 
       const res = await fetchVideoDetail(id, setLoading);
       if (getIgnore()) return;
-      if (res) setVideo(res);
+      if (res && res.data) setVideo(res.data);
 
       const commentsRes = await fetchVideoComments(id, { page: 1, pageSize: 20, sort: commentSort });
       if (getIgnore()) return;
-      if (commentsRes?.list) setComments(commentsRes.list);
+      if (commentsRes?.data?.list) setComments(commentsRes.data.list);
   }, [id, commentSort]);
 
   useEffect(() => {

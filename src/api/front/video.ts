@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import type { ApiResponse } from "../types";
 import { mockVideoData, mockVideoComments } from "../mock/front/videoDetail";
 
@@ -153,12 +153,11 @@ export interface PostVideoCommentParams {
  * @param setLoading 加载状态设置函数
  */
 export async function fetchVideoDetail(id: string, setLoading?: (loading: boolean) => void) {
-  return handleApiCall({
-    requestFn: () => request.instance.get<ApiResponse<VideoDetail>>(`/content/video/detail/${id}`).then(r => r.data.data),
-    mockFn: () => mockVideoData,
-    fallbackOnEmpty: (data) => !data || !data.id,
+  return handleRequest({
+    requestFn: () => request.instance.get<ApiResponse<VideoDetail>>(`/content/video/detail/${id}`).then(r => r.data),
+    mockData: mockVideoData,
     setLoading,
-    errorPrefix: "获取视频详情失败"
+    apiName: "fetchVideoDetail"
   });
 }
 
@@ -167,10 +166,10 @@ export async function fetchVideoDetail(id: string, setLoading?: (loading: boolea
  * @param id 视频ID
  */
 export async function toggleVideoLike(id: string) {
-  return handleApiCall({
-    requestFn: () => request.instance.post<ApiResponse<{ isLiked: boolean; count: number }>>(`/content/video/like/${id}`).then(r => r.data.data),
-    mockFn: () => ({ isLiked: true, count: 123 }),
-    errorPrefix: "视频点赞操作失败"
+  return handleRequest({
+    requestFn: () => request.instance.post<ApiResponse<{ isLiked: boolean; count: number }>>(`/content/video/like/${id}`).then(r => r.data),
+    mockData: { isLiked: true, count: 123 },
+    apiName: "toggleVideoLike"
   });
 }
 
@@ -179,10 +178,10 @@ export async function toggleVideoLike(id: string) {
  * @param id 视频ID
  */
 export async function toggleVideoFavorite(id: string) {
-  return handleApiCall({
-    requestFn: () => request.instance.post<ApiResponse<{ isFavorited: boolean; count: number }>>(`/content/video/favorite/${id}`).then(r => r.data.data),
-    mockFn: () => ({ isFavorited: true, count: 456 }),
-    errorPrefix: "视频收藏操作失败"
+  return handleRequest({
+    requestFn: () => request.instance.post<ApiResponse<{ isFavorited: boolean; count: number }>>(`/content/video/favorite/${id}`).then(r => r.data),
+    mockData: { isFavorited: true, count: 456 },
+    apiName: "toggleVideoFavorite"
   });
 }
 
@@ -199,10 +198,10 @@ export async function fetchVideoComments(
     sort?: "hot" | "new";
   }
 ) {
-  return handleApiCall({
-    requestFn: () => request.instance.get<ApiResponse<{ list: CommentItem[]; total: number }>>(`/content/video/comments/${id}`, { params }).then(r => r.data.data),
-    mockFn: () => ({ list: mockVideoComments, total: mockVideoComments.length }),
-    errorPrefix: "获取视频评论失败"
+  return handleRequest({
+    requestFn: () => request.instance.get<ApiResponse<{ list: CommentItem[]; total: number }>>(`/content/video/comments/${id}`, { params }).then(r => r.data),
+    mockData: { list: mockVideoComments, total: mockVideoComments.length },
+    apiName: "fetchVideoComments"
   });
 }
 
@@ -211,17 +210,17 @@ export async function fetchVideoComments(
  * @param data 评论内容数据
  */
 export async function postVideoComment(data: PostVideoCommentParams) {
-  return handleApiCall({
-    requestFn: () => request.instance.post<ApiResponse<CommentItem>>(`/content/video/comment`, data).then(r => r.data.data),
-    mockFn: () => ({
+  return handleRequest({
+    requestFn: () => request.instance.post<ApiResponse<CommentItem>>(`/content/video/comment`, data).then(r => r.data),
+    mockData: {
       id: "mock-" + Date.now(),
       content: data.content,
       author: { id: "mock-user", name: "Mock用户", avatar: "" },
       createdAt: new Date().toISOString(),
       likes: 0,
       isLiked: false,
-    }),
-    errorPrefix: "发布视频评论失败"
+    },
+    apiName: "postVideoComment"
   });
 }
 
@@ -230,9 +229,9 @@ export async function postVideoComment(data: PostVideoCommentParams) {
  * @param commentId 评论ID
  */
 export async function toggleCommentLike(commentId: string) {
-  return handleApiCall({
-    requestFn: () => request.instance.post<ApiResponse<{ isLiked: boolean; likes: number }>>(`/content/comment/like/${commentId}`, null, { params: { type: "video" } }).then(r => r.data.data),
-    mockFn: () => ({ isLiked: true, likes: 99 }),
-    errorPrefix: "评论点赞操作失败"
+  return handleRequest({
+    requestFn: () => request.instance.post<ApiResponse<{ isLiked: boolean; likes: number }>>(`/content/comment/like/${commentId}`, null, { params: { type: "video" } }).then(r => r.data),
+    mockData: { isLiked: true, likes: 99 },
+    apiName: "toggleCommentLike"
   });
 }

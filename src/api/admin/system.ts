@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleRequestWithMock, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import {
   mockSystemParams,
   mockInitialDicts,
@@ -217,21 +217,18 @@ export async function fetchDictList(
   params: DictListParams,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<DictListResponse>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<DictListResponse>>("/admin/system/dict/list", {
-              params,
-            })
-            .then((r) => r.data),
-        {
-          list: mockInitialDicts,
-          total: mockInitialDicts.length,
-        },
-        "fetchDictList"
-      ),
+      request.instance
+        .get<ApiResponse<DictListResponse>>("/admin/system/dict/list", {
+          params,
+        })
+        .then((r) => r.data),
+    mockData: {
+      list: mockInitialDicts,
+      total: mockInitialDicts.length,
+    },
+    apiName: "fetchDictList",
     setLoading,
   });
 }
@@ -246,16 +243,13 @@ export async function saveDict(
   data: SaveDictRequest,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/dict/save", data)
-            .then((r) => r.data),
-        true,
-        "saveDict"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/dict/save", data)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "saveDict",
     setLoading,
   });
 }
@@ -272,19 +266,16 @@ export async function toggleDictStatus(
   status: DictStatus,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/dict/toggle-status", {
-              id,
-              status,
-            })
-            .then((r) => r.data),
-        true,
-        "toggleDictStatus"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/dict/toggle-status", {
+          id,
+          status,
+        })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "toggleDictStatus",
     setLoading,
   });
 }
@@ -301,19 +292,16 @@ export async function batchToggleDictStatus(
   status: DictStatus,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/dict/batch-toggle-status", {
-              ids,
-              status,
-            })
-            .then((r) => r.data),
-        true,
-        "batchToggleDictStatus"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/dict/batch-toggle-status", {
+          ids,
+          status,
+        })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchToggleDictStatus",
     setLoading,
   });
 }
@@ -328,16 +316,13 @@ export async function batchDeleteDicts(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/dict/batch-delete", { ids })
-            .then((r) => r.data),
-        true,
-        "batchDeleteDicts"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/dict/batch-delete", { ids })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchDeleteDicts",
     setLoading,
   });
 }
@@ -350,16 +335,13 @@ export async function batchDeleteDicts(
 export async function fetchParamList(
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<ParamItem[]>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<ParamItem[]>>("/admin/system/param/list")
-            .then((r) => r.data),
-        mockSystemParams,
-        "fetchParamList"
-      ),
+      request.instance
+        .get<ApiResponse<ParamItem[]>>("/admin/system/param/list")
+        .then((r) => r.data),
+    mockData: mockSystemParams,
+    apiName: "fetchParamList",
     setLoading,
   });
 }
@@ -374,16 +356,13 @@ export async function saveParam(
   data: Partial<ParamItem>,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/param/save", data)
-            .then((r) => r.data),
-        true,
-        "saveParam"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/param/save", data)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "saveParam",
     setLoading,
   });
 }
@@ -398,16 +377,13 @@ export async function deleteParam(
   id: string,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/param/delete", { id })
-            .then((r) => r.data),
-        true,
-        "deleteParam"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/param/delete", { id })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "deleteParam",
     setLoading,
   });
 }
@@ -422,16 +398,13 @@ export async function batchDeleteParams(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/param/batch-delete", { ids })
-            .then((r) => r.data),
-        true,
-        "batchDeleteParams"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/param/batch-delete", { ids })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchDeleteParams",
     setLoading,
   });
 }
@@ -444,16 +417,13 @@ export async function batchDeleteParams(
 export async function fetchTokenList(
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<TokenItem[]>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<TokenItem[]>>("/admin/system/token/list")
-            .then((r) => r.data),
-        mockInitialTokens,
-        "fetchTokenList"
-      ),
+      request.instance
+        .get<ApiResponse<TokenItem[]>>("/admin/system/token/list")
+        .then((r) => r.data),
+    mockData: mockInitialTokens,
+    apiName: "fetchTokenList",
     setLoading,
   });
 }
@@ -468,16 +438,13 @@ export async function saveToken(
   data: Partial<TokenItem>,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/token/save", data)
-            .then((r) => r.data),
-        true,
-        "saveToken"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/token/save", data)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "saveToken",
     setLoading,
   });
 }
@@ -492,16 +459,13 @@ export async function revokeToken(
   id: string,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/token/revoke", { id })
-            .then((r) => r.data),
-        true,
-        "revokeToken"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/token/revoke", { id })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "revokeToken",
     setLoading,
   });
 }
@@ -516,16 +480,13 @@ export async function batchRevokeTokens(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/token/batch-revoke", { ids })
-            .then((r) => r.data),
-        true,
-        "batchRevokeTokens"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/token/batch-revoke", { ids })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchRevokeTokens",
     setLoading,
   });
 }
@@ -540,16 +501,13 @@ export async function deleteToken(
   id: string,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/token/delete", { id })
-            .then((r) => r.data),
-        true,
-        "deleteToken"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/token/delete", { id })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "deleteToken",
     setLoading,
   });
 }
@@ -564,16 +522,13 @@ export async function batchDeleteTokens(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/system/token/batch-delete", { ids })
-            .then((r) => r.data),
-        true,
-        "batchDeleteTokens"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/system/token/batch-delete", { ids })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchDeleteTokens",
     setLoading,
   });
 }
@@ -586,16 +541,13 @@ export async function batchDeleteTokens(
 export async function fetchPermissionList(
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<PermissionGroup[]>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<PermissionGroup[]>>("/admin/system/permission/list")
-            .then((r) => r.data),
-        mockPermissionGroups,
-        "fetchPermissionList"
-      ),
+      request.instance
+        .get<ApiResponse<PermissionGroup[]>>("/admin/system/permission/list")
+        .then((r) => r.data),
+    mockData: mockPermissionGroups,
+    apiName: "fetchPermissionList",
     setLoading,
   });
 }
@@ -608,16 +560,13 @@ export async function fetchPermissionList(
 export async function fetchBotConfigs(
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<BotConfig[]>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<BotConfig[]>>("/admin/bot/list")
-            .then((r) => r.data),
-        [],
-        "fetchBotConfigs"
-      ),
+      request.instance
+        .get<ApiResponse<BotConfig[]>>("/admin/bot/list")
+        .then((r) => r.data),
+    mockData: [],
+    apiName: "fetchBotConfigs",
     setLoading,
   });
 }
@@ -632,16 +581,13 @@ export async function saveBotConfig(
   data: BotConfig,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/bot/save", data)
-            .then((r) => r.data),
-        true,
-        "saveBotConfig"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/bot/save", data)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "saveBotConfig",
     setLoading,
   });
 }

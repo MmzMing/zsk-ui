@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import type { ApiResponse } from "../types";
 import { mockUserProfile, mockUserWorks, mockUserFavorites } from "../mock/front/userDetail";
 
@@ -86,12 +86,15 @@ export type UserWorkItem = {
  * @returns 用户资料详情
  */
 export async function fetchUserProfile(id: string) {
-  return handleApiCall({
-    requestFn: () => request.instance.get<ApiResponse<UserProfile>>(`/user/profile/${id}`).then(r => r.data.data),
-    mockFn: () => mockUserProfile,
-    fallbackOnEmpty: (data) => !data || !data.id,
-    errorPrefix: "获取用户资料失败"
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<UserProfile>>(`/user/profile/${id}`)
+        .then((r) => r.data),
+    mockData: mockUserProfile,
+    apiName: "fetchUserProfile",
   });
+  return data;
 }
 
 /**
@@ -100,11 +103,15 @@ export async function fetchUserProfile(id: string) {
  * @returns 更新后的用户资料
  */
 export async function updateUserProfile(data: Partial<UserProfile>) {
-  return handleApiCall({
-    requestFn: () => request.instance.post<ApiResponse<UserProfile>>("/user/profile/update", data).then(r => r.data.data),
-    mockFn: () => ({ ...mockUserProfile, ...data }),
-    errorPrefix: "更新用户资料失败"
+  const { data: resData } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .post<ApiResponse<UserProfile>>("/user/profile/update", data)
+        .then((r) => r.data),
+    mockData: { ...mockUserProfile, ...data },
+    apiName: "updateUserProfile",
   });
+  return resData;
 }
 
 /**
@@ -113,11 +120,15 @@ export async function updateUserProfile(data: Partial<UserProfile>) {
  * @returns 关注状态
  */
 export async function toggleFollowUser(id: string) {
-  return handleApiCall({
-    requestFn: () => request.instance.post<ApiResponse<{ isFollowing: boolean }>>(`/user/follow/${id}`).then(r => r.data.data),
-    mockFn: () => ({ isFollowing: true }),
-    errorPrefix: "关注操作失败"
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .post<ApiResponse<{ isFollowing: boolean }>>(`/user/follow/${id}`)
+        .then((r) => r.data),
+    mockData: { isFollowing: true },
+    apiName: "toggleFollowUser",
   });
+  return data;
 }
 
 /**
@@ -137,11 +148,18 @@ export async function fetchUserWorks(
     type?: string;
   }
 ) {
-  return handleApiCall({
-    requestFn: () => request.instance.get<ApiResponse<{ list: UserWorkItem[]; total: number }>>(`/user/works/${id}`, { params }).then(r => r.data.data),
-    mockFn: () => ({ list: mockUserWorks, total: mockUserWorks.length }),
-    errorPrefix: "获取用户作品列表失败"
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<{ list: UserWorkItem[]; total: number }>>(
+          `/user/works/${id}`,
+          { params }
+        )
+        .then((r) => r.data),
+    mockData: { list: mockUserWorks, total: mockUserWorks.length },
+    apiName: "fetchUserWorks",
   });
+  return data;
 }
 
 /**
@@ -159,9 +177,16 @@ export async function fetchUserFavorites(
     pageSize: number;
   }
 ) {
-  return handleApiCall({
-    requestFn: () => request.instance.get<ApiResponse<{ list: UserWorkItem[]; total: number }>>(`/user/favorites/${id}`, { params }).then(r => r.data.data),
-    mockFn: () => ({ list: mockUserFavorites, total: mockUserFavorites.length }),
-    errorPrefix: "获取用户收藏列表失败"
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<{ list: UserWorkItem[]; total: number }>>(
+          `/user/favorites/${id}`,
+          { params }
+        )
+        .then((r) => r.data),
+    mockData: { list: mockUserFavorites, total: mockUserFavorites.length },
+    apiName: "fetchUserFavorites",
   });
+  return data;
 }

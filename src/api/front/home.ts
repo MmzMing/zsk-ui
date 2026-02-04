@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleRequestWithMock, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import type { ApiResponse } from "../types";
 import {
   mockHomeVideos,
@@ -177,17 +177,15 @@ export type HomeSlide = {
  * @returns 首页视频列表响应
  */
 export async function fetchHomeVideos() {
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<HomeVideo[]>>("/home/videos")
-            .then((r) => r.data),
-        mockHomeVideos,
-        "fetchHomeVideos"
-      ).then((res) => res.data),
+      request.instance
+        .get<ApiResponse<HomeVideo[]>>("/home/videos")
+        .then((r) => r.data),
+    mockData: mockHomeVideos,
+    apiName: "fetchHomeVideos",
   });
+  return data;
 }
 
 /**
@@ -195,17 +193,15 @@ export async function fetchHomeVideos() {
  * @returns 首页文章列表响应
  */
 export async function fetchHomeArticles() {
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<HomeArticle[]>>("/home/articles")
-            .then((r) => r.data),
-        mockHomeArticles,
-        "fetchHomeArticles"
-      ).then((res) => res.data),
+      request.instance
+        .get<ApiResponse<HomeArticle[]>>("/home/articles")
+        .then((r) => r.data),
+    mockData: mockHomeArticles,
+    apiName: "fetchHomeArticles",
   });
+  return data;
 }
 
 /**
@@ -213,17 +209,15 @@ export async function fetchHomeArticles() {
  * @returns 首页评论列表响应
  */
 export async function fetchHomeReviews() {
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<HomeReview[]>>("/home/reviews")
-            .then((r) => r.data),
-        mockHomeReviews,
-        "fetchHomeReviews"
-      ).then((res) => res.data),
+      request.instance
+        .get<ApiResponse<HomeReview[]>>("/home/reviews")
+        .then((r) => r.data),
+    mockData: mockHomeReviews,
+    apiName: "fetchHomeReviews",
   });
+  return data;
 }
 
 /**
@@ -231,16 +225,13 @@ export async function fetchHomeReviews() {
  * @returns 首页幻灯片列表响应
  */
 export async function fetchHomeSlides() {
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<HomeSlide[]>>("/home/slides")
-            .then((r) => r.data),
-        mockHomeSlides,
-        "fetchHomeSlides"
-      ).then((res) => res.data),
+      request.instance
+        .get<ApiResponse<HomeSlide[]>>("/home/slides")
+        .then((r) => r.data),
+    mockData: mockHomeSlides,
+    apiName: "fetchHomeSlides",
   });
+  return data;
 }
-

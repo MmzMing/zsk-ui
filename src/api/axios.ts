@@ -14,9 +14,12 @@ import { handleDebugOutput } from "@/lib/utils";
 
 // ===== 3. 状态控制逻辑区域 =====
 /**
- * 是否启用 Mock 数据 (开发环境下默认启用)
+ * 获取是否启用 Mock 数据状态
+ * @returns 是否启用 Mock
  */
-const mockEnabled = import.meta.env.DEV || import.meta.env.VITE_USE_MOCK === "true";
+const isMockEnabled = (): boolean => {
+  return import.meta.env.DEV || import.meta.env.VITE_USE_MOCK === "true";
+};
 
 // ===== 4. 通用工具函数区域 =====
 /**
@@ -43,8 +46,6 @@ function createRequestInstance(baseURL: string) {
   instance.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
       // 优先从 Cookie 获取 Token
-      // 注意：如果是 HttpOnly Cookie，JS 无法读取，此处 token 为 undefined
-      // 但由于设置了 withCredentials: true，浏览器会自动在请求中携带 Cookie
       const token = Cookies.get("token");
       
       if (token) {
@@ -84,7 +85,6 @@ function createRequestInstance(baseURL: string) {
       if (res.code === 401) {
         if (!window.location.pathname.includes("/login")) {
           Cookies.remove("token");
-          // window.localStorage.removeItem("auth_session"); // Optional: clear store state?
           window.location.href = `/auth/login?redirect=${encodeURIComponent(
             window.location.pathname + window.location.search
           )}`;
@@ -103,9 +103,9 @@ function createRequestInstance(baseURL: string) {
       const customConfig = response.config as CustomRequestConfig;
       const error = new Error(errorMsg);
       if (!customConfig?.skipErrorHandler) {
-          showGlobalError(errorMsg);
-          (error as HandledError).__isHandled = true;
-        }
+        showGlobalError(errorMsg);
+        (error as HandledError).__isHandled = true;
+      }
       return Promise.reject(error);
     },
     (error) => {
@@ -156,7 +156,7 @@ function createRequestInstance(baseURL: string) {
      * GET 请求
      * @param url 请求地址
      * @param config 请求配置
-     * @returns 响应数据
+     * @returns 响应数据 (注意：此处返回 data 部分)
      */
     get: <T = unknown>(url: string, config?: CustomRequestConfig): Promise<T> => {
       return instance
@@ -225,17 +225,20 @@ interface CustomRequestConfig extends AxiosRequestConfig {
 }
 
 /**
- * API 调用配置选项
+ * API 请求配置选项
  */
-type ApiCallOptions<T> = {
-  requestFn: () => Promise<T>;
-  mockFn?: () => Promise<T> | T;
-  enableMock?: boolean;
-  fallbackOnEmpty?: (data: T) => boolean;
-  onError?: (error: unknown) => void;
+export interface RequestOptions<T> {
+  /** 核心请求函数 */
+  requestFn: () => Promise<ApiResponse<T>>;
+  /** Mock数据 (兜底用) */
+  mockData?: T;
+  /** 接口名称 (调试用) */
+  apiName?: string;
+  /** Loading状态回调 */
   setLoading?: (loading: boolean) => void;
-  errorPrefix?: string;
-};
+  /** 自定义错误处理 */
+  onError?: (error: unknown) => void;
+}
 
 /**
  * 全局错误提示函数
@@ -249,101 +252,53 @@ function showGlobalError(message: string) {
 }
 
 /**
- * 通用 API 调用处理函数
- * @param options 调用选项
- * @returns 响应结果
+ * 统一请求处理函数 (替代 handleApiCall 和 handleRequestWithMock)
+ * @param options 请求配置
+ * @returns 响应对象 (ApiResponse)
  */
-export async function handleApiCall<T>(options: ApiCallOptions<T>): Promise<T> {
-  const {
-    requestFn,
-    mockFn,
-    enableMock = mockEnabled,
-    fallbackOnEmpty,
-    onError,
-    setLoading,
-    errorPrefix,
-  } = options;
+export async function handleRequest<T>(options: RequestOptions<T>): Promise<ApiResponse<T>> {
+  const { requestFn, mockData, apiName, setLoading, onError } = options;
+  const mockEnabled = isMockEnabled();
 
   if (setLoading) {
     setLoading(true);
   }
 
   try {
-    const result = await requestFn();
-    
-    // 检查结果是否为空 (null, undefined) 或满足自定义空数据判断
-    const isEmpty = result === null || result === undefined || (fallbackOnEmpty && fallbackOnEmpty(result));
-    
-    if (isEmpty && enableMock && mockFn) {
-      handleDebugOutput({
-        debugLevel: "warn",
-        debugMessage: `[Mock兜底] 数据为空，触发 Mock`,
-        debugDetail: { result, errorPrefix },
-      });
-      return await mockFn();
-    }
-    
-    return result;
-  } catch (error) {
-    if (onError) {
-      onError(error);
-    } else if (errorPrefix && !(error as HandledError)?.__isHandled) {
-      const message = error instanceof Error ? error.message : String(error);
-      showGlobalError(`${errorPrefix}: ${message}`);
-    }
-
-    if (mockFn && enableMock) {
-      return await mockFn();
-    }
-    throw error;
-  } finally {
-    if (setLoading) {
-      setLoading(false);
-    }
-  }
-}
-
-/**
- * 通用请求封装：开发环境下真实请求失败/无数据时，自动兜底返回 Mock 数据
- * @param requestFn 真实接口请求函数
- * @param mockData 兜底的Mock数据
- * @param apiName 接口唯一标识
- * @returns 最终返回值
- */
-export async function handleRequestWithMock<T>(
-  requestFn: () => Promise<ApiResponse<T>>,
-  mockData: T,
-  apiName: string
-): Promise<ApiResponse<T>> {
-  try {
     const response = await requestFn();
 
-    // 检查数据是否有效 (200 且有内容)
-    if (response.code === 200 && response.data) {
+    // 检查业务状态码
+    if (response.code === 200) {
       return response;
     }
 
-    // 数据无效时尝试 Mock 兜底
-    if (mockEnabled) {
+    // 业务错误 (非200) 尝试 Mock 兜底
+    if (mockEnabled && mockData !== undefined) {
       handleDebugOutput({
         debugLevel: "warn",
-        debugMessage: `[Mock兜底] ${apiName}`,
-        debugDetail: { reason: "接口返回数据为空", response, mockData },
+        debugMessage: `[Mock兜底] ${apiName || "Unknown API"}`,
+        debugDetail: { reason: "接口返回非200", response, mockData },
       });
       return {
         code: 200,
         data: mockData,
-        msg: `[MOCK兜底] 接口 ${apiName} 返回空数据，已使用 Mock`,
+        msg: `[MOCK兜底] 接口 ${apiName} 异常，已使用 Mock`,
       };
     }
+
     return response;
   } catch (error) {
-    // 请求失败时尝试 Mock 兜底
-    if (mockEnabled) {
+    // 自定义错误处理
+    if (onError) {
+      onError(error);
+    }
+
+    // 请求异常尝试 Mock 兜底
+    if (mockEnabled && mockData !== undefined) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       handleDebugOutput({
         debugLevel: "error",
-        debugMessage: `[Mock兜底] ${apiName}`,
+        debugMessage: `[Mock兜底] ${apiName || "Unknown API"}`,
         debugDetail: { reason: "接口请求异常", errorMsg, mockData },
       });
       return {
@@ -352,8 +307,13 @@ export async function handleRequestWithMock<T>(
         msg: `[MOCK兜底] 接口 ${apiName} 请求失败，已使用 Mock`,
       };
     }
-    // 非开发环境且未启用 Mock 时抛出原始错误
+    
+    // 如果没有 Mock 兜底，抛出错误
     throw error;
+  } finally {
+    if (setLoading) {
+      setLoading(false);
+    }
   }
 }
 

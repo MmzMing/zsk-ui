@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleRequestWithMock } from "../axios";
+import { request, handleRequest } from "../axios";
 import type { ApiResponse } from "../types";
 import {
   mockDocumentUploadTasks,
@@ -310,21 +310,21 @@ export type DocCommentItem = {
 export async function initDocumentUpload(
   data: DocumentUploadInitRequest
 ): Promise<ApiResponse<DocumentUploadInitResponse>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<DocumentUploadInitResponse>>(
           "/admin/content/doc/upload/init",
           data
         )
         .then((r) => r.data),
-    {
+    mockData: {
       uploadId: "mock_upload_id_" + Date.now(),
       needUpload: true,
       presignedUrl: "https://mock-s3-url.com/upload",
     },
-    "initDocumentUpload"
-  );
+    apiName: "initDocumentUpload",
+  });
 }
 
 /**
@@ -335,14 +335,14 @@ export async function initDocumentUpload(
 export async function finishDocumentUpload(
   data: DocumentUploadFinishRequest
 ): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/admin/content/doc/upload/finish", data)
         .then((r) => r.data),
-    true,
-    "finishDocumentUpload"
-  );
+    mockData: true,
+    apiName: "finishDocumentUpload",
+  });
 }
 
 /**
@@ -353,14 +353,14 @@ export async function finishDocumentUpload(
 export async function removeDocumentUploadTask(
   id: string
 ): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/admin/content/doc/upload/remove", { id })
         .then((r) => r.data),
-    true,
-    "removeDocumentUploadTask"
-  );
+    mockData: true,
+    apiName: "removeDocumentUploadTask",
+  });
 }
 
 /**
@@ -371,14 +371,16 @@ export async function removeDocumentUploadTask(
 export async function batchRemoveDocumentUploadTasks(
   ids: string[]
 ): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/content/doc/upload/batch-remove", { ids })
+        .post<ApiResponse<boolean>>("/admin/content/doc/upload/batch-remove", {
+          ids,
+        })
         .then((r) => r.data),
-    true,
-    "batchRemoveDocumentUploadTasks"
-  );
+    mockData: true,
+    apiName: "batchRemoveDocumentUploadTasks",
+  });
 }
 
 /**
@@ -389,14 +391,14 @@ export async function batchRemoveDocumentUploadTasks(
 export async function retryDocumentUploadTask(
   id: string
 ): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/admin/content/doc/upload/retry", { id })
         .then((r) => r.data),
-    true,
-    "retryDocumentUploadTask"
-  );
+    mockData: true,
+    apiName: "retryDocumentUploadTask",
+  });
 }
 
 /**
@@ -409,20 +411,20 @@ export async function fetchDocumentUploadTaskList(params: {
   pageSize: number;
   status?: string;
 }): Promise<ApiResponse<DocumentUploadTaskListResponse>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<DocumentUploadTaskListResponse>>(
           "/admin/content/doc/upload/list",
           { params }
         )
         .then((r) => r.data),
-    {
+    mockData: {
       list: mockDocumentUploadTasks,
       total: mockDocumentUploadTasks.length,
     },
-    "fetchDocumentUploadTaskList"
-  );
+    apiName: "fetchDocumentUploadTaskList",
+  });
 }
 
 /**
@@ -432,14 +434,14 @@ export async function fetchDocumentUploadTaskList(params: {
 export async function fetchDocumentCategories(): Promise<
   ApiResponse<DocCategory[]>
 > {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<DocCategory[]>>("/admin/content/doc/categories")
         .then((r) => r.data),
-    mockDocumentCategories,
-    "fetchDocumentCategories"
-  );
+    mockData: mockDocumentCategories,
+    apiName: "fetchDocumentCategories",
+  });
 }
 
 /**
@@ -447,14 +449,14 @@ export async function fetchDocumentCategories(): Promise<
  * @returns 标签列表
  */
 export async function fetchTagOptions(): Promise<ApiResponse<DocTag[]>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<DocTag[]>>("/admin/content/doc/tags")
         .then((r) => r.data),
-    mockTagOptions,
-    "fetchTagOptions"
-  );
+    mockData: mockTagOptions,
+    apiName: "fetchTagOptions",
+  });
 }
 
 /**
@@ -467,19 +469,19 @@ export async function fetchDraftList(params: {
   pageSize: number;
   search?: string;
 }): Promise<ApiResponse<DocumentListResponse>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<DocumentListResponse>>("/admin/content/doc/drafts", {
           params,
         })
         .then((r) => r.data),
-    {
+    mockData: {
       list: mockDraftList,
       total: mockDraftList.length,
     },
-    "fetchDraftList"
-  );
+    apiName: "fetchDraftList",
+  });
 }
 
 /**
@@ -494,19 +496,19 @@ export async function fetchDocumentList(params: {
   category?: string;
   keyword?: string;
 }): Promise<ApiResponse<DocumentListResponse>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<DocumentListResponse>>("/admin/content/doc/list", {
           params,
         })
         .then((r) => r.data),
-    {
+    mockData: {
       list: mockDocumentList,
       total: mockDocumentList.length,
     },
-    "fetchDocumentList"
-  );
+    apiName: "fetchDocumentList",
+  });
 }
 
 /**
@@ -518,38 +520,50 @@ export async function batchUpdateDocumentStatus(data: {
   ids: string[];
   status: "published" | "offline";
 }): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/admin/content/doc/batch-update-status", data)
         .then((r) => r.data),
-    true,
-    "batchUpdateDocumentStatus"
-  );
+    mockData: true,
+    apiName: "batchUpdateDocumentStatus",
+  });
 }
 
 /**
  * 获取文档评论列表
  * @param docId 文档ID
  */
-export async function fetchDocumentComments(docId: string): Promise<ApiResponse<DocCommentItem[]>> {
-  return handleRequestWithMock(
-    () => request.instance.get<ApiResponse<DocCommentItem[]>>(`/admin/content/doc/${docId}/comments`).then(r => r.data),
-    mockDocumentComments.filter(c => c.docId === docId),
-    "fetchDocumentComments"
-  );
+export async function fetchDocumentComments(
+  docId: string
+): Promise<ApiResponse<DocCommentItem[]>> {
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<DocCommentItem[]>>(
+          `/admin/content/doc/${docId}/comments`
+        )
+        .then((r) => r.data),
+    mockData: mockDocumentComments.filter((c) => c.docId === docId),
+    apiName: "fetchDocumentComments",
+  });
 }
 
 /**
  * 删除文档评论
  * @param commentId 评论ID
  */
-export async function deleteDocumentComment(commentId: string): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () => request.instance.delete<ApiResponse<boolean>>(`/admin/content/doc/comments/${commentId}`).then(r => r.data),
-    true,
-    "deleteDocumentComment"
-  );
+export async function deleteDocumentComment(
+  commentId: string
+): Promise<ApiResponse<boolean>> {
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .delete<ApiResponse<boolean>>(`/admin/content/doc/comments/${commentId}`)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "deleteDocumentComment",
+  });
 }
 
 /**
@@ -563,20 +577,20 @@ export async function fetchDocumentReviewQueue(params: {
   status?: string;
   keyword?: string;
 }): Promise<ApiResponse<DocumentReviewQueueResponse>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<DocumentReviewQueueResponse>>(
           "/admin/content/doc/review/queue",
           { params }
         )
         .then((r) => r.data),
-    {
+    mockData: {
       list: mockReviewQueueItems,
       total: mockReviewQueueItems.length,
     },
-    "fetchDocumentReviewQueue"
-  );
+    apiName: "fetchDocumentReviewQueue",
+  });
 }
 
 /**
@@ -587,21 +601,21 @@ export async function fetchDocumentReviewQueue(params: {
 export async function fetchDocumentReviewLogs(params: {
   docIds?: string[];
 }): Promise<ApiResponse<DocumentReviewLogItem[]>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<DocumentReviewLogItem[]>>(
           "/admin/content/doc/review/logs",
           { params }
         )
         .then((r) => r.data),
-    mockDocumentReviewLogs.filter((log) =>
+    mockData: mockDocumentReviewLogs.filter((log) =>
       params.docIds && params.docIds.length > 0
         ? params.docIds.includes(log.docId)
         : true
     ),
-    "fetchDocumentReviewLogs"
-  );
+    apiName: "fetchDocumentReviewLogs",
+  });
 }
 
 /**
@@ -614,14 +628,14 @@ export async function submitDocumentReview(data: {
   status: "approved" | "rejected";
   reason?: string;
 }): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/admin/content/doc/review/submit", data)
         .then((r) => r.data),
-    true,
-    "submitDocumentReview"
-  );
+    mockData: true,
+    apiName: "submitDocumentReview",
+  });
 }
 
 /**
@@ -632,14 +646,14 @@ export async function submitDocumentReview(data: {
 export async function getDocumentDetail(
   id: string
 ): Promise<ApiResponse<DocumentDetail>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<DocumentDetail>>(`/admin/content/doc/${id}`)
         .then((r) => r.data),
-    mockAdminDocument,
-    "getDocumentDetail"
-  );
+    mockData: mockAdminDocument,
+    apiName: "getDocumentDetail",
+  });
 }
 
 /**
@@ -650,14 +664,14 @@ export async function getDocumentDetail(
 export async function createDocument(
   data: Partial<DocumentDetail>
 ): Promise<ApiResponse<string>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<string>>("/admin/content/doc/create", data)
         .then((r) => r.data),
-    "mock_doc_id_" + Date.now(),
-    "createDocument"
-  );
+    mockData: "mock_doc_id_" + Date.now(),
+    apiName: "createDocument",
+  });
 }
 
 /**
@@ -670,14 +684,14 @@ export async function updateDocument(
   id: string,
   data: Partial<DocumentDetail>
 ): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .put<ApiResponse<boolean>>(`/admin/content/doc/${id}`, data)
         .then((r) => r.data),
-    true,
-    "updateDocument"
-  );
+    mockData: true,
+    apiName: "updateDocument",
+  });
 }
 
 /**
@@ -688,16 +702,16 @@ export async function updateDocument(
 export async function deleteDocument(
   ids: string[]
 ): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .delete<ApiResponse<boolean>>("/admin/content/doc/batch", {
           data: { ids },
         })
         .then((r) => r.data),
-    true,
-    "deleteDocument"
-  );
+    mockData: true,
+    apiName: "deleteDocument",
+  });
 }
 
 /**
@@ -710,15 +724,15 @@ export async function moveDocumentCategory(
   ids: string[],
   category: string
 ): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/admin/content/doc/category/batch", {
           ids,
           category,
         })
         .then((r) => r.data),
-    true,
-    "moveDocumentCategory"
-  );
+    mockData: true,
+    apiName: "moveDocumentCategory",
+  });
 }

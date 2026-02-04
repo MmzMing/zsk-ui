@@ -1,7 +1,8 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import { SearchResult } from "./search";
 import { getMockToolboxDetail } from "../mock/front/toolbox";
+import type { ApiResponse } from "../types";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -71,12 +72,15 @@ export type ToolboxDetail = {
  * @returns 工具详情数据
  */
 export async function getToolboxDetail(id: string): Promise<ToolboxDetail> {
-  return handleApiCall({
-    requestFn: () => request.get<ToolboxDetail>(`/toolbox/${id}`),
-    mockFn: () => getMockToolboxDetail(id),
-    fallbackOnEmpty: (data) => !data || !data.id,
-    errorPrefix: "获取工具箱详情失败"
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<ToolboxDetail>>(`/toolbox/${id}`)
+        .then((r) => r.data),
+    mockData: getMockToolboxDetail(id),
+    apiName: "getToolboxDetail",
   });
+  return data;
 }
 
 // --- Mock Data ---

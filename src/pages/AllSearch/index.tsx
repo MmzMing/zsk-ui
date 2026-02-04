@@ -154,7 +154,7 @@ function AllSearchPage() {
     setIsLoading(true);
 
     try {
-      // 不直接传递 setIsLoading 给 searchAll，避免它在 handleApiCall 的 finally 中过早关闭 loading
+      // 不直接传递 setIsLoading 给 searchAll，避免它在 handleRequest 的 finally 中过早关闭 loading
       const data = await searchAll(currentSearchParams);
       
       // 如果请求已被忽略，则不更新状态

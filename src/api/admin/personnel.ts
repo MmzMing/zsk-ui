@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleRequestWithMock, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import { mockAdminUsers, mockAdminRoles } from "../mock/admin/personnel";
 import type { ApiResponse } from "../types";
 
@@ -239,21 +239,18 @@ export async function fetchUserList(
   params: UserListParams,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<UserListResponse>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<UserListResponse>>("/admin/personnel/user/list", {
-              params,
-            })
-            .then((r) => r.data),
-        {
-          list: mockAdminUsers,
-          total: mockAdminUsers.length,
-        },
-        "fetchUserList"
-      ),
+      request.instance
+        .get<ApiResponse<UserListResponse>>("/admin/personnel/user/list", {
+          params,
+        })
+        .then((r) => r.data),
+    mockData: {
+      list: mockAdminUsers,
+      total: mockAdminUsers.length,
+    },
+    apiName: "fetchUserList",
     setLoading,
   });
 }
@@ -268,16 +265,13 @@ export async function createUser(
   data: CreateUserRequest,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/user/create", data)
-            .then((r) => r.data),
-        true,
-        "createUser"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/user/create", data)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "createUser",
     setLoading,
   });
 }
@@ -292,16 +286,13 @@ export async function updateUser(
   data: UpdateUserRequest,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/user/update", data)
-            .then((r) => r.data),
-        true,
-        "updateUser"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/user/update", data)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "updateUser",
     setLoading,
   });
 }
@@ -316,16 +307,13 @@ export async function deleteUser(
   id: string,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/user/delete", { id })
-            .then((r) => r.data),
-        true,
-        "deleteUser"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/user/delete", { id })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "deleteUser",
     setLoading,
   });
 }
@@ -340,16 +328,13 @@ export async function batchDeleteUsers(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/user/batch-delete", { ids })
-            .then((r) => r.data),
-        true,
-        "batchDeleteUsers"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/user/batch-delete", { ids })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchDeleteUsers",
     setLoading,
   });
 }
@@ -366,19 +351,16 @@ export async function toggleUserStatus(
   status: UserStatus,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/user/toggle-status", {
-              id,
-              status,
-            })
-            .then((r) => r.data),
-        true,
-        "toggleUserStatus"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/user/toggle-status", {
+          id,
+          status,
+        })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "toggleUserStatus",
     setLoading,
   });
 }
@@ -393,16 +375,13 @@ export async function resetPassword(
   id: string,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/user/reset-password", { id })
-            .then((r) => r.data),
-        true,
-        "resetPassword"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/user/reset-password", { id })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "resetPassword",
     setLoading,
   });
 }
@@ -417,18 +396,15 @@ export async function batchResetPassword(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/user/batch-reset-password", {
-              ids,
-            })
-            .then((r) => r.data),
-        true,
-        "batchResetPassword"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/user/batch-reset-password", {
+          ids,
+        })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchResetPassword",
     setLoading,
   });
 }
@@ -446,21 +422,18 @@ export async function fetchRoleList(
   },
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<RoleListResponse>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<RoleListResponse>>("/admin/personnel/role/list", {
-              params,
-            })
-            .then((r) => r.data),
-        {
-          list: mockAdminRoles,
-          total: mockAdminRoles.length,
-        },
-        "fetchRoleList"
-      ),
+      request.instance
+        .get<ApiResponse<RoleListResponse>>("/admin/personnel/role/list", {
+          params,
+        })
+        .then((r) => r.data),
+    mockData: {
+      list: mockAdminRoles,
+      total: mockAdminRoles.length,
+    },
+    apiName: "fetchRoleList",
     setLoading,
   });
 }
@@ -475,16 +448,13 @@ export async function createRole(
   data: CreateRoleRequest,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/role/create", data)
-            .then((r) => r.data),
-        true,
-        "createRole"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/role/create", data)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "createRole",
     setLoading,
   });
 }
@@ -499,16 +469,13 @@ export async function updateRole(
   data: UpdateRoleRequest,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/role/update", data)
-            .then((r) => r.data),
-        true,
-        "updateRole"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/role/update", data)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "updateRole",
     setLoading,
   });
 }
@@ -523,16 +490,13 @@ export async function deleteRole(
   id: string,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/role/delete", { id })
-            .then((r) => r.data),
-        true,
-        "deleteRole"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/role/delete", { id })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "deleteRole",
     setLoading,
   });
 }
@@ -547,18 +511,15 @@ export async function batchDeleteRoles(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/role/batch-delete", {
-              ids,
-            })
-            .then((r) => r.data),
-        true,
-        "batchDeleteRoles"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/role/batch-delete", {
+          ids,
+        })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchDeleteRoles",
     setLoading,
   });
 }
@@ -573,18 +534,15 @@ export async function batchCopyRoles(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/personnel/role/batch-copy", {
-              ids,
-            })
-            .then((r) => r.data),
-        true,
-        "batchCopyRoles"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/personnel/role/batch-copy", {
+          ids,
+        })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchCopyRoles",
     setLoading,
   });
 }

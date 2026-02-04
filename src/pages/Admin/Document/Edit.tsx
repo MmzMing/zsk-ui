@@ -23,8 +23,7 @@ import {
 } from "react-icons/fi";
 import { useNavigate, useParams } from "react-router-dom";
 import { getDocumentDetail, createDocument, updateDocument, type DocumentDetail } from "../../../api/admin/document";
-import { handleApiCall } from "@/api/axios";
-import type { ApiResponse } from "@/api/types";
+import { handleRequest } from "@/api/axios";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -209,9 +208,8 @@ export default function DocumentEditPage() {
     if (!id || id === "new") return;
     
     setLoading(true);
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => getDocumentDetail(id),
-      errorPrefix: "加载文档失败"
     });
     
     if (res && res.data) {
@@ -234,7 +232,8 @@ export default function DocumentEditPage() {
     }
 
     setLoading(true);
-    const res = await handleApiCall<ApiResponse<string | boolean>>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await handleRequest<any>({
       requestFn: () => {
         if (id && id !== "new") {
           return updateDocument(id, docData);
@@ -242,7 +241,6 @@ export default function DocumentEditPage() {
           return createDocument(docData);
         }
       },
-      errorPrefix: "保存文档失败"
     });
 
     if (res && res.code === 200) {

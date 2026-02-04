@@ -49,7 +49,7 @@ import {
   type RiskLevel,
   type VideoItem
 } from "@/api/admin/video";
-import { handleApiCall } from "@/api/axios";
+import { handleRequest } from "@/api/axios";
 
 // ===== 2. TODO待处理导入区域 =====
 import { Checkbox, CheckboxGroup, Textarea } from "@heroui/react";
@@ -173,7 +173,7 @@ export default function VideoReviewPage() {
    * 加载审核队列数据
    */
   const loadQueue = useCallback(async () => {
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => fetchReviewQueue({
         page,
         pageSize,
@@ -200,7 +200,7 @@ export default function VideoReviewPage() {
     }
     
     // 使用 video API 获取日志
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => fetchReviewLogs({
         page: 1, // 日志暂时只显示第一页
         pageSize: 10,
@@ -223,11 +223,11 @@ export default function VideoReviewPage() {
     setVideoLoading(true);
     // 并行请求
     const [videoRes, reasonsRes] = await Promise.all([
-      handleApiCall({
+      handleRequest({
         requestFn: () => fetchVideoDetail(id),
         setLoading: undefined // 不控制全局 loading
       }),
-      handleApiCall({
+      handleRequest({
         requestFn: () => fetchViolationReasons(),
         setLoading: undefined
       })
@@ -331,7 +331,7 @@ export default function VideoReviewPage() {
       }
     }
 
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => submitReviewResult({
         reviewId: id,
         status,
@@ -366,7 +366,7 @@ export default function VideoReviewPage() {
     const confirmed = window.confirm("确认批量通过选中的审核任务？");
     if (!confirmed) return;
 
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => submitBatchReviewResult({
         reviewIds: selectedIds,
         status: "approved"
@@ -394,7 +394,7 @@ export default function VideoReviewPage() {
     const confirmed = window.confirm("确认批量驳回选中的审核任务？");
     if (!confirmed) return;
 
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => submitBatchReviewResult({
         reviewIds: selectedIds,
         status: "rejected"

@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleRequestWithMock, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import { mockAdminMenuTree } from "../mock/admin/menu";
 import type { ApiResponse } from "../types";
 
@@ -55,17 +55,14 @@ export type MenuNode = {
 export async function fetchAdminMenuTree(
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<MenuNode[]>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<MenuNode[]>>("/admin/menu/tree")
-            .then((r) => r.data),
-        mockAdminMenuTree,
-        "fetchAdminMenuTree"
-      ),
-    setLoading
+      request.instance
+        .get<ApiResponse<MenuNode[]>>("/admin/menu/tree")
+        .then((r) => r.data),
+    mockData: mockAdminMenuTree,
+    apiName: "fetchAdminMenuTree",
+    setLoading,
   });
 }
 
@@ -79,17 +76,14 @@ export async function updateMenuTree(
   tree: MenuNode[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/menu/tree", { tree })
-            .then((r) => r.data),
-        true,
-        "updateMenuTree"
-      ),
-    setLoading
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/menu/tree", { tree })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "updateMenuTree",
+    setLoading,
   });
 }
 
@@ -103,17 +97,14 @@ export async function createMenu(
   data: MenuNode,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/menu/create", data)
-            .then((r) => r.data),
-        true,
-        "createMenu"
-      ),
-    setLoading
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/menu/create", data)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "createMenu",
+    setLoading,
   });
 }
 
@@ -127,17 +118,14 @@ export async function updateMenu(
   data: MenuNode,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/menu/update", data)
-            .then((r) => r.data),
-        true,
-        "updateMenu"
-      ),
-    setLoading
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/menu/update", data)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "updateMenu",
+    setLoading,
   });
 }
 
@@ -151,17 +139,14 @@ export async function deleteMenu(
   id: string,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/menu/delete", { id })
-            .then((r) => r.data),
-        true,
-        "deleteMenu"
-      ),
-    setLoading
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/menu/delete", { id })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "deleteMenu",
+    setLoading,
   });
 }
 
@@ -175,16 +160,13 @@ export async function batchDeleteMenu(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/menu/batch-delete", { ids })
-            .then((r) => r.data),
-        true,
-        "batchDeleteMenu"
-      ),
-    setLoading
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/menu/batch-delete", { ids })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchDeleteMenu",
+    setLoading,
   });
 }

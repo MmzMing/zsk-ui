@@ -45,7 +45,7 @@ import {
   type DocumentReviewLogItem,
   type DocumentReviewItem
 } from "@/api/admin/document";
-import { handleApiCall } from "@/api/axios";
+import { handleRequest } from "@/api/axios";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -153,7 +153,7 @@ function DocumentReviewPage() {
    * 加载审核队列数据
    */
   const loadQueue = useCallback(async () => {
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => fetchDocumentReviewQueue({
         page,
         pageSize,
@@ -178,7 +178,7 @@ function DocumentReviewPage() {
       return;
     }
     
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => fetchDocumentReviewLogs({
         docIds: selectedIds
       }),
@@ -203,7 +203,7 @@ function DocumentReviewPage() {
    */
   const handleUpdateStatus = async (id: string, status: FinalReviewStatus) => {
     setIsSubmitting(true);
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => submitDocumentReview({
         reviewId: id,
         status
@@ -238,7 +238,7 @@ function DocumentReviewPage() {
     setIsSubmitting(true);
     const results = await Promise.all(
       selectedIds.map(id =>
-        handleApiCall({
+        handleRequest({
           requestFn: () => submitDocumentReview({
             reviewId: id,
             status: "approved"
@@ -278,7 +278,7 @@ function DocumentReviewPage() {
     setIsSubmitting(true);
     const results = await Promise.all(
       selectedIds.map(id =>
-        handleApiCall({
+        handleRequest({
           requestFn: () => submitDocumentReview({
             reviewId: id,
             status: "rejected"

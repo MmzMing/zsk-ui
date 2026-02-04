@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleRequestWithMock, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import {
   mockCacheKeys,
   mockCacheInstances,
@@ -46,20 +46,33 @@ export async function getBehaviorFullData(params: {
   onError?: (error: unknown) => void;
 }) {
   const { userId, range, keyword, setLoading, onError } = params;
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () =>
       Promise.all([
         fetchBehaviorUsers(),
         fetchBehaviorTimeline({ userId, range }),
         fetchBehaviorEvents({ userId, keyword }),
-      ]).then(([uRes, tRes, eRes]) => ({
-        users: uRes.data || [],
-        timeline: tRes.data || [],
-        events: eRes.data || [],
-      })),
+      ]).then(([uRes, tRes, eRes]) => {
+        return {
+          code: 200,
+          msg: "ok",
+          data: {
+            users: uRes.data || [],
+            timeline: tRes.data || [],
+            events: eRes.data || [],
+          },
+        };
+      }),
+    mockData: {
+      users: [],
+      timeline: [],
+      events: [],
+    },
+    apiName: "getBehaviorFullData",
     setLoading,
     onError,
   });
+  return data;
 }
 
 /**
@@ -72,17 +85,27 @@ export async function getSystemMonitorFullData(params: {
   onError?: (error: unknown) => void;
 }) {
   const { setLoading, onError } = params;
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () =>
       Promise.all([fetchSystemMonitorData(), fetchSystemMonitorOverview()]).then(
         ([dataRes, ovRes]) => ({
-          monitorData: dataRes.data || [],
-          overview: ovRes.data,
+          code: 200,
+          msg: "ok",
+          data: {
+            monitorData: dataRes.data || [],
+            overview: ovRes.data,
+          },
         })
       ),
+    mockData: {
+      monitorData: [],
+      overview: { cpu: 0, memory: 0, disk: 0, network: 0 },
+    },
+    apiName: "getSystemMonitorFullData",
     setLoading,
     onError,
   });
+  return data;
 }
 
 /**
@@ -100,7 +123,7 @@ export async function getSystemLogListData(params: {
   onError?: (error: unknown) => void;
 }) {
   const { page, pageSize, keyword, module, level, setLoading, onError } = params;
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () =>
       fetchSystemLogs({
         page,
@@ -108,10 +131,13 @@ export async function getSystemLogListData(params: {
         keyword,
         module,
         level,
-      }).then((res) => res.data),
+      }),
+    mockData: { list: [], total: 0 },
+    apiName: "getSystemLogListData",
     setLoading,
     onError,
   });
+  return data;
 }
 
 /**
@@ -125,23 +151,25 @@ export async function getCacheMonitorInitialData(params: {
   onError?: (error: unknown) => void;
 }) {
   const { setLoading, setLoadingTrend, onError } = params;
-  return handleApiCall({
-    requestFn: () => fetchCacheInstances().then((res) => res.data),
+  const { data: instances } = await handleRequest({
+    requestFn: () => fetchCacheInstances(),
+    mockData: [],
+    apiName: "getCacheMonitorInitialData",
     setLoading,
     onError,
-  }).then(async (instances) => {
-    if (instances && instances.length > 0) {
-      const defaultInstance =
-        instances.find((i) => i.id === "redis-main") || instances[0];
-      const detail = await getCacheInstanceDetailData({
-        instanceId: defaultInstance.id,
-        setLoading: setLoadingTrend,
-        onError,
-      });
-      return { instances, defaultInstance, detail };
-    }
-    return { instances: [], defaultInstance: null, detail: null };
   });
+
+  if (instances && instances.length > 0) {
+    const defaultInstance =
+      instances.find((i) => i.id === "redis-main") || instances[0];
+    const detail = await getCacheInstanceDetailData({
+      instanceId: defaultInstance.id,
+      setLoading: setLoadingTrend,
+      onError,
+    });
+    return { instances, defaultInstance, detail };
+  }
+  return { instances: [], defaultInstance: null, detail: null };
 }
 
 /**
@@ -155,20 +183,31 @@ export async function getCacheInstanceDetailData(params: {
   onError?: (error: unknown) => void;
 }) {
   const { instanceId, setLoading, onError } = params;
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () =>
       Promise.all([
         fetchCacheHitRateTrend({ instanceId }),
         fetchCacheQpsTrend({ instanceId }),
         fetchCacheLogs({ instanceId }),
       ]).then(([hitRes, qpsRes, logRes]) => ({
-        hitRateTrendData: hitRes.data,
-        qpsTrendData: qpsRes.data,
-        cacheLogs: logRes.data,
+        code: 200,
+        msg: "ok",
+        data: {
+          hitRateTrendData: hitRes.data,
+          qpsTrendData: qpsRes.data,
+          cacheLogs: logRes.data,
+        },
       })),
+    mockData: {
+      hitRateTrendData: [],
+      qpsTrendData: [],
+      cacheLogs: [],
+    },
+    apiName: "getCacheInstanceDetailData",
     setLoading,
     onError,
   });
+  return data;
 }
 
 /**
@@ -182,11 +221,14 @@ export async function clearCacheInstanceData(params: {
   onError?: (error: unknown) => void;
 }) {
   const { instanceId, setLoading, onError } = params;
-  return handleApiCall({
-    requestFn: () => clearCacheInstance({ instanceId }).then((res) => res.data),
+  const { data } = await handleRequest({
+    requestFn: () => clearCacheInstance({ instanceId }),
+    mockData: true,
+    apiName: "clearCacheInstanceData",
     setLoading,
     onError,
   });
+  return data;
 }
 
 /**
@@ -199,11 +241,14 @@ export async function getCacheInstancesData(params: {
   onError?: (error: unknown) => void;
 }) {
   const { setLoading, onError } = params;
-  return handleApiCall({
-    requestFn: () => fetchCacheInstances().then((res) => res.data),
+  const { data } = await handleRequest({
+    requestFn: () => fetchCacheInstances(),
+    mockData: [],
+    apiName: "getCacheInstancesData",
     setLoading,
     onError,
   });
+  return data;
 }
 
 /**
@@ -220,17 +265,20 @@ export async function getCacheKeysListData(params: {
   onError?: (error: unknown) => void;
 }) {
   const { page, pageSize, keyword, instanceId, setLoading, onError } = params;
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () =>
       fetchCacheKeys({
         page,
         pageSize,
         keyword,
         instanceId,
-      }).then((res) => res.data),
+      }),
+    mockData: { list: [], total: 0 },
+    apiName: "getCacheKeysListData",
     setLoading,
     onError,
   });
+  return data;
 }
 
 /**
@@ -244,11 +292,14 @@ export async function batchRefreshCache(params: {
   onError?: (error: unknown) => void;
 }) {
   const { ids, setLoading, onError } = params;
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () => batchRefreshCacheKeys({ ids }),
+    mockData: true,
+    apiName: "batchRefreshCache",
     setLoading,
     onError,
   });
+  return data;
 }
 
 /**
@@ -262,11 +313,14 @@ export async function batchDeleteCache(params: {
   onError?: (error: unknown) => void;
 }) {
   const { ids, setLoading, onError } = params;
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () => batchDeleteCacheKeys({ ids }),
+    mockData: true,
+    apiName: "batchDeleteCache",
     setLoading,
     onError,
   });
+  return data;
 }
 
 /**
@@ -280,11 +334,14 @@ export async function refreshSingleCache(params: {
   onError?: (error: unknown) => void;
 }) {
   const { id, setLoading, onError } = params;
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () => refreshCacheKey({ id }),
+    mockData: true,
+    apiName: "refreshSingleCache",
     setLoading,
     onError,
   });
+  return data;
 }
 
 /**
@@ -298,11 +355,14 @@ export async function deleteSingleCache(params: {
   onError?: (error: unknown) => void;
 }) {
   const { id, setLoading, onError } = params;
-  return handleApiCall({
+  const { data } = await handleRequest({
     requestFn: () => deleteCacheKey({ id }),
+    mockData: true,
+    apiName: "deleteSingleCache",
     setLoading,
     onError,
   });
+  return data;
 }
 
 // ===== 11. 导出区域 =====
@@ -538,16 +598,16 @@ export type CacheKeyItem = {
 export async function fetchApiDocTree(params: {
   keyword?: string;
 }): Promise<ApiResponse<ApiDocTreeItem[]>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<ApiDocTreeItem[]>>("/admin/ops/api-doc/tree", {
           params,
         })
         .then((r) => r.data),
-    [{ id: "root", name: "Root", children: [] }],
-    "fetchApiDocTree"
-  );
+    mockData: [{ id: "root", name: "Root", children: [] }],
+    apiName: "fetchApiDocTree",
+  });
 }
 
 /**
@@ -558,14 +618,14 @@ export async function fetchApiDocTree(params: {
 export async function fetchApiDocDetail(params: {
   id: string;
 }): Promise<ApiResponse<ApiDocDetail>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<ApiDocDetail>>("/admin/ops/api-doc/detail", {
           params,
         })
         .then((r) => r.data),
-    {
+    mockData: {
       id: params.id,
       name: "Mock API",
       path: "/mock/api",
@@ -575,8 +635,8 @@ export async function fetchApiDocDetail(params: {
       requestParams: [],
       responseExample: "{}",
     },
-    "fetchApiDocDetail"
-  );
+    apiName: "fetchApiDocDetail",
+  });
 }
 
 /**
@@ -587,18 +647,18 @@ export async function fetchApiDocDetail(params: {
 export async function debugApiDoc(
   body: ApiDocDebugRequest
 ): Promise<ApiResponse<ApiDocDebugResult>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<ApiDocDebugResult>>("/admin/ops/api-doc/debug", body)
         .then((r) => r.data),
-    {
+    mockData: {
       status: 200,
       headers: { "content-type": "application/json" },
       body: { message: "Mock response" },
     },
-    "debugApiDoc"
-  );
+    apiName: "debugApiDoc",
+  });
 }
 
 /**
@@ -613,20 +673,20 @@ export async function fetchSystemLogs(params?: {
   module?: string;
   level?: string;
 }): Promise<ApiResponse<{ list: SystemLogItem[]; total: number }>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<{ list: SystemLogItem[]; total: number }>>(
           "/admin/ops/logs",
           { params }
         )
         .then((r) => r.data),
-    {
+    mockData: {
       list: mockSystemLogs,
       total: mockSystemLogs.length,
     },
-    "fetchSystemLogs"
-  );
+    apiName: "fetchSystemLogs",
+  });
 }
 
 /**
@@ -636,14 +696,14 @@ export async function fetchSystemLogs(params?: {
 export async function fetchSystemMonitorData(): Promise<
   ApiResponse<MonitorPoint[]>
 > {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<MonitorPoint[]>>("/admin/ops/monitor/data")
         .then((r) => r.data),
-    mockMonitorData,
-    "fetchSystemMonitorData"
-  );
+    mockData: mockMonitorData,
+    apiName: "fetchSystemMonitorData",
+  });
 }
 
 /**
@@ -653,14 +713,14 @@ export async function fetchSystemMonitorData(): Promise<
 export async function fetchSystemMonitorOverview(): Promise<
   ApiResponse<MonitorOverview>
 > {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<MonitorOverview>>("/admin/ops/monitor/overview")
         .then((r) => r.data),
-    mockMonitorOverview,
-    "fetchSystemMonitorOverview"
-  );
+    mockData: mockMonitorOverview,
+    apiName: "fetchSystemMonitorOverview",
+  });
 }
 
 /**
@@ -671,16 +731,16 @@ export async function fetchSystemMonitorOverview(): Promise<
 export async function fetchMonitorTrend(
   params: MonitorTrendParams
 ): Promise<ApiResponse<MonitorTrendItem[]>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<MonitorTrendItem[]>>("/admin/ops/monitor/trend", {
           params,
         })
         .then((r) => r.data),
-    mockMonitorData.map((d) => ({ ...d, metric: d.metric })),
-    "fetchMonitorTrend"
-  );
+    mockData: mockMonitorData.map((d) => ({ ...d, metric: d.metric })),
+    apiName: "fetchMonitorTrend",
+  });
 }
 
 /**
@@ -690,14 +750,14 @@ export async function fetchMonitorTrend(
 export async function fetchCacheInstances(): Promise<
   ApiResponse<CacheInstanceItem[]>
 > {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<CacheInstanceItem[]>>("/admin/ops/cache/instances")
         .then((r) => r.data),
-    mockCacheInstances,
-    "fetchCacheInstances"
-  );
+    mockData: mockCacheInstances,
+    apiName: "fetchCacheInstances",
+  });
 }
 
 /**
@@ -708,12 +768,12 @@ export async function fetchCacheInstances(): Promise<
 export async function fetchCacheLogs(params?: {
   instanceId?: string;
 }): Promise<ApiResponse<CacheLogItem[]>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<CacheLogItem[]>>("/admin/ops/cache/logs", { params })
         .then((r) => r.data),
-    [
+    mockData: [
       {
         id: "1",
         time: "10:40",
@@ -727,8 +787,8 @@ export async function fetchCacheLogs(params?: {
         message: "刷新热点列表缓存，耗时 120ms",
       },
     ],
-    "fetchCacheLogs"
-  );
+    apiName: "fetchCacheLogs",
+  });
 }
 
 /**
@@ -739,8 +799,8 @@ export async function fetchCacheLogs(params?: {
 export async function fetchCacheHitRateTrend(params?: {
   instanceId?: string;
 }): Promise<ApiResponse<LineConfig["data"]>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<LineConfig["data"]>>(
           "/admin/ops/cache/trend/hit-rate",
@@ -749,9 +809,9 @@ export async function fetchCacheHitRateTrend(params?: {
           }
         )
         .then((r) => r.data),
-    mockHitRateTrendData,
-    "fetchCacheHitRateTrend"
-  );
+    mockData: mockHitRateTrendData,
+    apiName: "fetchCacheHitRateTrend",
+  });
 }
 
 /**
@@ -762,16 +822,16 @@ export async function fetchCacheHitRateTrend(params?: {
 export async function fetchCacheQpsTrend(params?: {
   instanceId?: string;
 }): Promise<ApiResponse<ColumnConfig["data"]>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<ColumnConfig["data"]>>("/admin/ops/cache/trend/qps", {
           params,
         })
         .then((r) => r.data),
-    mockQpsTrendData,
-    "fetchCacheQpsTrend"
-  );
+    mockData: mockQpsTrendData,
+    apiName: "fetchCacheQpsTrend",
+  });
 }
 
 /**
@@ -782,14 +842,14 @@ export async function fetchCacheQpsTrend(params?: {
 export async function refreshCacheKey(params: {
   id: string;
 }): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/admin/ops/cache/keys/refresh", params)
         .then((r) => r.data),
-    true,
-    "refreshCacheKey"
-  );
+    mockData: true,
+    apiName: "refreshCacheKey",
+  });
 }
 
 /**
@@ -800,14 +860,14 @@ export async function refreshCacheKey(params: {
 export async function deleteCacheKey(params: {
   id: string;
 }): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .delete<ApiResponse<boolean>>("/admin/ops/cache/keys", { params })
         .then((r) => r.data),
-    true,
-    "deleteCacheKey"
-  );
+    mockData: true,
+    apiName: "deleteCacheKey",
+  });
 }
 
 /**
@@ -818,17 +878,17 @@ export async function deleteCacheKey(params: {
 export async function batchRefreshCacheKeys(params: {
   ids: string[];
 }): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>(
           "/admin/ops/cache/keys/batch-refresh",
           params
         )
         .then((r) => r.data),
-    true,
-    "batchRefreshCacheKeys"
-  );
+    mockData: true,
+    apiName: "batchRefreshCacheKeys",
+  });
 }
 
 /**
@@ -839,17 +899,17 @@ export async function batchRefreshCacheKeys(params: {
 export async function batchDeleteCacheKeys(params: {
   ids: string[];
 }): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>(
           "/admin/ops/cache/keys/batch-delete",
           params
         )
         .then((r) => r.data),
-    true,
-    "batchDeleteCacheKeys"
-  );
+    mockData: true,
+    apiName: "batchDeleteCacheKeys",
+  });
 }
 
 /**
@@ -860,14 +920,14 @@ export async function batchDeleteCacheKeys(params: {
 export async function clearCacheInstance(params: {
   instanceId: string;
 }): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/admin/ops/cache/instances/clear", params)
         .then((r) => r.data),
-    true,
-    "clearCacheInstance"
-  );
+    mockData: true,
+    apiName: "clearCacheInstance",
+  });
 }
 
 /**
@@ -877,14 +937,14 @@ export async function clearCacheInstance(params: {
 export async function fetchBehaviorUsers(): Promise<
   ApiResponse<BehaviorUser[]>
 > {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<BehaviorUser[]>>("/admin/ops/behavior/users")
         .then((r) => r.data),
-    mockBehaviorUsers,
-    "fetchBehaviorUsers"
-  );
+    mockData: mockBehaviorUsers,
+    apiName: "fetchBehaviorUsers",
+  });
 }
 
 /**
@@ -896,18 +956,18 @@ export async function fetchBehaviorTimeline(params: {
   userId: string;
   range: BehaviorRange;
 }): Promise<ApiResponse<BehaviorPoint[]>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<BehaviorPoint[]>>("/admin/ops/behavior/timeline", {
           params,
         })
         .then((r) => r.data),
-    mockBehaviorTimeline.filter(
+    mockData: mockBehaviorTimeline.filter(
       (item) => item.userId === params.userId && item.range === params.range
     ),
-    "fetchBehaviorTimeline"
-  );
+    apiName: "fetchBehaviorTimeline",
+  });
 }
 
 /**
@@ -919,14 +979,14 @@ export async function fetchBehaviorEvents(params: {
   userId: string;
   keyword?: string;
 }): Promise<ApiResponse<BehaviorEvent[]>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<BehaviorEvent[]>>("/admin/ops/behavior/events", {
           params,
         })
         .then((r) => r.data),
-    mockBehaviorEvents.filter((item) => {
+    mockData: mockBehaviorEvents.filter((item) => {
       if (item.userId !== params.userId) return false;
       if (params.keyword) {
         const content =
@@ -935,8 +995,8 @@ export async function fetchBehaviorEvents(params: {
       }
       return true;
     }),
-    "fetchBehaviorEvents"
-  );
+    apiName: "fetchBehaviorEvents",
+  });
 }
 
 /**
@@ -951,15 +1011,15 @@ export async function fetchCacheKeys(params: {
   page: number;
   pageSize: number;
 }): Promise<ApiResponse<{ list: CacheKeyItem[]; total: number }>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<{ list: CacheKeyItem[]; total: number }>>(
           "/admin/ops/cache/keys",
           { params }
         )
         .then((r) => r.data),
-    (() => {
+    mockData: (() => {
       let list = mockCacheKeys;
       if (params.keyword) {
         list = list.filter((item) => item.key.includes(params.keyword!));
@@ -972,6 +1032,6 @@ export async function fetchCacheKeys(params: {
         total: list.length,
       };
     })(),
-    "fetchCacheKeys"
-  );
+    apiName: "fetchCacheKeys",
+  });
 }

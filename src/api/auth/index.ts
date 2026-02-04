@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleRequestWithMock } from "../axios";
+import { request, handleRequest } from "../axios";
 import type { ApiResponse } from "../types";
 import { MOCK_CAPTCHA_DATA, MOCK_LOGIN_RESPONSE } from "@/api/mock/auth";
 
@@ -97,14 +97,14 @@ export async function preCheckAndGetCaptcha(data: {
   password?: string;
   scene: SliderScene;
 }) {
-  const res = await handleRequestWithMock(
-    () =>
+  const res = await handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<SliderCaptchaData>>("/auth/pre-check", data)
         .then((r) => r.data),
-    { ...MOCK_CAPTCHA_DATA, uuid: "mock-uuid-" + Date.now() },
-    "preCheckAndGetCaptcha"
-  );
+    mockData: { ...MOCK_CAPTCHA_DATA, uuid: "mock-uuid-" + Date.now() },
+    apiName: "preCheckAndGetCaptcha"
+  });
   return res.data;
 }
 
@@ -119,14 +119,14 @@ export async function verifySliderCaptcha(body: {
   email?: string;
   [key: string]: unknown;
 }) {
-  const res = await handleRequestWithMock(
-    () =>
+  const res = await handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<SliderVerifyResult>>("/auth/captcha/slider/verify", body)
         .then((r) => r.data),
-    { passed: true },
-    "verifySliderCaptcha"
-  );
+    mockData: { passed: true },
+    apiName: "verifySliderCaptcha"
+  });
   return res.data;
 }
 
@@ -135,8 +135,8 @@ export async function verifySliderCaptcha(body: {
  * @param data 登录请求数据
  */
 export async function login(data: LoginRequest) {
-  const res = await handleRequestWithMock(
-    async () => {
+  const res = await handleRequest({
+    requestFn: async () => {
       // 模拟验证码校验逻辑（如果后端还未实现，可以在这里抛错触发 Mock）
       const response = await request.instance.post<ApiResponse<LoginResponse>>(
         "/auth/login",
@@ -144,15 +144,15 @@ export async function login(data: LoginRequest) {
       );
       return response.data;
     },
-    {
+    mockData: {
       ...MOCK_LOGIN_RESPONSE,
       user: {
         ...MOCK_LOGIN_RESPONSE.user,
         username: data.username || data.email?.split("@")[0] || "MockUser",
       },
     },
-    "login"
-  );
+    apiName: "login"
+  });
 
   // 针对 Mock 数据的额外逻辑处理（如模拟验证码错误）
   if (import.meta.env.DEV && res.msg?.includes("[MOCK兜底]")) {
@@ -169,14 +169,14 @@ export async function login(data: LoginRequest) {
  * @param data 注册请求数据
  */
 export async function register(data: RegisterRequest) {
-  const res = await handleRequestWithMock(
-    () =>
+  const res = await handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/auth/register", data)
         .then((r) => r.data),
-    true,
-    "register"
-  );
+    mockData: true,
+    apiName: "register"
+  });
 
   if (import.meta.env.DEV && res.msg?.includes("[MOCK兜底]")) {
     if (data.code && data.code !== "123456") {
@@ -207,14 +207,14 @@ export async function refreshToken(token: string) {
  * @param data 忘记密码请求数据
  */
 export async function forgotPassword(data: ForgotPasswordRequest) {
-  const res = await handleRequestWithMock(
-    () =>
+  const res = await handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/auth/forgot-password", data)
         .then((r) => r.data),
-    true,
-    "forgotPassword"
-  );
+    mockData: true,
+    apiName: "forgotPassword"
+  });
 
   if (import.meta.env.DEV && res.msg?.includes("[MOCK兜底]")) {
     if (data.code && data.code !== "123456") {

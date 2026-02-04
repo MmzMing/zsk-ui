@@ -1,11 +1,12 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import { 
   mockTechStack, 
   mockFAQ, 
   type TechStackItem, 
   type FAQCategory 
 } from "../mock/front/about";
+import type { ApiResponse } from "../types";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -34,12 +35,12 @@ export type { TechStackItem, FAQCategory };
  * @returns 技术栈列表数据
  */
 export async function fetchTechStack(): Promise<TechStackItem[]> {
-  return handleApiCall({
-    requestFn: () => request.get<TechStackItem[]>("/about/skill"),
-    mockFn: () => mockTechStack,
-    fallbackOnEmpty: (data) => data.length === 0,
-    errorPrefix: "获取技术栈失败"
+  const { data } = await handleRequest({
+    requestFn: () => request.instance.get<ApiResponse<TechStackItem[]>>("/about/skill").then(r => r.data),
+    mockData: mockTechStack,
+    apiName: "fetchTechStack"
   });
+  return data;
 }
 
 /**
@@ -47,10 +48,10 @@ export async function fetchTechStack(): Promise<TechStackItem[]> {
  * @returns FAQ 列表数据
  */
 export async function fetchFAQ(): Promise<FAQCategory[]> {
-  return handleApiCall({
-    requestFn: () => request.get<FAQCategory[]>("/about/faq"),
-    mockFn: () => mockFAQ,
-    fallbackOnEmpty: (data) => data.length === 0,
-    errorPrefix: "获取 FAQ 失败"
+  const { data } = await handleRequest({
+    requestFn: () => request.instance.get<ApiResponse<FAQCategory[]>>("/about/faq").then(r => r.data),
+    mockData: mockFAQ,
+    apiName: "fetchFAQ"
   });
+  return data;
 }

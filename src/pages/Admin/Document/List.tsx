@@ -48,7 +48,7 @@ import {
   type DocCommentItem
 } from "../../../api/admin/document";
 import { useAppStore } from "../../../store";
-import { handleApiCall } from "../../../api/axios";
+import { handleRequest } from "../../../api/axios";
 import { Loading } from "@/components/Loading";
 
 // ===== 2. TODO待处理导入区域 =====
@@ -189,7 +189,7 @@ function DocumentListPage() {
    */
   const loadDocumentList = useCallback(async () => {
     setLoading(true);
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => fetchDocumentList({
         page: 1,
         pageSize: 100,
@@ -242,7 +242,7 @@ function DocumentListPage() {
     const confirmed = window.confirm(`确定要删除选中的 ${selectedIds.length} 个文档吗？此操作不可恢复。`);
     if (!confirmed) return;
 
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => deleteDocument(selectedIds)
     });
 
@@ -266,7 +266,7 @@ function DocumentListPage() {
     const confirmed = window.confirm(`确认批量${actionName}选中的 ${selectedIds.length} 个文档吗？`);
     if (!confirmed) return;
 
-    const res = await handleApiCall({
+    const res = await handleRequest({
       requestFn: () => batchUpdateDocumentStatus({ ids: selectedIds, status })
     });
 
@@ -286,7 +286,7 @@ function DocumentListPage() {
    */
   const handleTogglePinned = async (id: string, currentPinned: boolean) => {
     const nextPinned = !currentPinned;
-    const res = await handleApiCall({
+    const res = await handleRequest({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       requestFn: () => updateDocument(id, { pinned: nextPinned } as any)
     });
@@ -306,7 +306,7 @@ function DocumentListPage() {
    */
   const handleToggleRecommended = async (id: string, currentRecommended: boolean) => {
     const nextRecommended = !currentRecommended;
-    const res = await handleApiCall({
+    const res = await handleRequest({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       requestFn: () => updateDocument(id, { recommended: nextRecommended } as any)
     });

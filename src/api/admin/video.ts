@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleRequestWithMock, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import type { ApiResponse } from "../types";
 import {
   mockVideos,
@@ -489,14 +489,17 @@ export type SubmitBatchReviewRequest = {
 export async function submitBatchReviewResult(
   data: SubmitBatchReviewRequest
 ): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/content/video/review/batch-submit", data)
+        .post<ApiResponse<boolean>>(
+          "/admin/content/video/review/batch-submit",
+          data
+        )
         .then((r) => r.data),
-    true,
-    "submitBatchReviewResult"
-  );
+    mockData: true,
+    apiName: "submitBatchReviewResult",
+  });
 }
 
 /**
@@ -508,44 +511,49 @@ export async function fetchReviewLogs(params: {
   pageSize: number;
   reviewer?: string;
 }): Promise<ApiResponse<ReviewLogItem[]>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
-        .get<ApiResponse<ReviewLogItem[]>>("/admin/content/video/review/logs", {
-          params,
-        })
+        .get<ApiResponse<ReviewLogItem[]>>(
+          "/admin/content/video/review/logs",
+          {
+            params,
+          }
+        )
         .then((r) => r.data),
-    mockReviewLogs,
-    "fetchReviewLogs"
-  );
+    mockData: mockReviewLogs,
+    apiName: "fetchReviewLogs",
+  });
 }
 
 /**
  * 获取视频分类
  */
-export async function fetchVideoCategories(): Promise<ApiResponse<VideoCategory[]>> {
-  return handleRequestWithMock(
-    () =>
+export async function fetchVideoCategories(): Promise<
+  ApiResponse<VideoCategory[]>
+> {
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<VideoCategory[]>>("/admin/content/video/categories")
         .then((r) => r.data),
-    mockVideoCategories,
-    "fetchVideoCategories"
-  );
+    mockData: mockVideoCategories,
+    apiName: "fetchVideoCategories",
+  });
 }
 
 /**
  * 获取标签选项
  */
 export async function fetchTagOptions(): Promise<ApiResponse<VideoTag[]>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<VideoTag[]>>("/admin/content/video/tags")
         .then((r) => r.data),
-    mockTagOptions,
-    "fetchTagOptions"
-  );
+    mockData: mockTagOptions,
+    apiName: "fetchTagOptions",
+  });
 }
 
 /**
@@ -556,20 +564,20 @@ export async function fetchDraftList(params: {
   page: number;
   pageSize: number;
 }): Promise<ApiResponse<{ list: DraftItem[]; total: number }>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<{ list: DraftItem[]; total: number }>>(
           "/admin/content/video/draft/list",
           { params }
         )
         .then((r) => r.data),
-    {
+    mockData: {
       list: mockVideoDrafts,
       total: mockVideoDrafts.length,
     },
-    "fetchDraftList"
-  );
+    apiName: "fetchDraftList",
+  });
 }
 
 /**
@@ -579,19 +587,19 @@ export async function fetchDraftList(params: {
 export async function saveDraft(
   data: Omit<DraftItem, "id" | "createdAt" | "updatedAt">
 ): Promise<ApiResponse<DraftItem>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<DraftItem>>("/admin/content/video/draft", data)
         .then((r) => r.data),
-    {
+    mockData: {
       id: "mock-draft-id",
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } as DraftItem,
-    "saveDraft"
-  );
+    apiName: "saveDraft",
+  });
 }
 
 /**
@@ -599,14 +607,14 @@ export async function saveDraft(
  * @param id 草稿ID
  */
 export async function deleteDraft(id: string): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .delete<ApiResponse<boolean>>(`/admin/content/video/draft/${id}`)
         .then((r) => r.data),
-    true,
-    "deleteDraft"
-  );
+    mockData: true,
+    apiName: "deleteDraft",
+  });
 }
 
 /**
@@ -616,21 +624,21 @@ export async function deleteDraft(id: string): Promise<ApiResponse<boolean>> {
 export async function initVideoUpload(
   data: UploadInitRequest
 ): Promise<ApiResponse<UploadInitResponse>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<UploadInitResponse>>(
           "/admin/content/video/upload/init",
           data
         )
         .then((r) => r.data),
-    {
+    mockData: {
       uploadId: "mock-upload-id",
       needUpload: true,
       uploadedChunks: [],
     },
-    "initVideoUpload"
-  );
+    apiName: "initVideoUpload",
+  });
 }
 
 /**
@@ -647,8 +655,8 @@ export async function uploadVideoChunk(
   formData.append("chunkSize", String(requestParams.chunkSize));
   formData.append("content", requestParams.file);
 
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<UploadChunkResponse>>(
           "/admin/content/video/upload/chunk",
@@ -660,13 +668,13 @@ export async function uploadVideoChunk(
           }
         )
         .then((r) => r.data),
-    {
+    mockData: {
       uploadId: requestParams.uploadId,
       chunkIndex: requestParams.chunkIndex,
       received: true,
     },
-    "uploadVideoChunk"
-  );
+    apiName: "uploadVideoChunk",
+  });
 }
 
 /**
@@ -676,20 +684,20 @@ export async function uploadVideoChunk(
 export async function mergeVideoUpload(
   data: UploadMergeRequest
 ): Promise<ApiResponse<UploadMergeResponse>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .post<ApiResponse<UploadMergeResponse>>(
           "/admin/content/video/upload/merge",
           data
         )
         .then((r) => r.data),
-    {
+    mockData: {
       videoId: "mock-video-id",
       playUrl: "http://mock-play-url.com/video.mp4",
     },
-    "mergeVideoUpload"
-  );
+    apiName: "mergeVideoUpload",
+  });
 }
 
 /**
@@ -699,8 +707,8 @@ export async function mergeVideoUpload(
 export async function fetchUploadTaskList(
   params: UploadTaskListParams
 ): Promise<ApiResponse<UploadTaskListResponse>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<UploadTaskListResponse>>(
           "/admin/content/video/upload/list",
@@ -709,12 +717,12 @@ export async function fetchUploadTaskList(
           }
         )
         .then((r) => r.data),
-    {
+    mockData: {
       list: mockVideoUploadTasks,
       total: mockVideoUploadTasks.length,
     },
-    "fetchUploadTaskList"
-  );
+    apiName: "fetchUploadTaskList",
+  });
 }
 
 /**
@@ -726,21 +734,18 @@ export async function fetchVideoList(
   params: VideoListParams,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<VideoListResponse>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<VideoListResponse>>("/admin/content/video/list", {
-              params,
-            })
-            .then((r) => r.data),
-        {
-          list: mockVideos,
-          total: mockVideos.length,
-        },
-        "fetchVideoList"
-      ),
+      request.instance
+        .get<ApiResponse<VideoListResponse>>("/admin/content/video/list", {
+          params,
+        })
+        .then((r) => r.data),
+    mockData: {
+      list: mockVideos,
+      total: mockVideos.length,
+    },
+    apiName: "fetchVideoList",
     setLoading,
   });
 }
@@ -754,16 +759,16 @@ export async function batchUpdateVideoStatus(
   data: BatchUpdateVideoStatusRequest,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/content/video/status/batch", data)
-            .then((r) => r.data),
-        true,
-        "batchUpdateVideoStatus"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>(
+          "/admin/content/video/status/batch",
+          data
+        )
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchUpdateVideoStatus",
     setLoading,
   });
 }
@@ -775,8 +780,8 @@ export async function batchUpdateVideoStatus(
 export async function fetchReviewQueue(
   params: ReviewQueueParams
 ): Promise<ApiResponse<ReviewQueueResponse>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
         .get<ApiResponse<ReviewQueueResponse>>(
           "/admin/content/video/review/list",
@@ -785,12 +790,12 @@ export async function fetchReviewQueue(
           }
         )
         .then((r) => r.data),
-    {
+    mockData: {
       list: mockReviewQueueItems,
       total: mockReviewQueueItems.length,
     },
-    "fetchReviewQueue"
-  );
+    apiName: "fetchReviewQueue",
+  });
 }
 
 /**
@@ -800,28 +805,35 @@ export async function fetchReviewQueue(
 export async function submitReviewResult(
   data: SubmitReviewRequest
 ): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () =>
+  return handleRequest({
+    requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/content/video/review/submit", data)
+        .post<ApiResponse<boolean>>(
+          "/admin/content/video/review/submit",
+          data
+        )
         .then((r) => r.data),
-    true,
-    "submitReviewResult"
-  );
+    mockData: true,
+    apiName: "submitReviewResult",
+  });
 }
 
 /**
  * 获取违规原因列表
  */
-export async function fetchViolationReasons(): Promise<ApiResponse<{ id: string; label: string }[]>> {
-  return handleRequestWithMock(
-    () =>
+export async function fetchViolationReasons(): Promise<
+  ApiResponse<{ id: string; label: string }[]>
+> {
+  return handleRequest({
+    requestFn: () =>
       request.instance
-        .get<ApiResponse<{ id: string; label: string }[]>>("/admin/content/video/review/violation-reasons")
+        .get<ApiResponse<{ id: string; label: string }[]>>(
+          "/admin/content/video/review/violation-reasons"
+        )
         .then((r) => r.data),
-    mockViolationReasons,
-    "fetchViolationReasons"
-  );
+    mockData: mockViolationReasons,
+    apiName: "fetchViolationReasons",
+  });
 }
 
 /**
@@ -833,16 +845,16 @@ export async function updateVideo(
   data: Partial<VideoItem> & { id: string },
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .put<ApiResponse<boolean>>(`/admin/content/video/${data.id}`, data)
-            .then((r) => r.data),
-        true,
-        "updateVideo"
-      ),
+      request.instance
+        .put<ApiResponse<boolean>>(
+          `/admin/content/video/${data.id}`,
+          data
+        )
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "updateVideo",
     setLoading,
   });
 }
@@ -852,17 +864,20 @@ export async function updateVideo(
  * @param file 封面文件
  */
 export async function uploadCover(file: Blob): Promise<ApiResponse<string>> {
-  return handleRequestWithMock(
-    () => {
+  return handleRequest({
+    requestFn: () => {
       const formData = new FormData();
       formData.append("file", file);
       return request.instance
-        .post<ApiResponse<string>>("/admin/content/video/upload/cover", formData)
+        .post<ApiResponse<string>>(
+          "/admin/content/video/upload/cover",
+          formData
+        )
         .then((r) => r.data);
     },
-    "public/DefaultImage/MyDefaultHomeVodie.png",
-    "uploadCover"
-  );
+    mockData: "public/DefaultImage/MyDefaultHomeVodie.png",
+    apiName: "uploadCover",
+  });
 }
 
 /**
@@ -874,16 +889,13 @@ export async function deleteVideo(
   id: string,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .delete<ApiResponse<boolean>>(`/admin/content/video/${id}`)
-            .then((r) => r.data),
-        true,
-        "deleteVideo"
-      ),
+      request.instance
+        .delete<ApiResponse<boolean>>(`/admin/content/video/${id}`)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "deleteVideo",
     setLoading,
   });
 }
@@ -897,16 +909,15 @@ export async function batchDeleteVideos(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>("/admin/content/video/batch-delete", { ids })
-            .then((r) => r.data),
-        true,
-        "batchDeleteVideos"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>("/admin/content/video/batch-delete", {
+          ids,
+        })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "batchDeleteVideos",
     setLoading,
   });
 }
@@ -922,16 +933,15 @@ export async function toggleVideoPinned(
   pinned: boolean,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>(`/admin/content/video/${id}/pinned`, { pinned })
-            .then((r) => r.data),
-        true,
-        "toggleVideoPinned"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>(`/admin/content/video/${id}/pinned`, {
+          pinned,
+        })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "toggleVideoPinned",
     setLoading,
   });
 }
@@ -947,72 +957,80 @@ export async function toggleVideoRecommended(
   recommended: boolean,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  return handleApiCall({
+  return handleRequest({
     requestFn: () =>
-      handleRequestWithMock(
-        () =>
-          request.instance
-            .post<ApiResponse<boolean>>(`/admin/content/video/${id}/recommended`, {
-              recommended,
-            })
-            .then((r) => r.data),
-        true,
-        "toggleVideoRecommended"
-      ),
+      request.instance
+        .post<ApiResponse<boolean>>(`/admin/content/video/${id}/recommended`, {
+          recommended,
+        })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "toggleVideoRecommended",
     setLoading,
   });
 }
 
 /**
- * 评论项类型
+ * 视频评论项
  */
 export type CommentItem = {
-  /** 评论ID */
   id: string;
-  /** 视频ID */
   videoId: string;
-  /** 用户名 */
   username: string;
-  /** 用户头像 */
-  avatar?: string;
-  /** 评论内容 */
+  avatar: string;
   content: string;
-  /** 创建时间 */
   createdAt: string;
 };
-
-/**
- * 获取视频评论列表
- * @param videoId 视频ID
- */
-export async function fetchVideoComments(videoId: string): Promise<ApiResponse<CommentItem[]>> {
-  return handleRequestWithMock(
-    () => request.instance.get<ApiResponse<CommentItem[]>>(`/admin/content/video/${videoId}/comments`).then(r => r.data),
-    mockComments.filter(c => c.videoId === videoId),
-    "fetchVideoComments"
-  );
-}
-
-/**
- * 删除视频评论
- * @param commentId 评论ID
- */
-export async function deleteVideoComment(commentId: string): Promise<ApiResponse<boolean>> {
-  return handleRequestWithMock(
-    () => request.instance.delete<ApiResponse<boolean>>(`/admin/content/video/comments/${commentId}`).then(r => r.data),
-    true,
-    "deleteVideoComment"
-  );
-}
 
 /**
  * 获取视频详情
  * @param id 视频ID
  */
 export async function fetchVideoDetail(id: string): Promise<ApiResponse<VideoItem>> {
-  return handleRequestWithMock(
-    () => request.instance.get(`/admin/content/video/${id}`).then((r) => r.data),
-    mockVideos.find((v) => v.id === id) || mockVideos[0],
-    "fetchVideoDetail"
-  );
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<VideoItem>>(`/admin/content/video/${id}`)
+        .then((r) => r.data),
+    mockData: mockVideos.find((v) => v.id === id),
+    apiName: "fetchVideoDetail",
+  });
+}
+
+/**
+ * 获取视频评论列表
+ * @param videoId 视频ID
+ */
+export async function fetchVideoComments(
+  videoId: string
+): Promise<ApiResponse<CommentItem[]>> {
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<CommentItem[]>>(
+          `/admin/content/video/${videoId}/comments`
+        )
+        .then((r) => r.data),
+    mockData: mockComments.filter((c) => c.videoId === videoId),
+    apiName: "fetchVideoComments",
+  });
+}
+
+/**
+ * 删除视频评论
+ * @param commentId 评论ID
+ */
+export async function deleteVideoComment(
+  commentId: string
+): Promise<ApiResponse<boolean>> {
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .delete<ApiResponse<boolean>>(
+          `/admin/content/video/comments/${commentId}`
+        )
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "deleteVideoComment",
+  });
 }

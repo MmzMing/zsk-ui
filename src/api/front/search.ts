@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { request, handleRequestWithMock, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import type { ApiResponse } from "../types";
 import { mockSearchResults } from "../mock/front/search";
 
@@ -205,38 +205,34 @@ export async function searchAll(
   params: SearchAllParams,
   setLoading?: (loading: boolean) => void
 ) {
-  return handleApiCall({
-    requestFn: async () => {
-      // 准备 Mock 数据
-      const mockData = filterMockData(params);
+  // 准备 Mock 数据
+  const mockData = filterMockData(params);
 
-      const res = await handleRequestWithMock(
-        () =>
-          request.instance
-            .get<ApiResponse<SearchAllApiData>>("/content/search/all", {
-              params: {
-                keyword: params.keyword || undefined,
-                // type: 对应后端的一级分类
-                type:
-                  params.type && params.type !== "all"
-                    ? params.type
-                    : "all",
-                sort: params.sort,
-                duration: params.duration || undefined,
-                timeRange: params.timeRange || undefined,
-                // category: 对应后端的二级分类 (原 tag)
-                category: params.category || undefined,
-                page: params.page || 1,
-                pageSize: params.pageSize || 20,
-              },
-            })
-            .then((r) => r.data),
-        mockData,
-        "searchAll"
-      );
-      return res.data;
-    },
+  const res = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<SearchAllApiData>>("/content/search/all", {
+          params: {
+            keyword: params.keyword || undefined,
+            // type: 对应后端的一级分类
+            type:
+              params.type && params.type !== "all"
+                ? params.type
+                : "all",
+            sort: params.sort,
+            duration: params.duration || undefined,
+            timeRange: params.timeRange || undefined,
+            // category: 对应后端的二级分类 (原 tag)
+            category: params.category || undefined,
+            page: params.page || 1,
+            pageSize: params.pageSize || 20,
+          },
+        })
+        .then((r) => r.data),
+    mockData,
+    apiName: "searchAll",
     setLoading,
-    errorPrefix: "搜索失败",
   });
+  
+  return res.data;
 }

@@ -127,12 +127,6 @@ export default function ToolboxDetailPage() {
           
           <div className="flex-1 space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl md:text-4xl font-bold">{data.title}</h1>
-                {import.meta.env.DEV && data.title.includes("(Mock数据)") && (
-                  <Chip color="warning" variant="flat" size="sm">DEV Mock</Chip>
-                )}
-              </div>
               <div className="flex gap-2">
                 <Button 
                   color="primary" 

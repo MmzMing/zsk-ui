@@ -1,6 +1,6 @@
 // ===== 1. 依赖导入区域 =====
 import React from "react";
-import { request, handleApiCall } from "../axios";
+import { request, handleRequest } from "../axios";
 import type { ApiResponse } from "../types";
 import { 
   mockMetricCards, 
@@ -129,12 +129,15 @@ export type AnalysisTimeDistributionParams = {
  * @returns {Promise<DashboardOverviewItem[]>} 概览数据列表
  */
 export async function fetchDashboardOverview(): Promise<DashboardOverviewItem[]> {
-  return handleApiCall({
-    requestFn: () => request.instance.get<ApiResponse<DashboardOverviewItem[]>>("/admin/dashboard/overview").then(r => r.data.data),
-    mockFn: () => mockOverviewCards as DashboardOverviewItem[],
-    fallbackOnEmpty: (data) => data.length === 0,
-    errorPrefix: "获取仪表盘概览数据失败"
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<DashboardOverviewItem[]>>("/admin/dashboard/overview")
+        .then((r) => r.data),
+    mockData: mockOverviewCards as DashboardOverviewItem[],
+    apiName: "fetchDashboardOverview",
   });
+  return data;
 }
 
 /**
@@ -145,12 +148,17 @@ export async function fetchDashboardOverview(): Promise<DashboardOverviewItem[]>
 export async function fetchDashboardTraffic(params: {
   range?: string;
 }): Promise<DashboardTrafficItem[]> {
-  return handleApiCall({
-    requestFn: () => request.instance.get<ApiResponse<DashboardTrafficItem[]>>("/admin/dashboard/traffic", { params }).then(r => r.data.data),
-    mockFn: () => mockTrafficData as DashboardTrafficItem[],
-    fallbackOnEmpty: (data) => data.length === 0,
-    errorPrefix: "获取流量统计数据失败"
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<DashboardTrafficItem[]>>("/admin/dashboard/traffic", {
+          params,
+        })
+        .then((r) => r.data),
+    mockData: mockTrafficData as DashboardTrafficItem[],
+    apiName: "fetchDashboardTraffic",
   });
+  return data;
 }
 
 /**
@@ -161,12 +169,17 @@ export async function fetchDashboardTraffic(params: {
 export async function fetchDashboardTrend(params: {
   range?: string;
 }): Promise<DashboardTrendItem[]> {
-  return handleApiCall({
-    requestFn: () => request.instance.get<ApiResponse<DashboardTrendItem[]>>("/admin/dashboard/trend", { params }).then(r => r.data.data),
-    mockFn: () => mockTrendData as DashboardTrendItem[],
-    fallbackOnEmpty: (data) => data.length === 0,
-    errorPrefix: "获取访问趋势数据失败"
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<DashboardTrendItem[]>>("/admin/dashboard/trend", {
+          params,
+        })
+        .then((r) => r.data),
+    mockData: mockTrendData as DashboardTrendItem[],
+    apiName: "fetchDashboardTrend",
   });
+  return data;
 }
 
 /**
@@ -199,11 +212,17 @@ export async function fetchRecentAdminLogs(
     total: 2,
   };
 
-  return handleApiCall({
-    requestFn: () => request.instance.get<ApiResponse<RecentAdminLogResponse>>("/admin/logs/recent", { params }).then(r => r.data.data),
-    mockFn: () => MOCK_LOGS,
-    errorPrefix: "获取最近管理日志失败"
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<RecentAdminLogResponse>>("/admin/logs/recent", {
+          params,
+        })
+        .then((r) => r.data),
+    mockData: MOCK_LOGS,
+    apiName: "fetchRecentAdminLogs",
   });
+  return data;
 }
 
 /**
@@ -211,12 +230,17 @@ export async function fetchRecentAdminLogs(
  * @returns {Promise<AnalysisMetricItem[]>} 分析指标数据列表
  */
 export async function fetchAnalysisMetrics(): Promise<AnalysisMetricItem[]> {
-  return handleApiCall({
-    requestFn: () => request.instance.get<ApiResponse<AnalysisMetricItem[]>>("/admin/dashboard/analysis/metrics").then(r => r.data.data),
-    mockFn: () => mockMetricCards as AnalysisMetricItem[],
-    fallbackOnEmpty: (data) => data.length === 0,
-    errorPrefix: "获取分析指标数据失败"
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<AnalysisMetricItem[]>>(
+          "/admin/dashboard/analysis/metrics"
+        )
+        .then((r) => r.data),
+    mockData: mockMetricCards as AnalysisMetricItem[],
+    apiName: "fetchAnalysisMetrics",
   });
+  return data;
 }
 
 /**
@@ -227,13 +251,16 @@ export async function fetchAnalysisMetrics(): Promise<AnalysisMetricItem[]> {
 export async function fetchAnalysisTimeDistribution(
   params: AnalysisTimeDistributionParams
 ): Promise<AnalysisTimeDistributionItem[]> {
-  return handleApiCall({
-    requestFn: () => request.instance.get<ApiResponse<AnalysisTimeDistributionItem[]>>("/admin/dashboard/analysis/time-distribution", { params }).then(r => r.data.data),
-    mockFn: () => mockBigScreenData as unknown as AnalysisTimeDistributionItem[],
-    fallbackOnEmpty: (data) => data.length === 0,
-    errorPrefix: "获取时间分布数据失败"
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<AnalysisTimeDistributionItem[]>>(
+          "/admin/dashboard/analysis/time-distribution",
+          { params }
+        )
+        .then((r) => r.data),
+    mockData: mockBigScreenData as unknown as AnalysisTimeDistributionItem[],
+    apiName: "fetchAnalysisTimeDistribution",
   });
+  return data;
 }
-
-
-
