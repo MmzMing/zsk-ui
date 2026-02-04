@@ -149,6 +149,7 @@ export async function fetchDocDetail(id: string, setLoading?: (loading: boolean)
   return handleApiCall({
     requestFn: () => request.instance.get<ApiResponse<DocDetail>>(`/content/doc/detail/${id}`).then(r => r.data.data),
     mockFn: () => mockDocData,
+    fallbackOnEmpty: (data) => !data || !data.id,
     setLoading,
     errorPrefix: "获取文档详情失败"
   });

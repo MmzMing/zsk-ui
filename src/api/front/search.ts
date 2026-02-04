@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { contentRequest as request, handleRequestWithMock, handleApiCall } from "../axios";
+import { request, handleRequestWithMock, handleApiCall } from "../axios";
 import type { ApiResponse } from "../types";
 import { mockSearchResults } from "../mock/front/search";
 

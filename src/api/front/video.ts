@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { contentRequest as request, handleApiCall } from "../axios";
+import { request, handleApiCall } from "../axios";
 import type { ApiResponse } from "../types";
 import { mockVideoData, mockVideoComments } from "../mock/front/videoDetail";
 
@@ -156,6 +156,7 @@ export async function fetchVideoDetail(id: string, setLoading?: (loading: boolea
   return handleApiCall({
     requestFn: () => request.instance.get<ApiResponse<VideoDetail>>(`/content/video/detail/${id}`).then(r => r.data.data),
     mockFn: () => mockVideoData,
+    fallbackOnEmpty: (data) => !data || !data.id,
     setLoading,
     errorPrefix: "获取视频详情失败"
   });

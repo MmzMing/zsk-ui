@@ -16,7 +16,7 @@ import { handleDebugOutput } from "@/lib/utils";
 /**
  * 是否启用 Mock 数据 (开发环境下默认启用)
  */
-const mockEnabled = import.meta.env.DEV;
+const mockEnabled = import.meta.env.DEV || import.meta.env.VITE_USE_MOCK === "true";
 
 // ===== 4. 通用工具函数区域 =====
 /**
@@ -257,7 +257,7 @@ export async function handleApiCall<T>(options: ApiCallOptions<T>): Promise<T> {
   const {
     requestFn,
     mockFn,
-    enableMock = import.meta.env.DEV,
+    enableMock = mockEnabled,
     fallbackOnEmpty,
     onError,
     setLoading,
@@ -270,9 +270,19 @@ export async function handleApiCall<T>(options: ApiCallOptions<T>): Promise<T> {
 
   try {
     const result = await requestFn();
-    if (fallbackOnEmpty && fallbackOnEmpty(result)) {
-      throw new Error("EMPTY_DATA");
+    
+    // 检查结果是否为空 (null, undefined) 或满足自定义空数据判断
+    const isEmpty = result === null || result === undefined || (fallbackOnEmpty && fallbackOnEmpty(result));
+    
+    if (isEmpty && enableMock && mockFn) {
+      handleDebugOutput({
+        debugLevel: "warn",
+        debugMessage: `[Mock兜底] 数据为空，触发 Mock`,
+        debugDetail: { result, errorPrefix },
+      });
+      return await mockFn();
     }
+    
     return result;
   } catch (error) {
     if (onError) {
@@ -391,13 +401,5 @@ function formatParams(params: unknown): unknown {
 // ===== 10. TODO任务管理区域 =====
 
 // ===== 11. 导出区域 =====
-export const contentRequest = createRequestInstance(
-  API_CONFIG.SERVICE_URLS.CONTENT
-);
-export const userRequest = createRequestInstance(API_CONFIG.SERVICE_URLS.USER);
-export const authRequest = createRequestInstance(API_CONFIG.SERVICE_URLS.AUTH);
-
-/**
- * 默认导出 contentRequest 作为 request，为了兼容旧代码
- */
-export const request = contentRequest;
+export const request = createRequestInstance(API_CONFIG.BASE_URL);
+export default request;

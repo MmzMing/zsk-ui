@@ -1,11 +1,7 @@
 // 全局 API 配置
 export const API_CONFIG = {
-  // 不同服务的端口封装
-  SERVICE_URLS: {
-    CONTENT: "http://localhost:30030", // 视频和文档
-    USER: "http://localhost:30010",    // 用户信息和系统信息
-    AUTH: "http://localhost:20010",    // 登录
-  },
+  // 统一网关地址
+  BASE_URL: import.meta.env.DEV || import.meta.env.VITE_USE_MOCK === "true" ? "/api" : "http://localhost:20010/api",
   
   // 默认超时时间 (毫秒)
   timeout: 10000,

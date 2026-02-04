@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { userRequest as request, handleRequestWithMock, handleApiCall } from "../axios";
+import { request, handleRequestWithMock, handleApiCall } from "../axios";
 import { mockAdminMenuTree } from "../mock/admin/menu";
 import type { ApiResponse } from "../types";
 

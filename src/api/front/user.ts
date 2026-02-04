@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { userRequest as request, handleApiCall } from "../axios";
+import { request, handleApiCall } from "../axios";
 import type { ApiResponse } from "../types";
 import { mockUserProfile, mockUserWorks, mockUserFavorites } from "../mock/front/userDetail";
 
@@ -89,6 +89,7 @@ export async function fetchUserProfile(id: string) {
   return handleApiCall({
     requestFn: () => request.instance.get<ApiResponse<UserProfile>>(`/user/profile/${id}`).then(r => r.data.data),
     mockFn: () => mockUserProfile,
+    fallbackOnEmpty: (data) => !data || !data.id,
     errorPrefix: "获取用户资料失败"
   });
 }

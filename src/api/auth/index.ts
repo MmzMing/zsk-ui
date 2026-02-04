@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { authRequest as request, handleRequestWithMock } from "../axios";
+import { request, handleRequestWithMock } from "../axios";
 import type { ApiResponse } from "../types";
 import { MOCK_CAPTCHA_DATA, MOCK_LOGIN_RESPONSE } from "@/api/mock/auth";
 

@@ -7,6 +7,7 @@
     "dev": "vite",
     "gen:api-docs": "node scripts/scan-api-docs.mjs",
     "build": "tsc -b && vite build",
+    "build:dev": "npm run lint && tsc -b && cross-env VITE_USE_MOCK=true vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -68,6 +69,7 @@
     "@types/three": "^0.182.0",
     "@vitalets/google-translate-api": "^9.2.1",
     "@vitejs/plugin-react": "^5.1.1",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

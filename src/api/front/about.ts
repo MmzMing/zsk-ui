@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { contentRequest as request, handleApiCall } from "../axios";
+import { request, handleApiCall } from "../axios";
 import { 
   mockTechStack, 
   mockFAQ, 
@@ -37,6 +37,7 @@ export async function fetchTechStack(): Promise<TechStackItem[]> {
   return handleApiCall({
     requestFn: () => request.get<TechStackItem[]>("/about/skill"),
     mockFn: () => mockTechStack,
+    fallbackOnEmpty: (data) => data.length === 0,
     errorPrefix: "获取技术栈失败"
   });
 }
@@ -49,6 +50,7 @@ export async function fetchFAQ(): Promise<FAQCategory[]> {
   return handleApiCall({
     requestFn: () => request.get<FAQCategory[]>("/about/faq"),
     mockFn: () => mockFAQ,
+    fallbackOnEmpty: (data) => data.length === 0,
     errorPrefix: "获取 FAQ 失败"
   });
 }

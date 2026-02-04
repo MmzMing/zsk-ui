@@ -1,6 +1,6 @@
 // ===== 1. 依赖导入区域 =====
 import React from "react";
-import { userRequest as request, handleApiCall } from "../axios";
+import { request, handleApiCall } from "../axios";
 import type { ApiResponse } from "../types";
 import { 
   mockMetricCards, 
@@ -132,6 +132,7 @@ export async function fetchDashboardOverview(): Promise<DashboardOverviewItem[]>
   return handleApiCall({
     requestFn: () => request.instance.get<ApiResponse<DashboardOverviewItem[]>>("/admin/dashboard/overview").then(r => r.data.data),
     mockFn: () => mockOverviewCards as DashboardOverviewItem[],
+    fallbackOnEmpty: (data) => data.length === 0,
     errorPrefix: "获取仪表盘概览数据失败"
   });
 }
@@ -147,6 +148,7 @@ export async function fetchDashboardTraffic(params: {
   return handleApiCall({
     requestFn: () => request.instance.get<ApiResponse<DashboardTrafficItem[]>>("/admin/dashboard/traffic", { params }).then(r => r.data.data),
     mockFn: () => mockTrafficData as DashboardTrafficItem[],
+    fallbackOnEmpty: (data) => data.length === 0,
     errorPrefix: "获取流量统计数据失败"
   });
 }
@@ -162,6 +164,7 @@ export async function fetchDashboardTrend(params: {
   return handleApiCall({
     requestFn: () => request.instance.get<ApiResponse<DashboardTrendItem[]>>("/admin/dashboard/trend", { params }).then(r => r.data.data),
     mockFn: () => mockTrendData as DashboardTrendItem[],
+    fallbackOnEmpty: (data) => data.length === 0,
     errorPrefix: "获取访问趋势数据失败"
   });
 }
@@ -211,6 +214,7 @@ export async function fetchAnalysisMetrics(): Promise<AnalysisMetricItem[]> {
   return handleApiCall({
     requestFn: () => request.instance.get<ApiResponse<AnalysisMetricItem[]>>("/admin/dashboard/analysis/metrics").then(r => r.data.data),
     mockFn: () => mockMetricCards as AnalysisMetricItem[],
+    fallbackOnEmpty: (data) => data.length === 0,
     errorPrefix: "获取分析指标数据失败"
   });
 }
@@ -226,6 +230,7 @@ export async function fetchAnalysisTimeDistribution(
   return handleApiCall({
     requestFn: () => request.instance.get<ApiResponse<AnalysisTimeDistributionItem[]>>("/admin/dashboard/analysis/time-distribution", { params }).then(r => r.data.data),
     mockFn: () => mockBigScreenData as unknown as AnalysisTimeDistributionItem[],
+    fallbackOnEmpty: (data) => data.length === 0,
     errorPrefix: "获取时间分布数据失败"
   });
 }

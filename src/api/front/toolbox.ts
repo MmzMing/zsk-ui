@@ -1,5 +1,5 @@
 // ===== 1. 依赖导入区域 =====
-import { contentRequest as request, handleApiCall } from "../axios";
+import { request, handleApiCall } from "../axios";
 import { SearchResult } from "./search";
 import { getMockToolboxDetail } from "../mock/front/toolbox";
 
@@ -74,6 +74,7 @@ export async function getToolboxDetail(id: string): Promise<ToolboxDetail> {
   return handleApiCall({
     requestFn: () => request.get<ToolboxDetail>(`/toolbox/${id}`),
     mockFn: () => getMockToolboxDetail(id),
+    fallbackOnEmpty: (data) => !data || !data.id,
     errorPrefix: "获取工具箱详情失败"
   });
 }
