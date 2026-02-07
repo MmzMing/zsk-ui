@@ -8,6 +8,9 @@ import { ArrowRight } from "lucide-react";
 
 // ===== 2. TODO待处理导入区域 =====
 
+import { SlicedImage } from '@/components/Motion/SlicedImage';
+import { DEFAULT_SLICE_CONFIG } from '@/components/Motion/SlicedImage.types';
+
 // ===== 3. 状态控制逻辑区域 =====
 /**
  * 首页特性卡片静态数据
@@ -18,45 +21,57 @@ const HOME_FEATURES_DATA = [
     tag: "核心能力",
     title: "轻量化知识库管理",
     description: "为开发者打造的一站式知识沉淀平台，支持双模式编辑、版本回溯与多维标签管理。",
+    image: "/slice/test1.png",
   },
   {
     id: "302",
     tag: "学习资源",
     title: "多形式教程指南",
     description: "配套视频教程与图文文档，从基础操作到高阶定制全覆盖，新手也能快速上手。",
+    image: "/slice/test1.png",
   },
   {
     id: "303",
     tag: "成长连接",
     title: "简历与开源社区",
     description: "在线编写简历，一键导出无水印。加入开源社区，与开发者共同完善工具生态。",
+    image: "/slice/test1.png",
   },
   {
     id: "304",
     tag: "社区共建",
     title: "开源生态",
     description: "汇聚全球开发者智慧，共同打造开放、透明、持续进化的技术生态系统。",
+    image: "/slice/test1.png",
   },
   {
     id: "305",
     tag: "多端协作",
     title: "云端同步",
     description: "笔记与代码片段实时同步至云端，无论在何处，都能无缝延续你的灵感与工作进度。",
+    image: "/slice/test1.png",
   },
   {
     id: "306",
     tag: "AI赋能",
     title: "智能检索",
     description: "深度融合 AI 语义理解，支持自然语言提问与关联内容推荐，让海量知识触手可及。",
+    image: "/slice/test1.png",
   }
 ];
 
 /** 小卡片宽度 (vw) */
-const SMALL_WIDTH = 18;
+const SMALL_WIDTH_DESKTOP = 18;
+const SMALL_WIDTH_MOBILE = 75; // 手机端给更大的固定宽度
+
 /** 大卡片展开宽度 (vw) */
-const LARGE_WIDTH = 60;
+const LARGE_WIDTH_DESKTOP = 60;
+const LARGE_WIDTH_MOBILE = 85;
+
 /** 卡片间距 (vw) */
-const GAP = 4;
+const GAP_DESKTOP = 4;
+const GAP_MOBILE = 5;
+
 /** 平铺动画阈值 */
 const SPREAD_THRESHOLD = 0.2;
 
@@ -120,8 +135,8 @@ function CardItem({
     scrollProgress,
     [0, 1],
     [
-      50 - smallWidth / 2, // 初始位置：第一张居中
-      50 - smallWidth / 2 - (total - 1) * (smallWidth + gap) // 结束位置：最后一张居中
+      50 - smallWidth / 2,
+      50 - smallWidth / 2 - (total - 1) * (smallWidth + gap)
     ]
   );
 
@@ -187,12 +202,11 @@ function CardItem({
         ease: [0.22, 1, 0.36, 1]
       }}
       className={`
-        absolute h-[50vh] md:h-[60vh] rounded-3xl overflow-hidden
-        border border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl
-        ${isActive && shouldLayoutExpand ? 'shadow-[0_0_100px_rgba(0,0,0,0.6)]' : ''}
+        absolute h-[50vh] md:h-[60vh] overflow-visible
+        ${isActive && shouldLayoutExpand ? 'z-50' : ''}
       `}
     >
-      {/* 始终居中的 Logo 视图 - 使用绝对定位脱离文档流，防止宽度变化导致布局重排 */}
+      {/* 始终居中的图片切片视图 - 仅在非展开状态下显示 */}
       <motion.div
         initial={false}
         animate={{ 
@@ -202,16 +216,27 @@ function CardItem({
         }}
         transition={{
           duration: 0.3,
-          delay: showDetail ? 0 : 0.2 // 收缩时延迟显示 Logo，确保文字先消失
+          delay: showDetail ? 0 : 0.2
         }}
-        className="absolute inset-0 flex flex-col items-center justify-center gap-8 pointer-events-none"
+        className="absolute inset-0"
       >
-        <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl shrink-0">
-          <span className="text-3xl md:text-4xl font-bold text-white/90">{slide.title.charAt(0)}</span>
-        </div>
-        <span className="text-sm md:text-base font-bold text-white tracking-[0.4em] uppercase text-center px-6 whitespace-nowrap">
-          {slide.title}
-        </span>
+        <SlicedImage 
+          src={slide.image} 
+          config={{
+            ...DEFAULT_SLICE_CONFIG,
+            sliceCount: 5, // 减少切片数，更硬朗
+            tiltAngle: 40, // 减小角度
+            sliceGap: 15, // 增大间隙
+            sliceOffset: 40, // 增大垂直错位
+            glitchOffset: 25, // 增加水平错位
+            imageScale: 0.85, // 缩小图片以显示更完整
+            grayscale: 1,
+            contrast: 1.3,
+            brightness: 1.2,
+            randomSeed: 123 + index * 10, 
+          }}
+          overlayTag={slide.tag}
+        />
       </motion.div>
 
       {/* 展开详情视图 */}
@@ -236,10 +261,10 @@ function CardItem({
                 transition={{ delay: 0.55, duration: 0.5, ease: "easeOut" }}
                 className="flex items-center gap-4"
               >
-                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10">
-                  <span className="font-bold text-white text-lg">{slide.title.charAt(0)}</span>
+                <div className="w-10 h-10 rounded-full bg-foreground/10 flex items-center justify-center border border-foreground/10">
+                  <span className="font-bold text-foreground text-lg">{slide.title.charAt(0)}</span>
                 </div>
-                <span className="text-[10px] md:text-xs uppercase tracking-[0.4em] text-[var(--primary-color)] font-black">{slide.tag}</span>
+                <span className="text-[10px] md:text-xs uppercase tracking-[0.4em] text-primary font-black">{slide.tag}</span>
               </motion.div>
 
               <div className="max-w-xl">
@@ -248,7 +273,7 @@ function CardItem({
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.65, duration: 0.5, ease: "easeOut" }}
-                  className="text-3xl md:text-6xl font-black text-white mb-6 leading-[1.1] tracking-tighter"
+                  className="text-3xl md:text-6xl font-black text-foreground mb-6 leading-[1.1] tracking-tighter"
                 >
                   {slide.title}
                 </motion.h2>
@@ -258,7 +283,7 @@ function CardItem({
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.75, duration: 0.5, ease: "easeOut" }}
-                  className="text-base md:text-lg text-white/80 leading-relaxed mb-10 font-medium"
+                  className="text-base md:text-lg text-muted-foreground leading-relaxed mb-10 font-medium"
                 >
                   {slide.description}
                 </motion.p>
@@ -271,12 +296,12 @@ function CardItem({
                 >
                   <button
                     onClick={() => navigate(routes.allSearch)}
-                    className="group flex items-center gap-4 text-white"
+                    className="group flex items-center gap-4 text-foreground"
                   >
-                    <span className="text-[10px] md:text-xs font-black tracking-[0.4em] uppercase border-b-2 border-white/10 group-hover:border-[var(--primary-color)] pb-2 transition-colors">
+                    <span className="text-[10px] md:text-xs font-black tracking-[0.4em] uppercase border-b-2 border-foreground/10 group-hover:border-primary pb-2 transition-colors">
                       Explore Project
                     </span>
-                    <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
+                    <div className="w-10 h-10 rounded-full border border-foreground/10 flex items-center justify-center group-hover:bg-foreground group-hover:text-background transition-all">
                       <ArrowRight className="w-5 h-5" />
                     </div>
                   </button>
@@ -291,9 +316,9 @@ function CardItem({
                transition={{ delay: 0.6, duration: 0.8 }}
                className="absolute right-0 top-0 bottom-0 w-1/2 overflow-hidden pointer-events-none"
             >
-              <div className="absolute top-1/2 right-[-10%] -translate-y-1/2 w-[600px] h-[600px] border border-white/5 rounded-full" />
-              <div className="absolute top-1/2 right-[5%] -translate-y-1/2 w-[400px] h-[400px] border border-white/5 rounded-full" />
-              <div className="absolute top-1/2 right-[20%] -translate-y-1/2 w-[200px] h-[200px] border border-white/5 rounded-full" />
+              <div className="absolute top-1/2 right-[-10%] -translate-y-1/2 w-[600px] h-[600px] border border-foreground/5 rounded-full" />
+              <div className="absolute top-1/2 right-[5%] -translate-y-1/2 w-[400px] h-[400px] border border-foreground/5 rounded-full" />
+              <div className="absolute top-1/2 right-[20%] -translate-y-1/2 w-[200px] h-[200px] border border-foreground/5 rounded-full" />
             </motion.div>
           </motion.div>
         )}
@@ -317,6 +342,22 @@ export default function HomeFeatures() {
   const [isExpanding, setIsExpanding] = useState(false);
   /** 停止判定定时器 */
   const stopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 响应式状态
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const smallWidth = isMobile ? SMALL_WIDTH_MOBILE : SMALL_WIDTH_DESKTOP;
+  const largeWidth = isMobile ? LARGE_WIDTH_MOBILE : LARGE_WIDTH_DESKTOP;
+  const gap = isMobile ? GAP_MOBILE : GAP_DESKTOP;
 
   // 滚动监听
   const { scrollYProgress } = useScroll({
@@ -404,9 +445,9 @@ export default function HomeFeatures() {
                 spreadProgress={spreadProgress}
                 scrollProgress={scrollProgress}
                 total={HOME_FEATURES_DATA.length}
-                smallWidth={SMALL_WIDTH}
-                largeWidth={LARGE_WIDTH}
-                gap={GAP}
+                smallWidth={smallWidth}
+                largeWidth={largeWidth}
+                gap={gap}
                 navigate={navigate}
               />
             );

@@ -155,7 +155,7 @@ export async function login(data: LoginRequest) {
   });
 
   // 针对 Mock 数据的额外逻辑处理（如模拟验证码错误）
-  if (import.meta.env.DEV && res.msg?.includes("[MOCK兜底]")) {
+  if (res.msg?.includes("[MOCK兜底]")) {
     if (data.code && data.code !== "123456") {
       throw new Error("验证码错误");
     }
@@ -178,7 +178,7 @@ export async function register(data: RegisterRequest) {
     apiName: "register"
   });
 
-  if (import.meta.env.DEV && res.msg?.includes("[MOCK兜底]")) {
+  if (res.msg?.includes("[MOCK兜底]")) {
     if (data.code && data.code !== "123456") {
       throw new Error("验证码错误");
     }
@@ -216,7 +216,7 @@ export async function forgotPassword(data: ForgotPasswordRequest) {
     apiName: "forgotPassword"
   });
 
-  if (import.meta.env.DEV && res.msg?.includes("[MOCK兜底]")) {
+  if (res.msg?.includes("[MOCK兜底]")) {
     if (data.code && data.code !== "123456") {
       throw new Error("验证码错误");
     }
