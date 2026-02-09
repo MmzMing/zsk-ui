@@ -642,7 +642,13 @@ const ForgotPasswordPage: React.FC = () => {
 
                 <InteractiveHoverButton
                   type="submit"
-                  disabled={submitting || !codeSent}
+                  disabled={
+                    submitting ||
+                    !email ||
+                    Boolean(emailError) ||
+                    !codeSent ||
+                    captcha.length !== 6
+                  }
                   className="w-full"
                 >
                   提交验证并进入重置密码

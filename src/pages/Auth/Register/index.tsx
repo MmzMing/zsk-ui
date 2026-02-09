@@ -666,7 +666,20 @@ function RegisterPage() {
 
             <InteractiveHoverButton
               type="submit"
-              disabled={submitting}
+              disabled={
+                submitting ||
+                !agree ||
+                !email ||
+                !username ||
+                !password ||
+                !confirmPassword ||
+                Boolean(emailError) ||
+                Boolean(usernameError) ||
+                Boolean(passwordError) ||
+                Boolean(confirmPasswordError) ||
+                captcha.length !== 6 ||
+                Boolean(captchaError)
+              }
               className="w-full"
             >
               {submitting ? "注册中..." : "立即注册"}

@@ -294,7 +294,7 @@ function LoginPage() {
 
     const accountMessage = validateAccount(account);
     const passwordMessage = validatePassword(password);
-    const captchaMessage = validateCaptcha(captcha, requireCaptcha || sliderVerified);
+    const captchaMessage = validateCaptcha(captcha, true);
 
     setAccountError(accountMessage);
     setPasswordError(passwordMessage);
@@ -306,9 +306,9 @@ function LoginPage() {
       return;
     }
 
-    if (requireCaptcha && !sliderVerified) {
-      setCaptchaError("请先完成滑块验证后再登录");
-      setFormError("已开启验证码保护，请完成滑块验证");
+    if (!codeSent || !sliderVerified) {
+      setCaptchaError("请先获取并输入邮箱验证码");
+      setFormError("请先完成滑块验证并获取验证码");
       recordLoginFail();
       return;
     }
@@ -610,7 +610,16 @@ function LoginPage() {
 
               <InteractiveHoverButton
                 type="submit"
-                disabled={submitting}
+                disabled={
+                  submitting ||
+                  !agree ||
+                  !account ||
+                  !password ||
+                  Boolean(accountError) ||
+                  Boolean(passwordError) ||
+                  captcha.length !== 6 ||
+                  Boolean(captchaError)
+                }
                 className="w-full"
               >
                 {submitting ? "登录中..." : "立即登录"}
