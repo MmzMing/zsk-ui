@@ -530,15 +530,15 @@ function BasicLayout() {
       <main
         className={
           "flex-1 relative " +
-          (location.pathname === routes.home
+          (location.pathname === routes.home || location.pathname === routes.resume
             ? "px-0 py-0"
             : "px-[var(--content-padding)] py-[var(--content-padding)]")
         }
       >
         <div
           className={
-            location.pathname === routes.home
-              ? "w-full flex gap-4"
+            location.pathname === routes.home || location.pathname === routes.resume
+              ? "w-full flex"
               : location.pathname.startsWith("/video/")
               ? "max-w-[1400px] mx-auto flex gap-4"
               : "max-w-6xl mx-auto flex gap-4"

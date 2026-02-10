@@ -1,6 +1,11 @@
 // ===== 1. 依赖导入区域 =====
-import React from "react";
-import UndevelopedPage from "@/components/Undeveloped";
+import React, { useEffect, useState } from "react";
+import { useResumeStore } from "@/store/resumeStore";
+import ResumeToolbar from "./components/ResumeToolbar";
+import ResumeEditor from "./components/ResumeEditor";
+import ResumePreview from "./components/ResumePreview";
+import { Tabs, Tab } from "@heroui/react";
+import { Edit3, Eye } from "lucide-react";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -19,15 +24,81 @@ import UndevelopedPage from "@/components/Undeveloped";
 // ===== 9. 页面初始化与事件绑定 =====
 /**
  * 简历页面组件
- * 目前处于开发规划阶段
+ * 采用响应式布局：
+ * - 桌面端：左侧编辑、右侧预览
+ * - 移动端：标签页切换编辑和预览
  */
 const ResumePage: React.FC = () => {
+  const { fetchResume, modules } = useResumeStore();
+  const [viewMode, setViewMode] = useState<string>("edit");
+
+  useEffect(() => {
+    // 如果没有模块数据，则请求初始数据 (Mock)
+    if (modules.length === 0) {
+      fetchResume();
+    }
+  }, [fetchResume, modules.length]);
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <UndevelopedPage 
-        title="我的简历"
-        description="这里将展示个人简历及相关经历，目前正在建设中，敬请期待！"
-      />
+    <div className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
+      {/* 顶部工具栏 */}
+      <ResumeToolbar />
+
+      {/* 移动端视图切换 */}
+      <div className="lg:hidden flex justify-center p-2 bg-content1 border-b border-default-200">
+        <Tabs 
+          aria-label="View Mode" 
+          selectedKey={viewMode} 
+          onSelectionChange={(key) => setViewMode(key as string)}
+          variant="bordered"
+          size="sm"
+          color="primary"
+          classNames={{
+            tabList: "gap-6",
+          }}
+        >
+          <Tab
+            key="edit"
+            title={
+              <div className="flex items-center space-x-2">
+                <Edit3 size={16} />
+                <span>编辑内容</span>
+              </div>
+            }
+          />
+          <Tab
+            key="preview"
+            title={
+              <div className="flex items-center space-x-2">
+                <Eye size={16} />
+                <span>预览简历</span>
+              </div>
+            }
+          />
+        </Tabs>
+      </div>
+
+      {/* 主体内容区 */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* 左侧：编辑区 (移动端根据 viewMode 显示) */}
+        <div className={`
+          flex-none h-full border-r border-default-200 bg-content2/50
+          transition-all duration-300 ease-in-out
+          ${viewMode === "edit" ? "w-full lg:w-[40%]" : "w-0 lg:w-[40%] overflow-hidden lg:overflow-visible"}
+          lg:block
+        `}>
+          <ResumeEditor />
+        </div>
+
+        {/* 右侧：预览区 (移动端根据 viewMode 显示) */}
+        <div className={`
+          flex-1 h-full bg-default-100/50
+          transition-all duration-300 ease-in-out
+          ${viewMode === "preview" ? "block" : "hidden lg:block"}
+        `}>
+          <ResumePreview />
+        </div>
+      </div>
     </div>
   );
 };

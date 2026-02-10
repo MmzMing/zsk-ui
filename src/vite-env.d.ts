@@ -14,3 +14,14 @@ declare module "@ant-design/plots" {
     [key: string]: unknown;
   };
 }
+
+declare module "mammoth" {
+  export interface Options {
+    arrayBuffer: ArrayBuffer;
+  }
+  export interface Result {
+    value: string;
+    messages: unknown[];
+  }
+  export function extractRawText(options: Options): Promise<Result>;
+}
