@@ -27,9 +27,7 @@ import { CategoryCascader } from "@/components/Admin/CategoryCascader";
 import { CoverEditor } from "@/components/Admin/CoverEditor";
 import { captureVideoFrame } from "@/lib/videoUtils";
 import {
-  initVideoUpload,
-  uploadVideoChunk,
-  mergeVideoUpload,
+  uploadVideo,
   fetchVideoCategories,
   fetchTagOptions,
   fetchDraftList,
@@ -238,76 +236,14 @@ export default function VideoUploadPage() {
       setStatus("uploading");
       setUploadProgress(0);
 
-      // 1. 初始化上传
-      // 注意：实际项目中应计算文件真实MD5，此处简化处理
-      const fileMd5 = `md5-${fileToUpload.name}-${fileToUpload.size}-${Date.now()}`;
-      
-      const initRes = await initVideoUpload({
-        title: fileToUpload.name,
-        category: "default", // 初始默认值，后续编辑
-        fileName: fileToUpload.name,
-        fileSize: fileToUpload.size,
-        fileMd5,
-        enableAiCheck: true
+      const uploadId = await uploadVideo(fileToUpload, (percent) => {
+        setUploadProgress(percent);
       });
 
-      if (!initRes.data) throw new Error("初始化上传失败");
-
-      const { uploadId, needUpload, uploadedChunks } = initRes.data;
-
-      // 如果秒传
-      if (!needUpload) {
-        setUploadProgress(100);
-        setStatus("merging");
-        // 直接合并（或者后端已经完成）
-        const mergeRes = await mergeVideoUpload({ uploadId, fileMd5 });
-        if (mergeRes.data) {
-          setVideoId(mergeRes.data.videoId);
-          setStatus("success");
-          showMessage("极速上传成功！", "success");
-        }
-        return;
-      }
-
-      // 2. 分片上传
-      const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB
-      const totalChunks = Math.ceil(fileToUpload.size / CHUNK_SIZE);
-
-      for (let i = 0; i < totalChunks; i++) {
-        // 如果已上传过该分片，跳过
-        if (uploadedChunks.includes(i)) {
-          const progress = Math.round(((i + 1) / totalChunks) * 100);
-          setUploadProgress(progress);
-          continue;
-        }
-
-        const start = i * CHUNK_SIZE;
-        const end = Math.min(fileToUpload.size, start + CHUNK_SIZE);
-        const chunk = fileToUpload.slice(start, end);
-
-        await uploadVideoChunk({
-          uploadId,
-          chunkIndex: i,
-          chunkCount: totalChunks,
-          chunkSize: CHUNK_SIZE,
-          file: chunk
-        });
-
-        const progress = Math.round(((i + 1) / totalChunks) * 100);
-        setUploadProgress(progress);
-      }
-
-      // 3. 合并文件
-      setStatus("merging");
-      const mergeRes = await mergeVideoUpload({ uploadId, fileMd5 });
-      
-      if (mergeRes.data) {
-        setVideoId(mergeRes.data.videoId);
-        setStatus("success");
-        setUploadProgress(100);
-        showMessage("视频上传并处理完成，请填写详细信息。", "success");
-      }
-
+      setVideoId(uploadId);
+      setStatus("success");
+      setUploadProgress(100);
+      showMessage("视频上传并处理完成，请填写详细信息。", "success");
     } catch {
       setStatus("error");
     }
@@ -480,6 +416,7 @@ export default function VideoUploadPage() {
     const newChapter: ChapterItem = {
       id: Date.now().toString(),
       title: newChapterTitle,
+      time: newChapterTime,
       timeInSeconds: seconds
     };
     setChapters([...chapters, newChapter].sort((a, b) => a.timeInSeconds - b.timeInSeconds));

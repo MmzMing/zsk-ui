@@ -107,10 +107,7 @@ function CacheMonitorPage() {
 
   /** 处理清空缓存操作 */
   const handleClearCache = async () => {
-    if (!activeInstanceId) return;
-
     const success = await clearCacheInstanceData({
-      instanceId: activeInstanceId,
       setLoading: setLoadingTrend,
       onError: (err) => showErrorFn(err, "清理缓存"),
     });
@@ -118,10 +115,9 @@ function CacheMonitorPage() {
     if (success) {
       addToast({
         title: "清理成功",
-        description: `已清理实例 ${activeInstanceId} 的所有缓存数据。`,
+        description: `已清理缓存数据。`,
         color: "success",
       });
-      // 清理后重新加载详情
       loadDetailData(activeInstanceId);
     }
   };

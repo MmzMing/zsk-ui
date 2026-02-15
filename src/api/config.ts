@@ -1,7 +1,7 @@
 // 全局 API 配置
 export const API_CONFIG = {
   // 统一网关地址
-  BASE_URL: import.meta.env.PROD ? "/api" : "http://localhost:20010/api",
+  BASE_URL: import.meta.env.PROD ? "/api" : "http://localhost:8080/api",
   
   // 默认超时时间 (毫秒)
   timeout: 10000,

@@ -202,17 +202,17 @@ export default function VideoReviewPage() {
     // 使用 video API 获取日志
     const res = await handleRequest({
       requestFn: () => fetchReviewLogs({
-        page: 1, // 日志暂时只显示第一页
-        pageSize: 10,
-        reviewer: undefined 
+        page: 1,
+        pageSize: 10
       }),
       setLoading: setLogsLoading
     });
 
     if (res && res.data) {
       // 简单过滤一下模拟数据，匹配选中项
-      const filteredLogs = res.data.filter(log => selectedIds.includes(log.videoId));
-      setLogs(filteredLogs.length > 0 ? filteredLogs : res.data);
+      const logRows = res.data.rows || [];
+      const filteredLogs = logRows.filter(log => selectedIds.includes(log.videoId));
+      setLogs(filteredLogs.length > 0 ? filteredLogs : logRows);
     }
   }, [selectedIds, hasSelection]);
 

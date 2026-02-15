@@ -7,7 +7,7 @@ import { defineConfig } from "eslint/config";
 
 export default defineConfig(
   {
-    ignores: ["dist", "node_modules", ".eslintrc.cjs", ".prettierrc.cjs"]
+    ignores: ["dist", "node_modules", ".eslintrc.cjs", ".prettierrc.cjs", "src/lib/jsencrypt.js"]
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

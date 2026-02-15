@@ -1,6 +1,5 @@
 // ===== 1. 依赖导入区域 =====
 import { request, handleRequest } from "../axios";
-import { mockAdminUsers, mockAdminRoles } from "../mock/admin/personnel";
 import type { ApiResponse } from "../types";
 
 // ===== 2. TODO待处理导入区域 =====
@@ -23,14 +22,58 @@ import type { ApiResponse } from "../types";
 
 // ===== 11. 导出区域 =====
 
-/**
- * 用户状态类型
- */
+// ===== 后端类型定义 =====
+
+/** 后端用户类型 */
+export type SysUser = {
+  /** 主键ID */
+  id?: number;
+  /** 用户账号 */
+  userName?: string;
+  /** 用户昵称 */
+  nickName?: string;
+  /** 用户类型 */
+  userType?: string;
+  /** 用户邮箱 */
+  email?: string;
+  /** 手机号码 */
+  phonenumber?: string;
+  /** 用户性别（0男 1女 2未知） */
+  sex?: string;
+  /** 头像地址 */
+  avatar?: string;
+  /** 帐号状态（0正常 1停用） */
+  status?: string;
+  /** 角色ID列表 */
+  roleIds?: number[];
+  /** 创建时间 */
+  createTime?: string;
+};
+
+/** 后端角色类型 */
+export type SysRole = {
+  /** 主键ID */
+  id?: number;
+  /** 角色名称 */
+  roleName?: string;
+  /** 角色权限字符串 */
+  roleKey?: string;
+  /** 显示顺序 */
+  roleSort?: number;
+  /** 角色状态（0正常 1停用） */
+  status?: string;
+  /** 菜单ID列表 */
+  menuIds?: number[];
+  /** 创建时间 */
+  createTime?: string;
+};
+
+// ===== 前端类型定义 =====
+
+/** 用户状态类型 */
 export type UserStatus = "enabled" | "disabled";
 
-/**
- * 用户项类型
- */
+/** 用户项类型 */
 export type UserItem = {
   /** 用户ID */
   id: string;
@@ -48,9 +91,7 @@ export type UserItem = {
   createdAt: string;
 };
 
-/**
- * 用户列表查询参数
- */
+/** 用户列表查询参数 */
 export type UserListParams = {
   /** 当前页码 */
   page: number;
@@ -66,9 +107,7 @@ export type UserListParams = {
   status?: string;
 };
 
-/**
- * 用户列表响应类型
- */
+/** 用户列表响应类型 */
 export type UserListResponse = {
   /** 用户列表 */
   list: UserItem[];
@@ -76,9 +115,7 @@ export type UserListResponse = {
   total: number;
 };
 
-/**
- * 用户表单状态类型定义
- */
+/** 用户表单状态类型定义 */
 export type UserFormState = {
   /** 用户ID（可选） */
   id?: string;
@@ -94,9 +131,7 @@ export type UserFormState = {
   enabled: boolean;
 };
 
-/**
- * 角色分配状态类型定义
- */
+/** 角色分配状态类型定义 */
 export type RoleAssignState = {
   /** 用户ID */
   userId: string;
@@ -106,14 +141,10 @@ export type RoleAssignState = {
   roles: string[];
 };
 
-/**
- * 所有可用角色列表常量
- */
+/** 所有可用角色列表常量 */
 export const allRoles = ["管理员", "内容运营", "审核员", "访客"];
 
-/**
- * 创建用户请求参数
- */
+/** 创建用户请求参数 */
 export type CreateUserRequest = {
   /** 用户名 */
   username: string;
@@ -127,9 +158,7 @@ export type CreateUserRequest = {
   status: UserStatus;
 };
 
-/**
- * 更新用户请求参数
- */
+/** 更新用户请求参数 */
 export type UpdateUserRequest = {
   /** 用户ID */
   id: string;
@@ -145,9 +174,7 @@ export type UpdateUserRequest = {
   status: UserStatus;
 };
 
-/**
- * 权限项类型
- */
+/** 权限项类型 */
 export type PermissionItem = {
   /** 权限ID */
   id: string;
@@ -165,9 +192,7 @@ export type PermissionItem = {
   createdAt: string;
 };
 
-/**
- * 权限分组类型
- */
+/** 权限分组类型 */
 export type PermissionGroup = {
   /** 分组ID */
   id: string;
@@ -177,9 +202,7 @@ export type PermissionGroup = {
   items: PermissionItem[];
 };
 
-/**
- * 角色项类型
- */
+/** 角色项类型 */
 export type RoleItem = {
   /** 角色ID */
   id: string;
@@ -193,9 +216,7 @@ export type RoleItem = {
   permissions: string[];
 };
 
-/**
- * 角色列表响应类型
- */
+/** 角色列表响应类型 */
 export type RoleListResponse = {
   /** 角色列表 */
   list: RoleItem[];
@@ -203,9 +224,7 @@ export type RoleListResponse = {
   total: number;
 };
 
-/**
- * 创建角色请求参数
- */
+/** 创建角色请求参数 */
 export type CreateRoleRequest = {
   /** 角色名称 */
   name: string;
@@ -215,9 +234,7 @@ export type CreateRoleRequest = {
   permissions: string[];
 };
 
-/**
- * 更新角色请求参数
- */
+/** 更新角色请求参数 */
 export type UpdateRoleRequest = {
   /** 角色ID */
   id: string;
@@ -229,6 +246,78 @@ export type UpdateRoleRequest = {
   permissions: string[];
 };
 
+// ===== 字段映射函数 =====
+
+/**
+ * 用户后端转前端字段映射
+ * @param backendData 后端用户数据
+ * @returns 前端用户数据
+ */
+function mapUserToFrontend(backendData: SysUser): UserItem {
+  return {
+    id: String(backendData.id || ""),
+    username: backendData.userName || "",
+    name: backendData.nickName || "",
+    phone: backendData.phonenumber || "",
+    roles: [], // 需要单独查询用户角色关联
+    status: backendData.status === "0" ? "enabled" : "disabled",
+    createdAt: backendData.createTime || "",
+  };
+}
+
+/**
+ * 用户前端转后端字段映射
+ * @param frontendData 前端用户数据
+ * @returns 后端用户数据
+ */
+function mapUserToBackend(
+  frontendData: Partial<UserItem | CreateUserRequest | UpdateUserRequest>
+): Partial<SysUser> {
+  return {
+    id: "id" in frontendData && frontendData.id ? Number(frontendData.id) : undefined,
+    userName: frontendData.username,
+    nickName: frontendData.name,
+    phonenumber: frontendData.phone,
+    status:
+      frontendData.status === "enabled" || frontendData.status === undefined
+        ? "0"
+        : "1",
+  };
+}
+
+/**
+ * 角色后端转前端字段映射
+ * @param backendData 后端角色数据
+ * @returns 前端角色数据
+ */
+function mapRoleToFrontend(backendData: SysRole): RoleItem {
+  return {
+    id: String(backendData.id || ""),
+    name: backendData.roleName || "",
+    description: backendData.roleKey || "",
+    createdAt: backendData.createTime || "",
+    permissions: (backendData.menuIds || []).map(String),
+  };
+}
+
+/**
+ * 角色前端转后端字段映射
+ * @param frontendData 前端角色数据
+ * @returns 后端角色数据
+ */
+function mapRoleToBackend(
+  frontendData: Partial<RoleItem | CreateRoleRequest | UpdateRoleRequest>
+): Partial<SysRole> {
+  return {
+    id: "id" in frontendData && frontendData.id ? Number(frontendData.id) : undefined,
+    roleName: frontendData.name,
+    roleKey: frontendData.description,
+    menuIds: (frontendData.permissions || []).map(Number),
+  };
+}
+
+// ===== 用户管理 API =====
+
 /**
  * 获取用户列表
  * @param params 查询参数
@@ -239,20 +328,19 @@ export async function fetchUserList(
   params: UserListParams,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<UserListResponse>> {
-  return handleRequest({
+  const res = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<UserListResponse>>("/admin/personnel/user/list", {
-          params,
-        })
+        .get<ApiResponse<SysUser[]>>("/system/user/list", { params })
         .then((r) => r.data),
-    mockData: {
-      list: mockAdminUsers,
-      total: mockAdminUsers.length,
-    },
+    mockData: [],
     apiName: "fetchUserList",
     setLoading,
   });
+
+  /** 用户列表映射 */
+  const list = (res.data || []).map(mapUserToFrontend);
+  return { code: 200, msg: "ok", data: { list, total: list.length } };
 }
 
 /**
@@ -265,10 +353,12 @@ export async function createUser(
   data: CreateUserRequest,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
+  /** 后端用户数据 */
+  const backendData = mapUserToBackend(data);
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/user/create", data)
+        .post<ApiResponse<boolean>>("/system/user", backendData)
         .then((r) => r.data),
     mockData: true,
     apiName: "createUser",
@@ -286,10 +376,12 @@ export async function updateUser(
   data: UpdateUserRequest,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
+  /** 后端用户数据 */
+  const backendData = mapUserToBackend(data);
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/user/update", data)
+        .put<ApiResponse<boolean>>("/system/user", backendData)
         .then((r) => r.data),
     mockData: true,
     apiName: "updateUser",
@@ -310,7 +402,7 @@ export async function deleteUser(
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/user/delete", { id })
+        .delete<ApiResponse<boolean>>(`/system/user/${id}`)
         .then((r) => r.data),
     mockData: true,
     apiName: "deleteUser",
@@ -328,10 +420,12 @@ export async function batchDeleteUsers(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
+  /** ID列表转逗号分隔字符串 */
+  const idsStr = ids.join(",");
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/user/batch-delete", { ids })
+        .delete<ApiResponse<boolean>>(`/system/user/${idsStr}`)
         .then((r) => r.data),
     mockData: true,
     apiName: "batchDeleteUsers",
@@ -354,9 +448,8 @@ export async function toggleUserStatus(
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/user/toggle-status", {
-          id,
-          status,
+        .put<ApiResponse<boolean>>(`/system/user/${id}/status`, {
+          status: status === "enabled" ? "0" : "1",
         })
         .then((r) => r.data),
     mockData: true,
@@ -378,7 +471,7 @@ export async function resetPassword(
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/user/reset-password", { id })
+        .put<ApiResponse<boolean>>(`/system/user/${id}/reset-password`)
         .then((r) => r.data),
     mockData: true,
     apiName: "resetPassword",
@@ -396,18 +489,20 @@ export async function batchResetPassword(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
+  /** ID列表转逗号分隔字符串 */
+  const idsStr = ids.join(",");
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/user/batch-reset-password", {
-          ids,
-        })
+        .put<ApiResponse<boolean>>(`/system/user/${idsStr}/reset-password`)
         .then((r) => r.data),
     mockData: true,
     apiName: "batchResetPassword",
     setLoading,
   });
 }
+
+// ===== 角色管理 API =====
 
 /**
  * 获取角色列表
@@ -416,26 +511,22 @@ export async function batchResetPassword(
  * @returns 角色列表响应
  */
 export async function fetchRoleList(
-  params: {
-    page: number;
-    pageSize: number;
-  },
+  params: { page: number; pageSize: number },
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<RoleListResponse>> {
-  return handleRequest({
+  const res = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<RoleListResponse>>("/admin/personnel/role/list", {
-          params,
-        })
+        .get<ApiResponse<SysRole[]>>("/system/role/list", { params })
         .then((r) => r.data),
-    mockData: {
-      list: mockAdminRoles,
-      total: mockAdminRoles.length,
-    },
+    mockData: [],
     apiName: "fetchRoleList",
     setLoading,
   });
+
+  /** 角色列表映射 */
+  const list = (res.data || []).map(mapRoleToFrontend);
+  return { code: 200, msg: "ok", data: { list, total: list.length } };
 }
 
 /**
@@ -448,10 +539,12 @@ export async function createRole(
   data: CreateRoleRequest,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
+  /** 后端角色数据 */
+  const backendData = mapRoleToBackend(data);
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/role/create", data)
+        .post<ApiResponse<boolean>>("/system/role", backendData)
         .then((r) => r.data),
     mockData: true,
     apiName: "createRole",
@@ -469,10 +562,12 @@ export async function updateRole(
   data: UpdateRoleRequest,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
+  /** 后端角色数据 */
+  const backendData = mapRoleToBackend(data);
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/role/update", data)
+        .put<ApiResponse<boolean>>("/system/role", backendData)
         .then((r) => r.data),
     mockData: true,
     apiName: "updateRole",
@@ -493,7 +588,7 @@ export async function deleteRole(
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/role/delete", { id })
+        .delete<ApiResponse<boolean>>(`/system/role/${id}`)
         .then((r) => r.data),
     mockData: true,
     apiName: "deleteRole",
@@ -511,12 +606,12 @@ export async function batchDeleteRoles(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
+  /** ID列表转逗号分隔字符串 */
+  const idsStr = ids.join(",");
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/role/batch-delete", {
-          ids,
-        })
+        .delete<ApiResponse<boolean>>(`/system/role/${idsStr}`)
         .then((r) => r.data),
     mockData: true,
     apiName: "batchDeleteRoles",
@@ -537,9 +632,7 @@ export async function batchCopyRoles(
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/personnel/role/batch-copy", {
-          ids,
-        })
+        .post<ApiResponse<boolean>>("/system/role/copy", { ids })
         .then((r) => r.data),
     mockData: true,
     apiName: "batchCopyRoles",

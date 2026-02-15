@@ -207,13 +207,17 @@ function VideoListPage() {
    * 加载视频列表数据
    */
   const loadVideoList = useCallback(async () => {
-    const res = await fetchVideoList({
-      page: 1,
-      pageSize: 1000 // 获取全量数据用于前端筛选
-    }, setIsLoading);
-
-    if (res && res.code === 200) {
-      setVideos(res.data.list);
+    setIsLoading(true);
+    try {
+      const res = await fetchVideoList({
+        page: 1,
+        pageSize: 1000
+      });
+      if (res && res.code === 200) {
+        setVideos(res.data.list);
+      }
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -333,26 +337,31 @@ function VideoListPage() {
       return;
     }
 
-    const res = await updateVideo({
-      id: editingVideo.id,
-      title: editingVideo.title,
-      category: editingVideo.category,
-      description: editingVideo.description,
-      cover: editingVideo.cover,
-      tags: handleProcessTags(editingVideo.tags),
-      status: editingVideo.status,
-      pinned: editingVideo.pinned,
-      recommended: editingVideo.recommended
-    }, setIsLoading);
-
-    if (res && res.code === 200) {
-      addToast({
-        title: "更新成功",
-        description: `视频「${editingVideo.title}」已更新`,
-        color: "success"
+    setIsLoading(true);
+    try {
+      const res = await updateVideo({
+        id: editingVideo.id,
+        title: editingVideo.title,
+        category: editingVideo.category,
+        description: editingVideo.description,
+        cover: editingVideo.cover,
+        tags: handleProcessTags(editingVideo.tags),
+        status: editingVideo.status,
+        pinned: editingVideo.pinned,
+        recommended: editingVideo.recommended
       });
-      loadVideoList();
-      onEditClose();
+
+      if (res && res.code === 200) {
+        addToast({
+          title: "更新成功",
+          description: `视频「${editingVideo.title}」已更新`,
+          color: "success"
+        });
+        loadVideoList();
+        onEditClose();
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -362,14 +371,19 @@ function VideoListPage() {
    */
   const handleTogglePinned = async (item: VideoItem) => {
     const nextPinned = !item.pinned;
-    const res = await toggleVideoPinned(item.id, nextPinned, setIsLoading);
-    if (res && res.code === 200) {
-      addToast({
-        title: nextPinned ? "已设为置顶" : "已取消置顶",
-        description: `视频「${item.title}」状态已更新`,
-        color: "success"
-      });
-      loadVideoList();
+    setIsLoading(true);
+    try {
+      const res = await toggleVideoPinned(item.id, nextPinned);
+      if (res && res.code === 200) {
+        addToast({
+          title: nextPinned ? "已设为置顶" : "已取消置顶",
+          description: `视频「${item.title}」状态已更新`,
+          color: "success"
+        });
+        loadVideoList();
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -379,14 +393,19 @@ function VideoListPage() {
    */
   const handleToggleRecommended = async (item: VideoItem) => {
     const nextRecommended = !item.recommended;
-    const res = await toggleVideoRecommended(item.id, nextRecommended, setIsLoading);
-    if (res && res.code === 200) {
-      addToast({
-        title: nextRecommended ? "已设为推荐" : "已取消推荐",
-        description: `视频「${item.title}」状态已更新`,
-        color: "success"
-      });
-      loadVideoList();
+    setIsLoading(true);
+    try {
+      const res = await toggleVideoRecommended(item.id, nextRecommended);
+      if (res && res.code === 200) {
+        addToast({
+          title: nextRecommended ? "已设为推荐" : "已取消推荐",
+          description: `视频「${item.title}」状态已更新`,
+          color: "success"
+        });
+        loadVideoList();
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -396,19 +415,24 @@ function VideoListPage() {
    */
   const handleBatchUpdateStatus = async (status: Exclude<VideoStatus, "draft">) => {
     if (selectedIds.length === 0) return;
-    const res = await batchUpdateVideoStatus({
-      ids: selectedIds,
-      status
-    }, setIsLoading);
-
-    if (res && res.code === 200) {
-      addToast({
-        title: "批量操作成功",
-        description: `已成功更新 ${selectedIds.length} 个视频的状态`,
-        color: "success"
+    setIsLoading(true);
+    try {
+      const res = await batchUpdateVideoStatus({
+        ids: selectedIds,
+        status
       });
-      setSelectedIds([]);
-      loadVideoList();
+
+      if (res && res.code === 200) {
+        addToast({
+          title: "批量操作成功",
+          description: `已成功更新 ${selectedIds.length} 个视频的状态`,
+          color: "success"
+        });
+        setSelectedIds([]);
+        loadVideoList();
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -420,15 +444,20 @@ function VideoListPage() {
     const confirmed = window.confirm(`确定要删除选中的 ${selectedIds.length} 个视频吗？此操作不可撤销。`);
     if (!confirmed) return;
 
-    const res = await batchDeleteVideos(selectedIds, setIsLoading);
-    if (res && res.code === 200) {
-      addToast({
-        title: "批量删除成功",
-        description: `已删除 ${selectedIds.length} 个视频`,
-        color: "success"
-      });
-      setSelectedIds([]);
-      loadVideoList();
+    setIsLoading(true);
+    try {
+      const res = await batchDeleteVideos(selectedIds);
+      if (res && res.code === 200) {
+        addToast({
+          title: "批量删除成功",
+          description: `已删除 ${selectedIds.length} 个视频`,
+          color: "success"
+        });
+        setSelectedIds([]);
+        loadVideoList();
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 

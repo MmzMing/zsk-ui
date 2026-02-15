@@ -1,17 +1,6 @@
 // ===== 1. 依赖导入区域 =====
 import { request, handleRequest } from "../axios";
 import type { ApiResponse } from "../types";
-import {
-  mockDocumentUploadTasks,
-  mockDocumentCategories,
-  mockTagOptions,
-  mockDraftList,
-  mockDocumentList,
-  mockReviewQueueItems,
-  mockAdminDocument,
-  mockDocumentReviewLogs,
-  mockDocumentComments,
-} from "../mock/admin/document";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -33,11 +22,65 @@ import {
 
 // ===== 11. 导出区域 =====
 
-// --- 类型定义 ---
+// ===== 后端类型定义 =====
 
-/** 
- * 文档上传初始化请求参数 
- */
+/** 后端笔记类型 */
+export type DocNote = {
+  /** 主键ID */
+  id?: number;
+  /** 用户ID */
+  userId?: number;
+  /** 笔记名称 */
+  noteName?: string;
+  /** 笔记标签 */
+  noteTags?: string;
+  /** 文档内容 */
+  content?: string;
+  /** 笔记简介/描述 */
+  description?: string;
+  /** 大类 */
+  broadCode?: string;
+  /** 小类 */
+  narrowCode?: string;
+  /** 笔记等级 */
+  noteGrade?: number;
+  /** 笔记模式 */
+  noteMode?: number;
+  /** 适合人群 */
+  suitableUsers?: string;
+  /** 审核状态 */
+  auditStatus?: number;
+  /** 笔记状态 */
+  status?: number;
+  /** 发布时间 */
+  publishTime?: string;
+  /** 浏览量 */
+  viewCount?: number;
+  /** 点赞量 */
+  likeCount?: number;
+  /** 评论量 */
+  commentCount?: number;
+  /** 封面图 */
+  cover?: string;
+  /** 是否置顶 */
+  isPinned?: number;
+  /** 是否推荐 */
+  isRecommended?: number;
+  /** SEO标题 */
+  seoTitle?: string;
+  /** SEO描述 */
+  seoDescription?: string;
+  /** SEO关键词 */
+  seoKeywords?: string;
+  /** 创建时间 */
+  createTime?: string;
+  /** 更新时间 */
+  updateTime?: string;
+};
+
+// ===== 前端类型定义 =====
+
+/** 文档上传初始化请求参数 */
 export type DocumentUploadInitRequest = {
   /** 文档标题 */
   title: string;
@@ -59,9 +102,7 @@ export type DocumentUploadInitRequest = {
   price?: number;
 };
 
-/** 
- * 文档上传初始化响应数据 
- */
+/** 文档上传初始化响应数据 */
 export type DocumentUploadInitResponse = {
   /** 上传 ID */
   uploadId: string;
@@ -71,9 +112,7 @@ export type DocumentUploadInitResponse = {
   presignedUrl?: string;
 };
 
-/** 
- * 文档上传完成请求参数 
- */
+/** 文档上传完成请求参数 */
 export type DocumentUploadFinishRequest = {
   /** 上传 ID */
   uploadId: string;
@@ -83,9 +122,7 @@ export type DocumentUploadFinishRequest = {
   errorMsg?: string;
 };
 
-/** 
- * 文档上传任务项 
- */
+/** 文档上传任务项 */
 export type DocumentUploadTaskItem = {
   /** 任务 ID */
   id: string;
@@ -103,9 +140,7 @@ export type DocumentUploadTaskItem = {
   createdAt: string;
 };
 
-/** 
- * 文档上传任务列表响应数据 
- */
+/** 文档上传任务列表响应数据 */
 export type DocumentUploadTaskListResponse = {
   /** 任务列表 */
   list: DocumentUploadTaskItem[];
@@ -113,9 +148,7 @@ export type DocumentUploadTaskListResponse = {
   total: number;
 };
 
-/** 
- * 文档状态类型 
- */
+/** 文档状态类型 */
 export type DocumentStatus =
   | "draft"
   | "pending"
@@ -125,9 +158,7 @@ export type DocumentStatus =
   | "scheduled"
   | "published";
 
-/** 
- * 文档列表项 
- */
+/** 文档列表项 */
 export type DocumentItem = {
   /** 文档 ID */
   id: string;
@@ -157,11 +188,11 @@ export type DocumentItem = {
   pinned?: boolean;
   /** 是否推荐 */
   recommended?: boolean;
+  /** 内容（详情时存在） */
+  content?: string;
 };
 
-/** 
- * 文档分类项 
- */
+/** 文档分类项 */
 export type DocCategory = {
   /** 分类 ID */
   id: string;
@@ -171,9 +202,7 @@ export type DocCategory = {
   children?: DocCategory[];
 };
 
-/** 
- * 文档标签项 
- */
+/** 文档标签项 */
 export type DocTag = {
   /** 标签显示文本 */
   label: string;
@@ -181,9 +210,7 @@ export type DocTag = {
   value: string;
 };
 
-/** 
- * 文档列表响应数据 
- */
+/** 文档列表响应数据 */
 export type DocumentListResponse = {
   /** 文档列表 */
   list: DocumentItem[];
@@ -191,19 +218,13 @@ export type DocumentListResponse = {
   total: number;
 };
 
-/** 
- * 审核状态类型 
- */
+/** 审核状态类型 */
 export type ReviewStatus = "pending" | "approved" | "rejected";
 
-/** 
- * 风险等级类型 
- */
+/** 风险等级类型 */
 export type RiskLevel = "low" | "medium" | "high";
 
-/** 
- * 文档审核项 
- */
+/** 文档审核项 */
 export type DocumentReviewItem = {
   /** 审核 ID */
   id: string;
@@ -223,9 +244,7 @@ export type DocumentReviewItem = {
   createdAt: string;
 };
 
-/** 
- * 文档审核日志项 
- */
+/** 文档审核日志项 */
 export type DocumentReviewLogItem = {
   /** 日志 ID */
   id: string;
@@ -243,9 +262,7 @@ export type DocumentReviewLogItem = {
   remark: string;
 };
 
-/** 
- * 文档审核队列响应数据 
- */
+/** 文档审核队列响应数据 */
 export type DocumentReviewQueueResponse = {
   /** 审核列表 */
   list: DocumentReviewItem[];
@@ -253,9 +270,7 @@ export type DocumentReviewQueueResponse = {
   total: number;
 };
 
-/** 
- * 文档详情数据 
- */
+/** 文档详情数据 */
 export type DocumentDetail = {
   /** 文档 ID */
   id: string;
@@ -282,9 +297,7 @@ export type DocumentDetail = {
   };
 };
 
-/**
- * 文档评论项类型
- */
+/** 文档评论项类型 */
 export type DocCommentItem = {
   /** 评论ID */
   id: string;
@@ -300,189 +313,101 @@ export type DocCommentItem = {
   createdAt: string;
 };
 
-// --- API 函数 ---
+// ===== 字段映射函数 =====
 
 /**
- * 初始化文档上传
- * @param data 上传初始化请求数据
- * @returns 上传初始化结果
+ * 状态映射：后端转前端
+ * @param status 笔记状态
+ * @param auditStatus 审核状态
+ * @returns 前端状态字符串
  */
-export async function initDocumentUpload(
-  data: DocumentUploadInitRequest
-): Promise<ApiResponse<DocumentUploadInitResponse>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .post<ApiResponse<DocumentUploadInitResponse>>(
-          "/admin/content/doc/upload/init",
-          data
-        )
-        .then((r) => r.data),
-    mockData: {
-      uploadId: "mock_upload_id_" + Date.now(),
-      needUpload: true,
-      presignedUrl: "https://mock-s3-url.com/upload",
-    },
-    apiName: "initDocumentUpload",
-  });
+function mapStatusToFrontend(
+  status: number,
+  auditStatus: number
+): DocumentStatus {
+  if (status === 3) return "draft";
+  if (status === 2) return "offline";
+  if (auditStatus === 0) return "pending";
+  if (auditStatus === 1) return "approved";
+  if (auditStatus === 2) return "rejected";
+  return "draft";
 }
 
 /**
- * 完成文档上传
- * @param data 上传完成请求数据
- * @returns 是否完成
+ * 状态映射：前端转后端
+ * @param status 前端状态
+ * @returns 后端状态对象
  */
-export async function finishDocumentUpload(
-  data: DocumentUploadFinishRequest
-): Promise<ApiResponse<boolean>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .post<ApiResponse<boolean>>("/admin/content/doc/upload/finish", data)
-        .then((r) => r.data),
-    mockData: true,
-    apiName: "finishDocumentUpload",
-  });
+function mapStatusToBackend(
+  status: DocumentStatus
+): { status: number; auditStatus: number } {
+  switch (status) {
+    case "draft":
+      return { status: 3, auditStatus: 0 };
+    case "pending":
+      return { status: 1, auditStatus: 0 };
+    case "approved":
+      return { status: 1, auditStatus: 1 };
+    case "rejected":
+      return { status: 1, auditStatus: 2 };
+    case "offline":
+      return { status: 2, auditStatus: 0 };
+    case "published":
+      return { status: 1, auditStatus: 1 };
+    default:
+      return { status: 3, auditStatus: 0 };
+  }
 }
 
 /**
- * 移除文档上传任务
- * @param id 任务 ID
- * @returns 是否移除成功
+ * 笔记后端转前端字段映射
+ * @param note 后端笔记数据
+ * @returns 前端文档数据
  */
-export async function removeDocumentUploadTask(
-  id: string
-): Promise<ApiResponse<boolean>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .post<ApiResponse<boolean>>("/admin/content/doc/upload/remove", { id })
-        .then((r) => r.data),
-    mockData: true,
-    apiName: "removeDocumentUploadTask",
-  });
+function mapNoteToFrontend(note: DocNote): DocumentItem {
+  return {
+    id: String(note.id || ""),
+    title: note.noteName || "",
+    category: note.broadCode || "",
+    description: note.description || "",
+    status: mapStatusToFrontend(note.status || 3, note.auditStatus || 0),
+    readCount: note.viewCount || 0,
+    likeCount: note.likeCount || 0,
+    commentCount: note.commentCount || 0,
+    createdAt: note.createTime || "",
+    updatedAt: note.updateTime || "",
+    cover: note.cover,
+    tags: note.noteTags ? note.noteTags.split(",") : [],
+    pinned: note.isPinned === 1,
+    recommended: note.isRecommended === 1,
+  };
 }
 
 /**
- * 批量移除文档上传任务
- * @param ids 任务 ID 列表
- * @returns 是否移除成功
+ * 笔记前端转后端字段映射
+ * @param doc 前端文档数据
+ * @returns 后端笔记数据
  */
-export async function batchRemoveDocumentUploadTasks(
-  ids: string[]
-): Promise<ApiResponse<boolean>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .post<ApiResponse<boolean>>("/admin/content/doc/upload/batch-remove", {
-          ids,
-        })
-        .then((r) => r.data),
-    mockData: true,
-    apiName: "batchRemoveDocumentUploadTasks",
-  });
+function mapNoteToBackend(
+  doc: Partial<DocumentItem | DocumentDetail>
+): Partial<DocNote> {
+  const statusMap = mapStatusToBackend(doc.status || "draft");
+  const docItem = doc as Partial<DocumentItem>;
+  return {
+    id: doc.id ? Number(doc.id) : undefined,
+    noteName: doc.title,
+    broadCode: doc.category,
+    description: docItem.description,
+    status: statusMap.status,
+    noteTags: Array.isArray(doc.tags) ? doc.tags.join(",") : undefined,
+    cover: doc.cover,
+    isPinned: docItem.pinned ? 1 : 0,
+    isRecommended: docItem.recommended ? 1 : 0,
+    content: (doc as DocumentDetail).content,
+  };
 }
 
-/**
- * 重试文档上传任务
- * @param id 任务 ID
- * @returns 是否重试成功
- */
-export async function retryDocumentUploadTask(
-  id: string
-): Promise<ApiResponse<boolean>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .post<ApiResponse<boolean>>("/admin/content/doc/upload/retry", { id })
-        .then((r) => r.data),
-    mockData: true,
-    apiName: "retryDocumentUploadTask",
-  });
-}
-
-/**
- * 获取文档上传任务列表
- * @param params 分页及过滤参数
- * @returns 任务列表
- */
-export async function fetchDocumentUploadTaskList(params: {
-  page: number;
-  pageSize: number;
-  status?: string;
-}): Promise<ApiResponse<DocumentUploadTaskListResponse>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .get<ApiResponse<DocumentUploadTaskListResponse>>(
-          "/admin/content/doc/upload/list",
-          { params }
-        )
-        .then((r) => r.data),
-    mockData: {
-      list: mockDocumentUploadTasks,
-      total: mockDocumentUploadTasks.length,
-    },
-    apiName: "fetchDocumentUploadTaskList",
-  });
-}
-
-/**
- * 获取文档分类列表
- * @returns 分类列表
- */
-export async function fetchDocumentCategories(): Promise<
-  ApiResponse<DocCategory[]>
-> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .get<ApiResponse<DocCategory[]>>("/admin/content/doc/categories")
-        .then((r) => r.data),
-    mockData: mockDocumentCategories,
-    apiName: "fetchDocumentCategories",
-  });
-}
-
-/**
- * 获取文档标签选项
- * @returns 标签列表
- */
-export async function fetchTagOptions(): Promise<ApiResponse<DocTag[]>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .get<ApiResponse<DocTag[]>>("/admin/content/doc/tags")
-        .then((r) => r.data),
-    mockData: mockTagOptions,
-    apiName: "fetchTagOptions",
-  });
-}
-
-/**
- * 获取草稿列表
- * @param params 分页及搜索参数
- * @returns 草稿列表
- */
-export async function fetchDraftList(params: {
-  page: number;
-  pageSize: number;
-  search?: string;
-}): Promise<ApiResponse<DocumentListResponse>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .get<ApiResponse<DocumentListResponse>>("/admin/content/doc/drafts", {
-          params,
-        })
-        .then((r) => r.data),
-    mockData: {
-      list: mockDraftList,
-      total: mockDraftList.length,
-    },
-    apiName: "fetchDraftList",
-  });
-}
+// ===== 文档管理 API =====
 
 /**
  * 获取文档列表
@@ -496,19 +421,152 @@ export async function fetchDocumentList(params: {
   category?: string;
   keyword?: string;
 }): Promise<ApiResponse<DocumentListResponse>> {
-  return handleRequest({
+  const res = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<DocumentListResponse>>("/admin/content/doc/list", {
+        .get<ApiResponse<{ rows: DocNote[]; total: number }>>("/note/page", {
           params,
         })
         .then((r) => r.data),
-    mockData: {
-      list: mockDocumentList,
-      total: mockDocumentList.length,
-    },
+    mockData: { rows: [], total: 0 },
     apiName: "fetchDocumentList",
   });
+
+  const list = (res.data?.rows || []).map(mapNoteToFrontend);
+  return {
+    code: 200,
+    msg: "ok",
+    data: { list, total: res.data?.total || 0 },
+  };
+}
+
+/**
+ * 获取文档详情
+ * @param id 文档 ID
+ * @returns 文档详情
+ */
+export async function getDocumentDetail(
+  id: string
+): Promise<ApiResponse<DocumentDetail>> {
+  const res = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<DocNote>>(`/note/${id}`)
+        .then((r) => r.data),
+    mockData: null,
+    apiName: "getDocumentDetail",
+  });
+
+  if (!res.data) {
+    return { code: 404, msg: "文档不存在", data: null as unknown as DocumentDetail };
+  }
+
+  const note = res.data;
+  const detail: DocumentDetail = {
+    id: String(note.id || ""),
+    title: note.noteName || "",
+    content: note.content || "",
+    category: note.broadCode || "",
+    status: mapStatusToFrontend(note.status || 3, note.auditStatus || 0),
+    tags: note.noteTags ? note.noteTags.split(",") : [],
+    cover: note.cover,
+    seo: note.seoTitle
+      ? {
+          title: note.seoTitle,
+          description: note.seoDescription || "",
+          keywords: note.seoKeywords ? note.seoKeywords.split(",") : [],
+        }
+      : undefined,
+  };
+  return { code: 200, msg: "ok", data: detail };
+}
+
+/**
+ * 创建文档
+ * @param data 文档详情数据
+ * @returns 新建文档的 ID
+ */
+export async function createDocument(
+  data: Partial<DocumentDetail>
+): Promise<ApiResponse<string>> {
+  const backendData = mapNoteToBackend(data);
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .post<ApiResponse<string>>("/note", backendData)
+        .then((r) => r.data),
+    mockData: "mock_doc_id_" + Date.now(),
+    apiName: "createDocument",
+  });
+}
+
+/**
+ * 更新文档
+ * @param id 文档 ID
+ * @param data 文档详情数据
+ * @returns 是否更新成功
+ */
+export async function updateDocument(
+  id: string,
+  data: Partial<DocumentDetail>
+): Promise<ApiResponse<boolean>> {
+  const backendData = mapNoteToBackend({ ...data, id });
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .put<ApiResponse<boolean>>("/note", backendData)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "updateDocument",
+  });
+}
+
+/**
+ * 批量删除文档
+ * @param ids ID 列表
+ * @returns 是否删除成功
+ */
+export async function deleteDocument(
+  ids: string[]
+): Promise<ApiResponse<boolean>> {
+  const idsStr = ids.join(",");
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .delete<ApiResponse<boolean>>(`/note/${idsStr}`)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "deleteDocument",
+  });
+}
+
+/**
+ * 获取草稿列表
+ * @param params 分页及搜索参数
+ * @returns 草稿列表
+ */
+export async function fetchDraftList(params: {
+  page: number;
+  pageSize: number;
+  search?: string;
+}): Promise<ApiResponse<DocumentListResponse>> {
+  const res = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<{ rows: DocNote[]; total: number }>>("/note/draft/list", {
+          params,
+        })
+        .then((r) => r.data),
+    mockData: { rows: [], total: 0 },
+    apiName: "fetchDraftList",
+  });
+
+  const list = (res.data?.rows || []).map(mapNoteToFrontend);
+  return {
+    code: 200,
+    msg: "ok",
+    data: { list, total: res.data?.total || 0 },
+  };
 }
 
 /**
@@ -523,7 +581,10 @@ export async function batchUpdateDocumentStatus(data: {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/content/doc/batch-update-status", data)
+        .put<ApiResponse<boolean>>("/note/status/batch", {
+          ids: data.ids.map(Number),
+          status: data.status,
+        })
         .then((r) => r.data),
     mockData: true,
     apiName: "batchUpdateDocumentStatus",
@@ -531,8 +592,68 @@ export async function batchUpdateDocumentStatus(data: {
 }
 
 /**
+ * 批量迁移文档分类
+ * @param ids ID 列表
+ * @param category 目标分类
+ * @returns 是否迁移成功
+ */
+export async function moveDocumentCategory(
+  ids: string[],
+  category: string
+): Promise<ApiResponse<boolean>> {
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .put<ApiResponse<boolean>>("/note/category/batch", {
+          ids: ids.map(Number),
+          category,
+        })
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "moveDocumentCategory",
+  });
+}
+
+// ===== 文档分类标签 API =====
+
+/**
+ * 获取文档分类列表
+ * @returns 分类列表
+ */
+export async function fetchDocumentCategories(): Promise<
+  ApiResponse<DocCategory[]>
+> {
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<DocCategory[]>>("/note/category/list")
+        .then((r) => r.data),
+    mockData: [],
+    apiName: "fetchDocumentCategories",
+  });
+}
+
+/**
+ * 获取文档标签选项
+ * @returns 标签列表
+ */
+export async function fetchTagOptions(): Promise<ApiResponse<DocTag[]>> {
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<DocTag[]>>("/note/tag/list")
+        .then((r) => r.data),
+    mockData: [],
+    apiName: "fetchTagOptions",
+  });
+}
+
+// ===== 文档评论 API =====
+
+/**
  * 获取文档评论列表
  * @param docId 文档ID
+ * @returns 评论列表
  */
 export async function fetchDocumentComments(
   docId: string
@@ -541,10 +662,10 @@ export async function fetchDocumentComments(
     requestFn: () =>
       request.instance
         .get<ApiResponse<DocCommentItem[]>>(
-          `/admin/content/doc/${docId}/comments`
+          `/note/comment/list?docId=${docId}`
         )
         .then((r) => r.data),
-    mockData: mockDocumentComments.filter((c) => c.docId === docId),
+    mockData: [],
     apiName: "fetchDocumentComments",
   });
 }
@@ -552,6 +673,7 @@ export async function fetchDocumentComments(
 /**
  * 删除文档评论
  * @param commentId 评论ID
+ * @returns 是否删除成功
  */
 export async function deleteDocumentComment(
   commentId: string
@@ -559,12 +681,14 @@ export async function deleteDocumentComment(
   return handleRequest({
     requestFn: () =>
       request.instance
-        .delete<ApiResponse<boolean>>(`/admin/content/doc/comments/${commentId}`)
+        .delete<ApiResponse<boolean>>(`/note/comment/${commentId}`)
         .then((r) => r.data),
     mockData: true,
     apiName: "deleteDocumentComment",
   });
 }
+
+// ===== 文档审核 API =====
 
 /**
  * 获取文档审核队列
@@ -577,20 +701,23 @@ export async function fetchDocumentReviewQueue(params: {
   status?: string;
   keyword?: string;
 }): Promise<ApiResponse<DocumentReviewQueueResponse>> {
-  return handleRequest({
+  const res = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<DocumentReviewQueueResponse>>(
-          "/admin/content/doc/review/queue",
+        .get<ApiResponse<{ rows: DocumentReviewItem[]; total: number }>>(
+          "/note/review/queue",
           { params }
         )
         .then((r) => r.data),
-    mockData: {
-      list: mockReviewQueueItems,
-      total: mockReviewQueueItems.length,
-    },
+    mockData: { rows: [], total: 0 },
     apiName: "fetchDocumentReviewQueue",
   });
+
+  return {
+    code: 200,
+    msg: "ok",
+    data: { list: res.data?.rows || [], total: res.data?.total || 0 },
+  };
 }
 
 /**
@@ -604,16 +731,11 @@ export async function fetchDocumentReviewLogs(params: {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<DocumentReviewLogItem[]>>(
-          "/admin/content/doc/review/logs",
-          { params }
-        )
+        .get<ApiResponse<DocumentReviewLogItem[]>>("/note/review/logs", {
+          params,
+        })
         .then((r) => r.data),
-    mockData: mockDocumentReviewLogs.filter((log) =>
-      params.docIds && params.docIds.length > 0
-        ? params.docIds.includes(log.docId)
-        : true
-    ),
+    mockData: [],
     apiName: "fetchDocumentReviewLogs",
   });
 }
@@ -631,108 +753,143 @@ export async function submitDocumentReview(data: {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/content/doc/review/submit", data)
+        .post<ApiResponse<boolean>>("/note/review/submit", {
+          id: data.reviewId,
+          result: data.status,
+          reason: data.reason,
+        })
         .then((r) => r.data),
     mockData: true,
     apiName: "submitDocumentReview",
   });
 }
 
+// ===== 文档上传 API =====
+
 /**
- * 获取文档详情
- * @param id 文档 ID
- * @returns 文档详情
+ * 初始化文档上传
+ * @param data 上传初始化请求数据
+ * @returns 上传初始化结果
  */
-export async function getDocumentDetail(
-  id: string
-): Promise<ApiResponse<DocumentDetail>> {
+export async function initDocumentUpload(
+  data: DocumentUploadInitRequest
+): Promise<ApiResponse<DocumentUploadInitResponse>> {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<DocumentDetail>>(`/admin/content/doc/${id}`)
+        .post<ApiResponse<DocumentUploadInitResponse>>(
+          "/files/multipart/init",
+          {
+            fileName: data.fileName,
+            fileSize: data.fileSize,
+            fileMd5: data.fileMd5,
+          }
+        )
         .then((r) => r.data),
-    mockData: mockAdminDocument,
-    apiName: "getDocumentDetail",
+    mockData: {
+      uploadId: "mock_upload_id_" + Date.now(),
+      needUpload: true,
+    },
+    apiName: "initDocumentUpload",
   });
 }
 
 /**
- * 创建文档
- * @param data 文档详情数据
- * @returns 新建文档的 ID
+ * 完成文档上传
+ * @param data 上传完成请求数据
+ * @returns 是否完成
  */
-export async function createDocument(
-  data: Partial<DocumentDetail>
-): Promise<ApiResponse<string>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .post<ApiResponse<string>>("/admin/content/doc/create", data)
-        .then((r) => r.data),
-    mockData: "mock_doc_id_" + Date.now(),
-    apiName: "createDocument",
-  });
-}
-
-/**
- * 更新文档
- * @param id 文档 ID
- * @param data 文档详情数据
- * @returns 是否更新成功
- */
-export async function updateDocument(
-  id: string,
-  data: Partial<DocumentDetail>
+export async function finishDocumentUpload(
+  data: DocumentUploadFinishRequest
 ): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .put<ApiResponse<boolean>>(`/admin/content/doc/${id}`, data)
+        .post<ApiResponse<boolean>>("/files/multipart/complete", {
+          uploadId: data.uploadId,
+        })
         .then((r) => r.data),
     mockData: true,
-    apiName: "updateDocument",
+    apiName: "finishDocumentUpload",
   });
 }
 
 /**
- * 批量删除文档
- * @param ids ID 列表
- * @returns 是否删除成功
+ * 获取文档上传任务列表
+ * @param params 分页及过滤参数
+ * @returns 任务列表
  */
-export async function deleteDocument(
+export async function fetchDocumentUploadTaskList(params: {
+  page: number;
+  pageSize: number;
+  status?: string;
+}): Promise<ApiResponse<DocumentUploadTaskListResponse>> {
+  const res = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<DocumentUploadTaskItem[]>>("/note/upload/task/list", {
+          params,
+        })
+        .then((r) => r.data),
+    mockData: [],
+    apiName: "fetchDocumentUploadTaskList",
+  });
+
+  const list = res.data || [];
+  return { code: 200, msg: "ok", data: { list, total: list.length } };
+}
+
+/**
+ * 移除文档上传任务
+ * @param id 任务 ID
+ * @returns 是否移除成功
+ */
+export async function removeDocumentUploadTask(
+  id: string
+): Promise<ApiResponse<boolean>> {
+  return handleRequest({
+    requestFn: () =>
+      request.instance
+        .delete<ApiResponse<boolean>>(`/note/upload/task/${id}`)
+        .then((r) => r.data),
+    mockData: true,
+    apiName: "removeDocumentUploadTask",
+  });
+}
+
+/**
+ * 批量移除文档上传任务
+ * @param ids 任务 ID 列表
+ * @returns 是否移除成功
+ */
+export async function batchRemoveDocumentUploadTasks(
   ids: string[]
 ): Promise<ApiResponse<boolean>> {
+  const idsStr = ids.join(",");
   return handleRequest({
     requestFn: () =>
       request.instance
-        .delete<ApiResponse<boolean>>("/admin/content/doc/batch", {
-          data: { ids },
-        })
+        .delete<ApiResponse<boolean>>(`/note/upload/task/${idsStr}`)
         .then((r) => r.data),
     mockData: true,
-    apiName: "deleteDocument",
+    apiName: "batchRemoveDocumentUploadTasks",
   });
 }
 
 /**
- * 批量迁移文档分类
- * @param ids ID 列表
- * @param category 目标分类
- * @returns 是否迁移成功
+ * 重试文档上传任务
+ * @param id 任务 ID
+ * @returns 是否重试成功
  */
-export async function moveDocumentCategory(
-  ids: string[],
-  category: string
+export async function retryDocumentUploadTask(
+  id: string
 ): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/content/doc/category/batch", {
-          ids,
-          category,
-        })
+        .post<ApiResponse<boolean>>(`/note/upload/task/${id}/retry`)
         .then((r) => r.data),
     mockData: true,
-    apiName: "moveDocumentCategory",
+    apiName: "retryDocumentUploadTask",
   });
 }

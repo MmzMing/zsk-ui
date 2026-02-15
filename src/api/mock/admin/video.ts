@@ -43,6 +43,7 @@ export const mockVideoDrafts = [
     title: "TypeScript 高级进阶技巧",
     category: "前端开发",
     description: "深入探讨 TypeScript 中的高级类型、装饰器以及元编程技巧。",
+    coverImage: "",
     createdAt: "2026-01-15 09:00:00",
     updatedAt: "2026-01-16 14:30:00"
   },
@@ -51,6 +52,7 @@ export const mockVideoDrafts = [
     title: "Node.js 微服务架构实战",
     category: "后端开发",
     description: "从零开始构建一个基于 Node.js 的微服务系统，涵盖服务注册、网关与链路追踪。",
+    coverImage: "",
     createdAt: "2026-01-17 11:20:00",
     updatedAt: "2026-01-17 11:20:00"
   }

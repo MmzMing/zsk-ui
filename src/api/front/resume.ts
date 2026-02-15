@@ -1,4 +1,5 @@
 // ===== 1. 依赖导入区域 =====
+import { request, handleRequest } from "../axios";
 import type { ApiResponse } from "../types";
 import { mockResumeModules } from "../mock/front/resume";
 
@@ -61,31 +62,29 @@ export type ResumeModule = {
 /**
  * 获取简历详情
  */
-export const fetchResumeDetail = () => {
-  // 暂时使用 Mock 数据
-  return new Promise<ApiResponse<ResumeModule[]>>((resolve) => {
-    setTimeout(() => {
-      resolve({
-        code: 200,
-        msg: "success",
-        data: mockResumeModules as ResumeModule[],
-      });
-    }, 500);
+export const fetchResumeDetail = async () => {
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .get<ApiResponse<ResumeModule[]>>("/system/resume/detail")
+        .then((r) => r.data),
+    mockData: mockResumeModules as ResumeModule[],
+    apiName: "fetchResumeDetail",
   });
+  return { code: 200, msg: "success", data };
 };
 
 /**
  * 保存简历
  */
-export const saveResume = (modules: ResumeModule[]) => {
-  return new Promise<ApiResponse<null>>((resolve) => {
-    setTimeout(() => {
-      console.log("Resume Saved:", modules);
-      resolve({
-        code: 200,
-        msg: "success",
-        data: null,
-      });
-    }, 500);
+export const saveResume = async (modules: ResumeModule[]) => {
+  const { data } = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .post<ApiResponse<null>>("/system/resume/save", modules)
+        .then((r) => r.data),
+    mockData: null,
+    apiName: "saveResume",
   });
+  return { code: 200, msg: "success", data };
 };

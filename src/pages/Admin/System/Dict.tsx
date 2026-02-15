@@ -93,18 +93,20 @@ function DictPage() {
    * 加载字典列表数据
    */
   const loadDictList = useCallback(async () => {
-    const res = await fetchDictList(
-      {
+    setIsLoading(true);
+    try {
+      const res = await fetchDictList({
         page,
         pageSize,
         keyword: keyword.trim() || undefined,
         status: statusFilter === "all" ? undefined : statusFilter
-      },
-      setIsLoading
-    );
-    if (res && res.data) {
-      setItems(res.data.list);
-      setTotal(res.data.total);
+      });
+      if (res && res.data) {
+        setItems(res.data.list);
+        setTotal(res.data.total);
+      }
+    } finally {
+      setIsLoading(false);
     }
   }, [page, pageSize, keyword, statusFilter]);
 

@@ -22,9 +22,13 @@ import {
 import {
   verifySliderCaptcha,
   preCheckAndGetCaptcha,
-  forgotPassword,
+  sendPasswordResetCode,
+  verifyResetCode,
+  resetPassword,
+  getPublicKey,
   type SliderCaptchaData,
 } from "@/api/auth";
+import { rsaEncrypt } from "@/lib/rsaEncrypt";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -160,6 +164,7 @@ const ForgotPasswordPage: React.FC = () => {
   const [formError, setFormError] = React.useState("");
   /** 验证码倒计时 */
   const [captchaCountdown, setCaptchaCountdown] = React.useState(0);
+  const [puzzleTop, setPuzzleTop] = React.useState(0);
   /** 滑块弹窗可见性 */
   const [sliderVisible, setSliderVisible] = React.useState(false);
   /** 滑块是否已验证 */
@@ -171,6 +176,8 @@ const ForgotPasswordPage: React.FC = () => {
   const [sliderError, setSliderError] = React.useState("");
   /** 验证码是否已发送 */
   const [codeSent, setCodeSent] = React.useState(false);
+  /** 验证令牌（验证码验证通过后获取） */
+  const [verifyToken, setVerifyToken] = React.useState<string>("");
 
   // --- 页面副作用 ---
   // 页面初始化
@@ -288,14 +295,15 @@ const ForgotPasswordPage: React.FC = () => {
    */
   const requestSliderCaptcha = async () => {
     try {
-      const data = await preCheckAndGetCaptcha({
-        account: email.trim(),
-        scene: "forgot_email",
-      });
+      const data = await preCheckAndGetCaptcha();
       setSliderCaptchaInfo(data);
+      if (data.y) {
+        setPuzzleTop(data.y);
+      }
       return {
         bgUrl: data.bgUrl,
         puzzleUrl: data.puzzleUrl,
+        y: data.y
       };
     } catch (error) {
       setSliderError("滑块验证码加载失败，请稍后重试");
@@ -326,6 +334,10 @@ const ForgotPasswordPage: React.FC = () => {
         setSliderError("验证失败，请重新尝试");
         return Promise.reject();
       }
+
+      /** 滑块验证通过后，发送密码重置验证码 */
+      await sendPasswordResetCode(email.trim());
+
       setSliderVerified(true);
       setSliderVisible(false);
       setCodeSent(true);
@@ -354,8 +366,8 @@ const ForgotPasswordPage: React.FC = () => {
       return;
     }
 
-    if (!codeSent) {
-      setFormError("请先获取并输入验证码");
+    if (!verifyToken) {
+      setFormError("验证令牌已过期，请重新验证");
       return;
     }
 
@@ -363,16 +375,17 @@ const ForgotPasswordPage: React.FC = () => {
     setSubmitting(true);
 
     try {
-      await forgotPassword({
-        email,
-        code: captcha,
-        newPassword,
-      });
+      const publicKeyData = await getPublicKey();
+      const encryptedPassword = await rsaEncrypt(newPassword, publicKeyData.publicKey);
+      
+      /** 使用新的三步流程重置密码 */
+      await resetPassword(email.trim(), verifyToken, encryptedPassword);
+      
       window.setTimeout(() => {
         navigate(routes.login);
       }, 800);
     } catch {
-      // 错误已由全局拦截器处理，这里仅需重置状态
+      setFormError("密码重置失败，请稍后重试");
     } finally {
       setSubmitting(false);
     }
@@ -556,7 +569,7 @@ const ForgotPasswordPage: React.FC = () => {
 
             {stepIndex === 1 && (
               <form
-                onSubmit={(event) => {
+                onSubmit={async (event) => {
                   event.preventDefault();
                   const emailMessage = validateEmail(email);
                   const captchaMessage = validateCaptcha(captcha, true);
@@ -570,8 +583,20 @@ const ForgotPasswordPage: React.FC = () => {
                     );
                     return;
                   }
+                  
                   setFormError("");
-                  setStepIndex(2);
+                  setSubmitting(true);
+                  
+                  try {
+                    /** 验证验证码并获取verifyToken */
+                    const token = await verifyResetCode(email.trim(), captcha);
+                    setVerifyToken(token);
+                    setStepIndex(2);
+                  } catch {
+                    setFormError("验证码验证失败，请检查验证码是否正确");
+                  } finally {
+                    setSubmitting(false);
+                  }
                 }}
                 className="space-y-5"
               >
@@ -651,7 +676,7 @@ const ForgotPasswordPage: React.FC = () => {
                   }
                   className="w-full"
                 >
-                  提交验证并进入重置密码
+                  {submitting ? "验证中..." : "提交验证并进入重置密码"}
                 </InteractiveHoverButton>
               </form>
             )}
@@ -760,7 +785,8 @@ const ForgotPasswordPage: React.FC = () => {
                     <SliderCaptcha
                       request={requestSliderCaptcha}
                       onVerify={handleSliderVerify}
-                      bgSize={{ width: 380, height: 200 }}
+                      bgSize={{ width: 300, height: 150 }}
+                      puzzleSize={{ width: 50, height: 50, top: puzzleTop }}
                     />
                   </div>
                   {sliderError ? (

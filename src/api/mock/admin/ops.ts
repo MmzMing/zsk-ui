@@ -133,14 +133,24 @@ export const mockMonitorData: MonitorPoint[] = [
   { metric: "network", time: "10:10", value: 31 },
   { metric: "network", time: "10:20", value: 29 },
   { metric: "network", time: "10:30", value: 35 },
-  { metric: "network", time: "10:40", value: 41 }
+  { metric: "network", time: "10:40", value: 41 },
+  { metric: "jvmHeap", time: "10:00", value: 45 },
+  { metric: "jvmHeap", time: "10:10", value: 48 },
+  { metric: "jvmHeap", time: "10:20", value: 52 },
+  { metric: "jvmHeap", time: "10:30", value: 55 },
+  { metric: "jvmHeap", time: "10:40", value: 51 }
 ];
 
 export const mockMonitorOverview: MonitorOverview = {
-  cpu: 0.81,
-  memory: 0.72,
-  disk: 0.88,
-  network: 0.41
+  cpu: 76,
+  memory: 72,
+  disk: 88,
+  network: 41,
+  jvmHeap: 51,
+  jvmThread: 128,
+  hostName: "zsk-server-01",
+  hostIp: "192.168.1.100",
+  osName: "Linux 5.15.0"
 };
 
 export const mockSystemLogs: SystemLogItem[] = [
@@ -149,90 +159,80 @@ export const mockSystemLogs: SystemLogItem[] = [
     time: "2026-01-18 10:40:21",
     level: "ERROR",
     module: "缓存服务",
-    message: "批量删除缓存键失败",
-    detail: "实例 redis-main，前缀 session:* 删除过程中部分键不存在，已记录失败列表。",
-    traceId: "7001"
+    message: "/api/cache/batch-delete",
+    detail: '{"prefix": "session:*", "instance": "redis-main"}'
   },
   {
     id: "6002",
     time: "2026-01-18 10:38:03",
-    level: "WARN",
+    level: "ERROR",
     module: "系统监控",
-    message: "磁盘使用率接近阈值",
-    detail: "节点 node-01 /data 分区使用率达到 82%，已触发告警。",
-    traceId: "7002"
+    message: "/api/monitor/disk/alert",
+    detail: '{"partition": "/data", "usage": "82%"}'
   },
   {
     id: "6003",
     time: "2026-01-18 10:32:10",
     level: "INFO",
     module: "认证中心",
-    message: "后台登录成功",
-    detail: "用户 admin 登录成功，来源 IP 192.168.0.10。",
-    traceId: "7003"
+    message: "/api/auth/login",
+    detail: '{"username": "admin", "ip": "192.168.0.10"}'
   },
   {
     id: "6004",
     time: "2026-01-18 10:28:44",
     level: "INFO",
     module: "接口网关",
-    message: "接口响应时间统计",
-    detail: "过去 5 分钟内 /api/admin/dashboard/overview P95 耗时 280ms。",
-    traceId: "7004"
+    message: "/api/admin/dashboard/overview",
+    detail: '{"p95_latency": "280ms"}'
   },
   {
     id: "6005",
     time: "2026-01-18 10:21:07",
-    level: "WARN",
+    level: "ERROR",
     module: "审核中心",
-    message: "审核接口调用频率异常",
-    detail: "用户 auditor 在 1 分钟内连续触发 20 次审核操作，已记录行为日志。",
-    traceId: "7005"
+    message: "/api/audit/batch",
+    detail: '{"user": "auditor", "count": 20}'
   },
   {
     id: "6006",
     time: "2026-01-18 10:12:33",
     level: "ERROR",
     module: "内容管理",
-    message: "视频转码失败",
-    detail: "任务 job_20260118_1001 转码异常，中途网络断开，已进入重试队列。",
-    traceId: "7006"
+    message: "/api/video/transcode",
+    detail: '{"job_id": "job_20260118_1001", "error": "network_timeout"}'
   },
   {
     id: "6007",
     time: "2026-01-18 10:05:59",
     level: "INFO",
     module: "系统配置",
-    message: "更新站点配置",
-    detail: "管理员 admin 更新了站点标题与 Logo 配置。",
-    traceId: "7007"
+    message: "/api/config/update",
+    detail: '{"fields": ["site_title", "logo"], "operator": "admin"}'
   },
   {
     id: "6008",
     time: "2026-01-18 09:55:12",
     level: "INFO",
     module: "系统运维",
-    message: "定时任务执行成功",
-    detail: "每日数据归档任务 archive_daily_stats 执行完毕，耗时 45s。",
-    traceId: "7008"
+    message: "/api/task/archive",
+    detail: '{"task": "archive_daily_stats", "duration": "45s"}'
   },
   {
     id: "6009",
     time: "2026-01-18 09:40:30",
-    level: "WARN",
+    level: "ERROR",
     module: "缓存服务",
-    message: "缓存命中率下降",
-    detail: "实例 redis-feed 命中率降至 85%，建议检查热点数据分布。",
-    traceId: "7009"
+    message: "/api/cache/hitrate/check",
+    detail: '{"instance": "redis-feed", "hit_rate": "85%"}'
   },
   {
     id: "6010",
     time: "2026-01-18 09:30:00",
     level: "INFO",
     module: "系统监控",
-    message: "系统启动",
-    detail: "知识库管理后台服务 v1.2.0 启动成功，环境：Production。",
-    traceId: "7010"
+    message: "/api/system/startup",
+    detail: '{"version": "v1.2.0", "env": "Production"}'
   }
 ];
 

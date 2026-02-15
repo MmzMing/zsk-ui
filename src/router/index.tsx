@@ -22,7 +22,6 @@ const ForgotPasswordPage = React.lazy(() => import("../pages/Auth/ForgotPassword
 const ProfilePage = React.lazy(() => import("../pages/Profile"));
 const AdminPage = React.lazy(() => import("../pages/Admin"));
 const AnalysisPage = React.lazy(() => import("../pages/Admin/Analysis"));
-const ApiDocPage = React.lazy(() => import("../pages/Admin/Ops/ApiDoc"));
 const SystemMonitorPage = React.lazy(() => import("../pages/Admin/Ops/SystemMonitor"));
 const CacheMonitorPage = React.lazy(() => import("../pages/Admin/Ops/CacheMonitor"));
 const CacheListPage = React.lazy(() => import("../pages/Admin/Ops/CacheList"));
@@ -68,7 +67,6 @@ function AppRouter() {
           <Route element={<AdminLayout />}>
             <Route path={routes.admin} element={<AdminPage />} />
             <Route path={`${routes.admin}/analysis`} element={<AnalysisPage />} />
-            <Route path={`${routes.admin}/ops/apiDoc`} element={<ApiDocPage />} />
             <Route path={`${routes.admin}/ops/systemMonitor`} element={<SystemMonitorPage />} />
             <Route path={`${routes.admin}/ops/cacheMonitor`} element={<CacheMonitorPage />} />
             <Route path={`${routes.admin}/ops/cacheList`} element={<CacheListPage />} />

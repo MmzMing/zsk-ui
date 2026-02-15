@@ -75,7 +75,7 @@ export async function getToolboxDetail(id: string): Promise<ToolboxDetail> {
   const { data } = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<ToolboxDetail>>(`/toolbox/${id}`)
+        .get<ApiResponse<ToolboxDetail>>(`/system/toolbox/${id}`)
         .then((r) => r.data),
     mockData: getMockToolboxDetail(id),
     apiName: "getToolboxDetail",

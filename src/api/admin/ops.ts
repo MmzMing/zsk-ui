@@ -3,7 +3,6 @@ import { request, handleRequest } from "../axios";
 import {
   mockCacheKeys,
   mockCacheInstances,
-  mockSystemLogs,
   mockMonitorData,
   mockMonitorOverview,
   mockHitRateTrendData,
@@ -99,7 +98,7 @@ export async function getSystemMonitorFullData(params: {
       ),
     mockData: {
       monitorData: [],
-      overview: { cpu: 0, memory: 0, disk: 0, network: 0 },
+      overview: { cpu: 0, memory: 0, disk: 0, network: 0, jvmHeap: 0, jvmThread: 0, hostName: "", hostIp: "", osName: "" },
     },
     apiName: "getSystemMonitorFullData",
     setLoading,
@@ -212,17 +211,16 @@ export async function getCacheInstanceDetailData(params: {
 
 /**
  * 清理缓存实例数据
- * @param params 实例 ID 及状态控制
+ * @param params 状态控制
  * @returns 是否清空成功
  */
 export async function clearCacheInstanceData(params: {
-  instanceId: string;
   setLoading?: (loading: boolean) => void;
   onError?: (error: unknown) => void;
 }) {
-  const { instanceId, setLoading, onError } = params;
+  const { setLoading, onError } = params;
   const { data } = await handleRequest({
-    requestFn: () => clearCacheInstance({ instanceId }),
+    requestFn: () => clearCacheInstance(),
     mockData: true,
     apiName: "clearCacheInstanceData",
     setLoading,
@@ -293,7 +291,7 @@ export async function batchRefreshCache(params: {
 }) {
   const { ids, setLoading, onError } = params;
   const { data } = await handleRequest({
-    requestFn: () => batchRefreshCacheKeys({ ids }),
+    requestFn: () => batchRefreshCacheKeys(ids),
     mockData: true,
     apiName: "batchRefreshCache",
     setLoading,
@@ -314,7 +312,7 @@ export async function batchDeleteCache(params: {
 }) {
   const { ids, setLoading, onError } = params;
   const { data } = await handleRequest({
-    requestFn: () => batchDeleteCacheKeys({ ids }),
+    requestFn: () => batchDeleteCacheKeys(ids),
     mockData: true,
     apiName: "batchDeleteCache",
     setLoading,
@@ -335,7 +333,7 @@ export async function refreshSingleCache(params: {
 }) {
   const { id, setLoading, onError } = params;
   const { data } = await handleRequest({
-    requestFn: () => refreshCacheKey({ id }),
+    requestFn: () => refreshCacheKey({ key: id }),
     mockData: true,
     apiName: "refreshSingleCache",
     setLoading,
@@ -356,7 +354,7 @@ export async function deleteSingleCache(params: {
 }) {
   const { id, setLoading, onError } = params;
   const { data } = await handleRequest({
-    requestFn: () => deleteCacheKey({ id }),
+    requestFn: () => deleteCacheKey(id),
     mockData: true,
     apiName: "deleteSingleCache",
     setLoading,
@@ -367,70 +365,8 @@ export async function deleteSingleCache(params: {
 
 // ===== 11. 导出区域 =====
 
-/** API 文档树项 */
-export type ApiDocTreeItem = {
-  /** 节点 ID */
-  id: string;
-  /** 节点名称 */
-  name: string;
-  /** 子节点列表 */
-  children?: ApiDocTreeItem[];
-};
-
-/** API 文档参数项 */
-export type ApiDocParam = {
-  /** 参数名 */
-  name: string;
-  /** 参数类型 */
-  type: string;
-  /** 是否必填 */
-  required: boolean;
-  /** 参数描述 */
-  description?: string;
-};
-
-/** API 文档详情 */
-export type ApiDocDetail = {
-  /** 文档 ID */
-  id: string;
-  /** API 名称 */
-  name: string;
-  /** API 路径 */
-  path: string;
-  /** 请求方法 */
-  method: string;
-  /** 状态 */
-  status: string;
-  /** 负责人 */
-  owner: string;
-  /** API 描述 */
-  description?: string;
-  /** 请求参数列表 */
-  requestParams: ApiDocParam[];
-  /** 响应示例 */
-  responseExample: string;
-};
-
-/** API 调试请求参数 */
-export type ApiDocDebugRequest = {
-  /** API ID */
-  id: string;
-  /** 请求体 */
-  body: Record<string, unknown>;
-};
-
-/** API 调试结果 */
-export type ApiDocDebugResult = {
-  /** 响应状态码 */
-  status: number;
-  /** 响应头 */
-  headers: Record<string, string>;
-  /** 响应体 */
-  body: unknown;
-};
-
 /** 日志级别类型 */
-export type LogLevel = "INFO" | "WARN" | "ERROR";
+export type LogLevel = "INFO" | "ERROR";
 
 /** 系统日志项 */
 export type SystemLogItem = {
@@ -442,16 +378,14 @@ export type SystemLogItem = {
   level: LogLevel;
   /** 模块名称 */
   module: string;
-  /** 日志消息 */
+  /** 请求URL */
   message: string;
-  /** 详细信息 */
+  /** 请求参数 */
   detail: string;
-  /** 追踪 ID */
-  traceId: string;
 };
 
 /** 监控指标类型 */
-export type MonitorMetric = "cpu" | "memory" | "disk" | "network";
+export type MonitorMetric = "cpu" | "memory" | "disk" | "network" | "jvmHeap";
 
 /** 监控数据点 */
 export type MonitorPoint = {
@@ -473,6 +407,16 @@ export type MonitorOverview = {
   disk: number;
   /** 网络使用率 */
   network: number;
+  /** JVM堆内存使用率 */
+  jvmHeap: number;
+  /** JVM线程数 */
+  jvmThread: number;
+  /** 主机名 */
+  hostName: string;
+  /** 主机IP */
+  hostIp: string;
+  /** 操作系统名称 */
+  osName: string;
 };
 
 /** 监控趋势项 */
@@ -488,7 +432,7 @@ export type MonitorTrendItem = {
 /** 监控趋势请求参数 */
 export type MonitorTrendParams = {
   /** 指标类型 */
-  metric: "cpu" | "memory" | "disk" | "network";
+  metric: "cpu" | "memory" | "disk" | "network" | "jvmHeap" | "jvmThread";
   /** 时间范围 */
   range: "1h" | "24h" | "7d" | string;
 };
@@ -590,81 +534,44 @@ export type CacheKeyItem = {
   updatedAt: string;
 };
 
-/**
- * 获取 API 文档树
- * @param params 关键字参数
- * @returns {Promise<ApiResponse<ApiDocTreeItem[]>>} 文档树列表
- */
-export async function fetchApiDocTree(params: {
-  keyword?: string;
-}): Promise<ApiResponse<ApiDocTreeItem[]>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .get<ApiResponse<ApiDocTreeItem[]>>("/admin/ops/api-doc/tree", {
-          params,
-        })
-        .then((r) => r.data),
-    mockData: [{ id: "root", name: "Root", children: [] }],
-    apiName: "fetchApiDocTree",
-  });
-}
-
-/**
- * 获取 API 文档详情
- * @param params API ID 参数
- * @returns {Promise<ApiResponse<ApiDocDetail>>} 文档详情
- */
-export async function fetchApiDocDetail(params: {
-  id: string;
-}): Promise<ApiResponse<ApiDocDetail>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .get<ApiResponse<ApiDocDetail>>("/admin/ops/api-doc/detail", {
-          params,
-        })
-        .then((r) => r.data),
-    mockData: {
-      id: params.id,
-      name: "Mock API",
-      path: "/mock/api",
-      method: "GET",
-      status: "enabled",
-      owner: "Admin",
-      requestParams: [],
-      responseExample: "{}",
-    },
-    apiName: "fetchApiDocDetail",
-  });
-}
-
-/**
- * 调试 API
- * @param body 调试请求数据
- * @returns {Promise<ApiResponse<ApiDocDebugResult>>} 调试结果
- */
-export async function debugApiDoc(
-  body: ApiDocDebugRequest
-): Promise<ApiResponse<ApiDocDebugResult>> {
-  return handleRequest({
-    requestFn: () =>
-      request.instance
-        .post<ApiResponse<ApiDocDebugResult>>("/admin/ops/api-doc/debug", body)
-        .then((r) => r.data),
-    mockData: {
-      status: 200,
-      headers: { "content-type": "application/json" },
-      body: { message: "Mock response" },
-    },
-    apiName: "debugApiDoc",
-  });
-}
+/** 后端操作日志类型 */
+export type SysOperLog = {
+  /** 主键ID */
+  id?: string;
+  /** 模块标题 */
+  title?: string;
+  /** 业务类型（0其它 1新增 2修改 3删除） */
+  businessType?: number;
+  /** 方法名称 */
+  method?: string;
+  /** 请求方式 */
+  requestMethod?: string;
+  /** 操作人员 */
+  operName?: string;
+  /** 请求URL */
+  operUrl?: string;
+  /** 主机地址 */
+  operIp?: string;
+  /** 操作地点 */
+  operLocation?: string;
+  /** 请求参数 */
+  operParam?: string;
+  /** 返回参数 */
+  jsonResult?: string;
+  /** 操作状态（0正常 1异常） */
+  status?: number;
+  /** 错误消息 */
+  errorMsg?: string;
+  /** 操作时间 */
+  operTime?: string;
+  /** 消耗时间 */
+  costTime?: number;
+};
 
 /**
  * 获取系统日志
  * @param params 分页及过滤参数
- * @returns {Promise<ApiResponse<{ list: SystemLogItem[]; total: number }>>} 日志列表
+ * @returns 日志列表响应
  */
 export async function fetchSystemLogs(params?: {
   page: number;
@@ -673,25 +580,47 @@ export async function fetchSystemLogs(params?: {
   module?: string;
   level?: string;
 }): Promise<ApiResponse<{ list: SystemLogItem[]; total: number }>> {
-  return handleRequest({
+  const { data } = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<{ list: SystemLogItem[]; total: number }>>(
-          "/admin/ops/logs",
+        .get<ApiResponse<{ rows: SysOperLog[]; total: number }>>(
+          "/system/operLog/list",
           { params }
         )
         .then((r) => r.data),
-    mockData: {
-      list: mockSystemLogs,
-      total: mockSystemLogs.length,
-    },
+    mockData: { rows: [], total: 0 },
     apiName: "fetchSystemLogs",
   });
+
+  return {
+    code: 200,
+    msg: "ok",
+    data: {
+      list: (data?.rows || []).map(mapOperLogToFrontend),
+      total: data?.total || 0,
+    },
+  };
+}
+
+/**
+ * 操作日志后端转前端字段映射
+ * @param backendData 后端日志数据
+ * @returns 前端日志数据
+ */
+function mapOperLogToFrontend(backendData: SysOperLog): SystemLogItem {
+  return {
+    id: backendData.id || "",
+    time: backendData.operTime || "",
+    level: backendData.status === 0 ? "INFO" : "ERROR",
+    module: backendData.title || "",
+    message: backendData.operUrl || "",
+    detail: backendData.operParam || "",
+  };
 }
 
 /**
  * 获取系统监控实时数据
- * @returns {Promise<ApiResponse<MonitorPoint[]>>} 实时数据点列表
+ * @returns 实时数据点列表
  */
 export async function fetchSystemMonitorData(): Promise<
   ApiResponse<MonitorPoint[]>
@@ -699,7 +628,7 @@ export async function fetchSystemMonitorData(): Promise<
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<MonitorPoint[]>>("/admin/ops/monitor/data")
+        .get<ApiResponse<MonitorPoint[]>>("/system/monitor/data")
         .then((r) => r.data),
     mockData: mockMonitorData,
     apiName: "fetchSystemMonitorData",
@@ -708,7 +637,7 @@ export async function fetchSystemMonitorData(): Promise<
 
 /**
  * 获取系统监控概览
- * @returns {Promise<ApiResponse<MonitorOverview>>} 监控概览数据
+ * @returns 监控概览数据
  */
 export async function fetchSystemMonitorOverview(): Promise<
   ApiResponse<MonitorOverview>
@@ -716,7 +645,7 @@ export async function fetchSystemMonitorOverview(): Promise<
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<MonitorOverview>>("/admin/ops/monitor/overview")
+        .get<ApiResponse<MonitorOverview>>("/system/monitor/overview")
         .then((r) => r.data),
     mockData: mockMonitorOverview,
     apiName: "fetchSystemMonitorOverview",
@@ -726,7 +655,7 @@ export async function fetchSystemMonitorOverview(): Promise<
 /**
  * 获取系统监控趋势
  * @param params 监控指标及范围参数
- * @returns {Promise<ApiResponse<MonitorTrendItem[]>>} 监控趋势数据列表
+ * @returns 监控趋势数据列表
  */
 export async function fetchMonitorTrend(
   params: MonitorTrendParams
@@ -734,7 +663,7 @@ export async function fetchMonitorTrend(
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<MonitorTrendItem[]>>("/admin/ops/monitor/trend", {
+        .get<ApiResponse<MonitorTrendItem[]>>("/system/monitor/trend", {
           params,
         })
         .then((r) => r.data),
@@ -745,7 +674,7 @@ export async function fetchMonitorTrend(
 
 /**
  * 获取缓存实例列表
- * @returns {Promise<ApiResponse<CacheInstanceItem[]>>} 缓存实例列表
+ * @returns 缓存实例列表
  */
 export async function fetchCacheInstances(): Promise<
   ApiResponse<CacheInstanceItem[]>
@@ -753,7 +682,7 @@ export async function fetchCacheInstances(): Promise<
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<CacheInstanceItem[]>>("/admin/ops/cache/instances")
+        .get<ApiResponse<CacheInstanceItem[]>>("/system/monitor/cache/instances")
         .then((r) => r.data),
     mockData: mockCacheInstances,
     apiName: "fetchCacheInstances",
@@ -763,7 +692,7 @@ export async function fetchCacheInstances(): Promise<
 /**
  * 获取缓存日志
  * @param params 实例 ID 过滤参数
- * @returns {Promise<ApiResponse<CacheLogItem[]>>} 缓存日志列表
+ * @returns 缓存日志列表
  */
 export async function fetchCacheLogs(params?: {
   instanceId?: string;
@@ -771,7 +700,7 @@ export async function fetchCacheLogs(params?: {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<CacheLogItem[]>>("/admin/ops/cache/logs", { params })
+        .get<ApiResponse<CacheLogItem[]>>("/system/monitor/cache/logs", { params })
         .then((r) => r.data),
     mockData: [
       {
@@ -794,7 +723,7 @@ export async function fetchCacheLogs(params?: {
 /**
  * 获取缓存命中率趋势
  * @param params 实例 ID 参数
- * @returns {Promise<ApiResponse<LineConfig["data"]>>} 命中率趋势数据
+ * @returns 命中率趋势数据
  */
 export async function fetchCacheHitRateTrend(params?: {
   instanceId?: string;
@@ -803,7 +732,7 @@ export async function fetchCacheHitRateTrend(params?: {
     requestFn: () =>
       request.instance
         .get<ApiResponse<LineConfig["data"]>>(
-          "/admin/ops/cache/trend/hit-rate",
+          "/system/monitor/cache/trend/hitRate",
           {
             params,
           }
@@ -817,7 +746,7 @@ export async function fetchCacheHitRateTrend(params?: {
 /**
  * 获取缓存 QPS 趋势
  * @param params 实例 ID 参数
- * @returns {Promise<ApiResponse<ColumnConfig["data"]>>} QPS 趋势数据
+ * @returns QPS 趋势数据
  */
 export async function fetchCacheQpsTrend(params?: {
   instanceId?: string;
@@ -825,7 +754,7 @@ export async function fetchCacheQpsTrend(params?: {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<ColumnConfig["data"]>>("/admin/ops/cache/trend/qps", {
+        .get<ApiResponse<ColumnConfig["data"]>>("/system/monitor/cache/trend/qps", {
           params,
         })
         .then((r) => r.data),
@@ -836,16 +765,16 @@ export async function fetchCacheQpsTrend(params?: {
 
 /**
  * 刷新缓存键
- * @param params 键 ID 参数
- * @returns {Promise<ApiResponse<boolean>>} 是否刷新成功
+ * @param params 键名参数
+ * @returns 是否刷新成功
  */
 export async function refreshCacheKey(params: {
-  id: string;
+  key: string;
 }): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/ops/cache/keys/refresh", params)
+        .post<ApiResponse<boolean>>("/system/monitor/cache/keys/refresh", null, { params })
         .then((r) => r.data),
     mockData: true,
     apiName: "refreshCacheKey",
@@ -854,16 +783,14 @@ export async function refreshCacheKey(params: {
 
 /**
  * 删除缓存键
- * @param params 键 ID 参数
- * @returns {Promise<ApiResponse<boolean>>} 是否删除成功
+ * @param key 键名
+ * @returns 是否删除成功
  */
-export async function deleteCacheKey(params: {
-  id: string;
-}): Promise<ApiResponse<boolean>> {
+export async function deleteCacheKey(key: string): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .delete<ApiResponse<boolean>>("/admin/ops/cache/keys", { params })
+        .delete<ApiResponse<boolean>>(`/system/monitor/cache/keys/${encodeURIComponent(key)}`)
         .then((r) => r.data),
     mockData: true,
     apiName: "deleteCacheKey",
@@ -872,18 +799,16 @@ export async function deleteCacheKey(params: {
 
 /**
  * 批量刷新缓存键
- * @param params ID 列表参数
- * @returns {Promise<ApiResponse<boolean>>} 是否刷新成功
+ * @param keys 键名列表
+ * @returns 是否刷新成功
  */
-export async function batchRefreshCacheKeys(params: {
-  ids: string[];
-}): Promise<ApiResponse<boolean>> {
+export async function batchRefreshCacheKeys(keys: string[]): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>(
-          "/admin/ops/cache/keys/batch-refresh",
-          params
+          "/system/monitor/cache/keys/batchRefresh",
+          keys
         )
         .then((r) => r.data),
     mockData: true,
@@ -893,18 +818,16 @@ export async function batchRefreshCacheKeys(params: {
 
 /**
  * 批量删除缓存键
- * @param params ID 列表参数
- * @returns {Promise<ApiResponse<boolean>>} 是否删除成功
+ * @param keys 键名列表
+ * @returns 是否删除成功
  */
-export async function batchDeleteCacheKeys(params: {
-  ids: string[];
-}): Promise<ApiResponse<boolean>> {
+export async function batchDeleteCacheKeys(keys: string[]): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>(
-          "/admin/ops/cache/keys/batch-delete",
-          params
+          "/system/monitor/cache/keys/batchDelete",
+          keys
         )
         .then((r) => r.data),
     mockData: true,
@@ -914,16 +837,13 @@ export async function batchDeleteCacheKeys(params: {
 
 /**
  * 清空缓存实例
- * @param params 实例 ID 参数
- * @returns {Promise<ApiResponse<boolean>>} 是否清空成功
+ * @returns 是否清空成功
  */
-export async function clearCacheInstance(params: {
-  instanceId: string;
-}): Promise<ApiResponse<boolean>> {
+export async function clearCacheInstance(): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/admin/ops/cache/instances/clear", params)
+        .post<ApiResponse<boolean>>("/system/monitor/cache/instances/clear")
         .then((r) => r.data),
     mockData: true,
     apiName: "clearCacheInstance",
@@ -940,7 +860,7 @@ export async function fetchBehaviorUsers(): Promise<
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<BehaviorUser[]>>("/admin/ops/behavior/users")
+        .get<ApiResponse<BehaviorUser[]>>("/system/ops/behavior/users")
         .then((r) => r.data),
     mockData: mockBehaviorUsers,
     apiName: "fetchBehaviorUsers",
@@ -959,7 +879,7 @@ export async function fetchBehaviorTimeline(params: {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<BehaviorPoint[]>>("/admin/ops/behavior/timeline", {
+        .get<ApiResponse<BehaviorPoint[]>>("/system/ops/behavior/timeline", {
           params,
         })
         .then((r) => r.data),
@@ -982,7 +902,7 @@ export async function fetchBehaviorEvents(params: {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<BehaviorEvent[]>>("/admin/ops/behavior/events", {
+        .get<ApiResponse<BehaviorEvent[]>>("/system/ops/behavior/events", {
           params,
         })
         .then((r) => r.data),
@@ -1002,7 +922,7 @@ export async function fetchBehaviorEvents(params: {
 /**
  * 获取缓存键列表
  * @param params 分页及过滤参数
- * @returns {Promise<ApiResponse<{ list: CacheKeyItem[]; total: number }>>} 缓存键列表
+ * @returns 缓存键列表
  */
 export async function fetchCacheKeys(params: {
   keyword?: string;
@@ -1011,27 +931,24 @@ export async function fetchCacheKeys(params: {
   page: number;
   pageSize: number;
 }): Promise<ApiResponse<{ list: CacheKeyItem[]; total: number }>> {
-  return handleRequest({
+  const { data } = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<{ list: CacheKeyItem[]; total: number }>>(
-          "/admin/ops/cache/keys",
+        .get<ApiResponse<{ rows: CacheKeyItem[]; total: number }>>(
+          "/system/monitor/cache/keys",
           { params }
         )
         .then((r) => r.data),
-    mockData: (() => {
-      let list = mockCacheKeys;
-      if (params.keyword) {
-        list = list.filter((item) => item.key.includes(params.keyword!));
-      }
-      if (params.instanceId && params.instanceId !== "all") {
-        list = list.filter((item) => item.instanceId === params.instanceId);
-      }
-      return {
-        list: list,
-        total: list.length,
-      };
-    })(),
+    mockData: { rows: mockCacheKeys, total: mockCacheKeys.length },
     apiName: "fetchCacheKeys",
   });
+
+  return {
+    code: 200,
+    msg: "ok",
+    data: {
+      list: data?.rows || [],
+      total: data?.total || 0,
+    },
+  };
 }

@@ -36,7 +36,7 @@ export type { TechStackItem, FAQCategory };
  */
 export async function fetchTechStack(): Promise<TechStackItem[]> {
   const { data } = await handleRequest({
-    requestFn: () => request.instance.get<ApiResponse<TechStackItem[]>>("/about/skill").then(r => r.data),
+    requestFn: () => request.instance.get<ApiResponse<TechStackItem[]>>("/system/about/skill").then(r => r.data),
     mockData: mockTechStack,
     apiName: "fetchTechStack"
   });
@@ -49,7 +49,7 @@ export async function fetchTechStack(): Promise<TechStackItem[]> {
  */
 export async function fetchFAQ(): Promise<FAQCategory[]> {
   const { data } = await handleRequest({
-    requestFn: () => request.instance.get<ApiResponse<FAQCategory[]>>("/about/faq").then(r => r.data),
+    requestFn: () => request.instance.get<ApiResponse<FAQCategory[]>>("/system/about/faq").then(r => r.data),
     mockData: mockFAQ,
     apiName: "fetchFAQ"
   });

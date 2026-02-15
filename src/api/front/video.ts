@@ -154,7 +154,7 @@ export interface PostVideoCommentParams {
  */
 export async function fetchVideoDetail(id: string, setLoading?: (loading: boolean) => void) {
   return handleRequest({
-    requestFn: () => request.instance.get<ApiResponse<VideoDetail>>(`/content/video/detail/${id}`).then(r => r.data),
+    requestFn: () => request.instance.get<ApiResponse<VideoDetail>>(`/video/detail/${id}`).then(r => r.data),
     mockData: mockVideoData,
     setLoading,
     apiName: "fetchVideoDetail"
@@ -167,7 +167,7 @@ export async function fetchVideoDetail(id: string, setLoading?: (loading: boolea
  */
 export async function toggleVideoLike(id: string) {
   return handleRequest({
-    requestFn: () => request.instance.post<ApiResponse<{ isLiked: boolean; count: number }>>(`/content/video/like/${id}`).then(r => r.data),
+    requestFn: () => request.instance.post<ApiResponse<{ isLiked: boolean; count: number }>>(`/video/like/${id}`).then(r => r.data),
     mockData: { isLiked: true, count: 123 },
     apiName: "toggleVideoLike"
   });
@@ -179,7 +179,7 @@ export async function toggleVideoLike(id: string) {
  */
 export async function toggleVideoFavorite(id: string) {
   return handleRequest({
-    requestFn: () => request.instance.post<ApiResponse<{ isFavorited: boolean; count: number }>>(`/content/video/favorite/${id}`).then(r => r.data),
+    requestFn: () => request.instance.post<ApiResponse<{ isFavorited: boolean; count: number }>>(`/video/favorite/${id}`).then(r => r.data),
     mockData: { isFavorited: true, count: 456 },
     apiName: "toggleVideoFavorite"
   });
@@ -199,7 +199,7 @@ export async function fetchVideoComments(
   }
 ) {
   return handleRequest({
-    requestFn: () => request.instance.get<ApiResponse<{ list: CommentItem[]; total: number }>>(`/content/video/comments/${id}`, { params }).then(r => r.data),
+    requestFn: () => request.instance.get<ApiResponse<{ list: CommentItem[]; total: number }>>(`/video/comments/${id}`, { params }).then(r => r.data),
     mockData: { list: mockVideoComments, total: mockVideoComments.length },
     apiName: "fetchVideoComments"
   });
@@ -211,7 +211,7 @@ export async function fetchVideoComments(
  */
 export async function postVideoComment(data: PostVideoCommentParams) {
   return handleRequest({
-    requestFn: () => request.instance.post<ApiResponse<CommentItem>>(`/content/video/comment`, data).then(r => r.data),
+    requestFn: () => request.instance.post<ApiResponse<CommentItem>>(`/video/comment`, data).then(r => r.data),
     mockData: {
       id: "mock-" + Date.now(),
       content: data.content,
@@ -230,7 +230,7 @@ export async function postVideoComment(data: PostVideoCommentParams) {
  */
 export async function toggleCommentLike(commentId: string) {
   return handleRequest({
-    requestFn: () => request.instance.post<ApiResponse<{ isLiked: boolean; likes: number }>>(`/content/comment/like/${commentId}`, null, { params: { type: "video" } }).then(r => r.data),
+    requestFn: () => request.instance.post<ApiResponse<{ isLiked: boolean; likes: number }>>(`/video/comment/like/${commentId}`).then(r => r.data),
     mockData: { isLiked: true, likes: 99 },
     apiName: "toggleCommentLike"
   });

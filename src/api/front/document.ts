@@ -152,7 +152,7 @@ export async function fetchDocDetail(
   const { data } = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<DocDetail>>(`/content/doc/detail/${id}`)
+        .get<ApiResponse<DocDetail>>(`/document/detail/${id}`)
         .then((r) => r.data),
     mockData: mockDocData,
     setLoading,
@@ -170,7 +170,7 @@ export async function toggleDocLike(id: string) {
     requestFn: () =>
       request.instance
         .post<ApiResponse<{ isLiked: boolean; count: number }>>(
-          `/content/doc/like/${id}`
+          `/document/like/${id}`
         )
         .then((r) => r.data),
     mockData: {
@@ -191,7 +191,7 @@ export async function toggleDocFavorite(id: string) {
     requestFn: () =>
       request.instance
         .post<ApiResponse<{ isFavorited: boolean; count: number }>>(
-          `/content/doc/favorite/${id}`
+          `/document/favorite/${id}`
         )
         .then((r) => r.data),
     mockData: {
@@ -216,7 +216,7 @@ export async function fetchDocComments(
     requestFn: () =>
       request.instance
         .get<ApiResponse<{ list: CommentItem[]; total: number }>>(
-          `/content/doc/comments/${id}`,
+          `/document/comments/${id}`,
           { params }
         )
         .then((r) => r.data),
@@ -234,7 +234,7 @@ export async function postDocComment(data: PostCommentParams) {
   const { data: resData } = await handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<CommentItem>>(`/content/doc/comment`, data)
+        .post<ApiResponse<CommentItem>>(`/document/comment`, data)
         .then((r) => r.data),
     mockData: mockDocComments[0],
     apiName: "postDocComment",
@@ -251,9 +251,7 @@ export async function toggleDocCommentLike(commentId: string) {
     requestFn: () =>
       request.instance
         .post<ApiResponse<{ isLiked: boolean; likes: number }>>(
-          `/content/comment/like/${commentId}`,
-          null,
-          { params: { type: "doc" } }
+          `/document/comment/like/${commentId}`
         )
         .then((r) => r.data),
     mockData: { isLiked: true, likes: 10 },

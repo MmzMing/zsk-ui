@@ -78,13 +78,6 @@ function SystemLogPage() {
         label: "ERROR",
       };
     }
-    if (level === "WARN") {
-      return {
-        color: "warning" as const,
-        className: "bg-orange-500/10 text-orange-500",
-        label: "WARN",
-      };
-    }
     return {
       color: "default" as const,
       className: "bg-sky-500/10 text-sky-500",
@@ -336,10 +329,10 @@ function SystemLogPage() {
                   模块
                 </TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">
-                  概要
+                  请求URL
                 </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium w-40">
-                  traceId
+                <TableColumn className="px-3 py-2 text-left font-medium w-48">
+                  请求参数
                 </TableColumn>
               </TableHeader>
               <TableBody
@@ -373,16 +366,11 @@ function SystemLogPage() {
                       <TableCell className="px-3 py-2 whitespace-nowrap">
                         {item.module}
                       </TableCell>
-                      <TableCell className="px-3 py-2">
-                        <div className="flex flex-col gap-1">
-                          <div className="font-medium">{item.message}</div>
-                          <div className="text-[11px] text-[var(--text-color-secondary)]">
-                            {item.detail}
-                          </div>
-                        </div>
-                      </TableCell>
                       <TableCell className="px-3 py-2 whitespace-nowrap font-mono text-[11px]">
-                        {item.traceId}
+                        {item.message}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-[11px] text-[var(--text-color-secondary)] max-w-xs truncate">
+                        {item.detail}
                       </TableCell>
                     </TableRow>
                   );

@@ -1,7 +1,7 @@
 // ===== 1. 依赖导入区域 =====
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import SliderCaptcha, { type VerifyParam } from "rc-slider-captcha";
+import SliderCaptcha, { type VerifyParam, type ActionType } from "rc-slider-captcha";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Button,
@@ -20,7 +20,8 @@ import InteractiveHoverButton from "@/components/Motion/InteractiveHoverButton";
 import { useUserStore } from "@/store/modules/userStore";
 import { useAppStore } from "@/store";
 import { UserAgreementModal, PrivacyPolicyModal } from "@/components/AgreementModals";
-import { verifySliderCaptcha, preCheckAndGetCaptcha, login, type SliderCaptchaData } from "@/api/auth";
+import { verifySliderCaptcha, preCheckAndGetCaptcha, login, getPublicKey, type SliderCaptchaData } from "@/api/auth";
+import { rsaEncrypt } from "@/lib/rsaEncrypt";
 import Shuffle from "@/components/Motion/Shuffle";
 import TextType from "@/components/Motion/TextType";
 import { RiHome4Line } from "react-icons/ri";
@@ -113,6 +114,7 @@ function LoginPage() {
   const [accountError, setAccountError] = React.useState("");
   const [passwordError, setPasswordError] = React.useState("");
   const [captchaError, setCaptchaError] = React.useState("");
+  const [puzzleTop, setPuzzleTop] = React.useState(0);
   const [formError, setFormError] = React.useState("");
   const [requireCaptcha, setRequireCaptcha] = React.useState(false);
   const [captchaCountdown, setCaptchaCountdown] = React.useState(0);
@@ -124,6 +126,8 @@ function LoginPage() {
   const [showPrivacyPolicy, setShowPrivacyPolicy] = React.useState(false);
   const [codeSent, setCodeSent] = React.useState(false);
   const [currentBgIndex, setCurrentBgIndex] = React.useState(0);
+
+  const sliderCaptchaRef = React.useRef<ActionType>(undefined);
 
   // ===== 9. 页面初始化与事件绑定 =====
   React.useEffect(() => {
@@ -244,15 +248,15 @@ function LoginPage() {
 
   const requestSliderCaptcha = async () => {
     try {
-      const data = await preCheckAndGetCaptcha({
-        account: account.trim(),
-        password: password,
-        scene: "login_email"
-      });
+      const data = await preCheckAndGetCaptcha();
       setSliderCaptchaInfo(data);
-      return {
-        bgUrl: data.bgUrl,
-        puzzleUrl: data.puzzleUrl
+      if (data.y) {
+        setPuzzleTop(data.y);
+      }
+      return { 
+        bgUrl: data.bgUrl, 
+        puzzleUrl: data.puzzleUrl,
+        y: data.y 
       };
     } catch (error) {
       setSliderError("滑块验证码加载失败，请稍后重试");
@@ -275,6 +279,7 @@ function LoginPage() {
       });
       if (!result.passed) {
         setSliderError("验证失败，请重新尝试");
+        sliderCaptchaRef.current?.refresh();
         return Promise.reject();
       }
       setSliderVerified(true);
@@ -322,13 +327,17 @@ function LoginPage() {
     setSubmitting(true);
 
     try {
+      const publicKeyData = await getPublicKey();
+      const encryptedPassword = await rsaEncrypt(password, publicKeyData.publicKey);
+
       const isEmail = account.includes("@");
       const res = await login({
         type: isEmail ? "email" : "account",
         username: !isEmail ? account : undefined,
         email: isEmail ? account : undefined,
-        password: password,
-        code: captcha
+        password: encryptedPassword,
+        code: captcha,
+        uuid: sliderCaptchaInfo?.uuid
       });
 
       setToken(res.token);
@@ -689,9 +698,11 @@ function LoginPage() {
                 <div className="flex flex-col items-center justify-center space-y-3">
                   <div className="rounded-lg overflow-hidden border border-[var(--border-color)]">
                     <SliderCaptcha
+                      actionRef={sliderCaptchaRef}
                       request={requestSliderCaptcha}
                       onVerify={handleSliderVerify}
-                      bgSize={{ width: 380, height: 200 }}
+                      bgSize={{ width: 300, height: 150 }}
+                      puzzleSize={{ width: 50, height: 50, top: puzzleTop }}
                     />
                   </div>
                   {sliderError ? (

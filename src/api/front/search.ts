@@ -211,7 +211,7 @@ export async function searchAll(
   const res = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<SearchAllApiData>>("/content/search/all", {
+        .get<ApiResponse<SearchAllApiData>>("/search/all", {
           params: {
             keyword: params.keyword || undefined,
             // type: 对应后端的一级分类

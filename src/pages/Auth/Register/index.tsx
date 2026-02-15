@@ -21,7 +21,8 @@ import { Shuffle } from "@/components/Motion/Shuffle";
 import { TextType } from "@/components/Motion/TextType";
 import InteractiveHoverButton from "@/components/Motion/InteractiveHoverButton";
 import { UserAgreementModal, PrivacyPolicyModal } from "@/components/AgreementModals";
-import { verifySliderCaptcha, preCheckAndGetCaptcha, register, type SliderCaptchaData } from "@/api/auth";
+import { verifySliderCaptcha, preCheckAndGetCaptcha, register, getPublicKey, type SliderCaptchaData } from "@/api/auth";
+import { rsaEncrypt } from "@/lib/rsaEncrypt";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -106,19 +107,6 @@ const validateCaptcha = (value: string, required: boolean): string => {
   return "";
 };
 
-/**
- * 密码哈希处理
- * @param value 原始密码
- */
-const hashPassword = async (value: string): Promise<string> => {
-  if (!window.crypto || !window.crypto.subtle) return value;
-  const encoder = new TextEncoder();
-  const data = encoder.encode(value);
-  const digest = await window.crypto.subtle.digest("SHA-256", data);
-  const bytes = Array.from(new Uint8Array(digest));
-  return bytes.map((byte) => byte.toString(16).padStart(2, "0")).join("");
-};
-
 // ===== 5. 注释代码函数区 =====
 
 // ===== 6. 错误处理函数区域 =====
@@ -165,6 +153,7 @@ function RegisterPage() {
   const [sliderError, setSliderError] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [captchaCountdown, setCaptchaCountdown] = useState(0);
+  const [puzzleTop, setPuzzleTop] = useState(0);
 
   useEffect(() => {
     let ignore = false;
@@ -270,14 +259,15 @@ function RegisterPage() {
   // 请求滑块验证码
   const requestSliderCaptcha = async () => {
     try {
-      const data = await preCheckAndGetCaptcha({
-        account: email.trim(),
-        scene: "register_email"
-      });
+      const data = await preCheckAndGetCaptcha();
       setSliderCaptchaInfo(data);
+      if (data.y) {
+        setPuzzleTop(data.y);
+      }
       return {
         bgUrl: data.bgUrl,
-        puzzleUrl: data.puzzleUrl
+        puzzleUrl: data.puzzleUrl,
+        y: data.y
       };
     } catch {
       setSliderError("滑块验证码加载失败，请稍后重试");
@@ -350,11 +340,13 @@ function RegisterPage() {
     setSubmitting(true);
 
     try {
-      const hashedPassword = await hashPassword(password);
+      const publicKeyData = await getPublicKey();
+      const encryptedPassword = await rsaEncrypt(password, publicKeyData.publicKey);
+      
       await register({
         username,
         email,
-        password: hashedPassword,
+        password: encryptedPassword,
         code: captcha
       });
       
@@ -729,7 +721,8 @@ function RegisterPage() {
                     <SliderCaptcha
                       request={requestSliderCaptcha}
                       onVerify={handleSliderVerify}
-                      bgSize={{ width: 380, height: 200 }}
+                      bgSize={{ width: 300, height: 150 }}
+                      puzzleSize={{ width: 50, height: 50, top: puzzleTop }}
                     />
                   </div>
                   {sliderError ? (

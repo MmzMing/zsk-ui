@@ -132,7 +132,7 @@ export async function fetchDashboardOverview(): Promise<DashboardOverviewItem[]>
   const { data } = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<DashboardOverviewItem[]>>("/admin/dashboard/overview")
+        .get<ApiResponse<DashboardOverviewItem[]>>("/system/dashboard/overview")
         .then((r) => r.data),
     mockData: mockOverviewCards as DashboardOverviewItem[],
     apiName: "fetchDashboardOverview",
@@ -151,7 +151,7 @@ export async function fetchDashboardTraffic(params: {
   const { data } = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<DashboardTrafficItem[]>>("/admin/dashboard/traffic", {
+        .get<ApiResponse<DashboardTrafficItem[]>>("/system/dashboard/traffic", {
           params,
         })
         .then((r) => r.data),
@@ -172,7 +172,7 @@ export async function fetchDashboardTrend(params: {
   const { data } = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<DashboardTrendItem[]>>("/admin/dashboard/trend", {
+        .get<ApiResponse<DashboardTrendItem[]>>("/system/dashboard/trend", {
           params,
         })
         .then((r) => r.data),
@@ -190,36 +190,17 @@ export async function fetchDashboardTrend(params: {
 export async function fetchRecentAdminLogs(
   params: RecentAdminLogParams
 ): Promise<RecentAdminLogResponse> {
-  const MOCK_LOGS: RecentAdminLogResponse = {
-    list: [
-      {
-        id: "1",
-        category: "content",
-        operator: "Admin",
-        action: "发布文档",
-        detail: "发布了新文档《系统操作指南》",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "2",
-        category: "user",
-        operator: "System",
-        action: "用户注册",
-        detail: "新用户 user_123 注册成功",
-        createdAt: new Date().toISOString(),
-      },
-    ],
-    total: 2,
-  };
-
   const { data } = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<RecentAdminLogResponse>>("/admin/logs/recent", {
+        .get<ApiResponse<RecentAdminLogResponse>>("/system/logs/recent", {
           params,
         })
         .then((r) => r.data),
-    mockData: MOCK_LOGS,
+    mockData: {
+      list: [],
+      total: 0,
+    },
     apiName: "fetchRecentAdminLogs",
   });
   return data;
@@ -234,7 +215,7 @@ export async function fetchAnalysisMetrics(): Promise<AnalysisMetricItem[]> {
     requestFn: () =>
       request.instance
         .get<ApiResponse<AnalysisMetricItem[]>>(
-          "/admin/dashboard/analysis/metrics"
+          "/system/dashboard/analysis/metrics"
         )
         .then((r) => r.data),
     mockData: mockMetricCards as AnalysisMetricItem[],
@@ -255,7 +236,7 @@ export async function fetchAnalysisTimeDistribution(
     requestFn: () =>
       request.instance
         .get<ApiResponse<AnalysisTimeDistributionItem[]>>(
-          "/admin/dashboard/analysis/time-distribution",
+          "/system/dashboard/analysis/time-distribution",
           { params }
         )
         .then((r) => r.data),

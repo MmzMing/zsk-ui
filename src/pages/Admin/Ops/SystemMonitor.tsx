@@ -36,6 +36,11 @@ function SystemMonitorPage() {
     memory: 0,
     disk: 0,
     network: 0,
+    jvmHeap: 0,
+    jvmThread: 0,
+    hostName: "",
+    hostIp: "",
+    osName: "",
   });
 
   // ===== 4. 通用工具函数区域 =====
@@ -62,7 +67,7 @@ function SystemMonitorPage() {
 
   /** 是否存在严重告警 */
   const hasCritical = useMemo(
-    () => overview.cpu >= 0.8 || overview.disk >= 0.8,
+    () => overview.cpu >= 80 || overview.disk >= 80,
     [overview.cpu, overview.disk]
   );
 
@@ -164,7 +169,7 @@ function SystemMonitorPage() {
   /**
    * 渲染资源概览卡片
    * @param label 资源名称
-   * @param value 资源使用率 (0-1)
+   * @param value 资源使用率 (0-100)
    * @param key 资源标识符
    */
   const renderOverviewCard = (
@@ -172,7 +177,7 @@ function SystemMonitorPage() {
     value: number,
     key: MonitorMetric
   ) => {
-    const percent = Math.round(value * 100);
+    const percent = Math.round(value);
     const critical = percent >= 80;
     const colorClass = critical ? "text-red-500" : "text-emerald-400";
     const badgeClass = critical ? "bg-red-500" : "bg-emerald-400";
