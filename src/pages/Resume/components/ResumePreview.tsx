@@ -320,12 +320,12 @@ const ResumePreview: React.FC = () => {
   return (
     <div 
       ref={containerRef}
-      className="flex-1 bg-[#1e1e20] flex justify-center items-start overflow-hidden relative cursor-grab active:cursor-grabbing print:p-0 print:bg-white print:overflow-visible"
+      className="flex-1 bg-[#1e1e20] flex justify-center items-start overflow-hidden relative cursor-grab active:cursor-grabbing print:p-0 print:bg-white print:overflow-visible print:block"
       onMouseDown={handleMouseDown}
     >
       <div
         id="resume-preview"
-        className={`bg-white text-black shadow-2xl box-border relative print:shadow-none print:w-full print:min-h-0 print:absolute print:top-0 print:left-0 origin-top transition-shadow duration-200 theme-${theme}`}
+        className={`bg-white text-black shadow-2xl box-border relative print:shadow-none print:w-full print:min-h-0 print:static transition-shadow duration-200 theme-${theme}`}
         style={{
           width: "210mm",
           minHeight: "297mm",
@@ -343,21 +343,59 @@ const ResumePreview: React.FC = () => {
       {/* Print Styles Injection */}
       <style>{`
         @media print {
-            body * {
-                visibility: hidden;
-            }
-            #resume-preview, #resume-preview * {
-                visibility: visible;
-            }
+            /* 确保打印目标容器占满页面并重置样式 */
             #resume-preview {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 210mm !important;
+                margin: 0 !important;
                 padding: ${pagePadding}mm !important;
                 box-shadow: none !important;
+                transform: none !important;
+                height: auto !important;
+                min-height: 297mm !important;
+                display: block !important;
+                visibility: visible !important;
+                background: white !important;
+                z-index: 99999 !important;
             }
+
+            /* 彻底重置所有父级布局，确保不截断、不缩放、不偏移 */
+            html, body, #root, [class*="layout"], main, .print-container, [class*="PageTransition"] {
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                display: block !important;
+                position: static !important;
+                transform: none !important;
+                min-height: auto !important;
+            }
+
+            /* 禁用所有可能的 transform 缩放和动画偏移 */
+            * {
+                animation: none !important;
+                transition: none !important;
+                transform-origin: 0 0 !important;
+            }
+
+            [style*="transform"] {
+                transform: none !important;
+            }
+
+            /* 隐藏页面上所有非打印目标的内容 */
+            body > *:not(#root),
+            .print-hidden,
+            header,
+            footer,
+            aside,
+            nav {
+                display: none !important;
+            }
+
             @page {
                 size: A4;
                 margin: 0;

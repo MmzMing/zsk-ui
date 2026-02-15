@@ -187,6 +187,7 @@ function AboutPage() {
               关于知识库小破站
             </h2>
             <div className="prose prose-sm dark:prose-invert max-w-none space-y-4 text-[var(--text-color-secondary)]">
+              <h3 className="text-lg font-semibold text-[var(--text-color)] pt-2">关于</h3>
               <p>
                 知识库小破站是一个专为开发者打造的轻量化知识管理与分享平台。在这里，你可以将碎片化的代码片段、
                 学习笔记、视频教程以及灵感想法进行结构化整理，构建属于自己的知识体系。
@@ -195,6 +196,25 @@ function AboutPage() {
                 项目起源于作者在日常开发中遇到的痛点：知识点散落在各个笔记软件、浏览器书签和本地文件中，
                 难以统一检索和复用。于是，一个集文档管理、视频教程、工具导航于一体的个人知识库应运而生。
               </p>
+              <p>目前小破站只开发了前台页面、后台管理、登录注册功能，后端接口仍在完善中。后端接口较大，站长能力有限展示页面只有mock数据，暂未部署。</p>
+              <p>想看后台的可以在登录界面，账号密码没限制，输入验证码"123456"，即可登录后台管理系统。</p>
+
+              <h3 className="text-lg font-semibold text-[var(--text-color)] pt-2">已部署QQ机器人</h3>
+                <ul className="list-disc pl-5 space-y-2">
+                <li>
+                  <span className="font-medium text-[var(--text-color)]">识库查询</span>：用户可以通过QQ机器人查询知识库中的内容，包括文档、视频教程、工具导航等。
+                </li>
+                <li>
+                  <span className="font-medium text-[var(--text-color)]">知识库管理</span>：用户可以通过QQ机器人管理知识库，包括添加、删除、修改知识库中的内容。
+                </li>
+                <li>
+                  <span className="font-medium text-[var(--text-color)]">知识库分享</span>：用户可以通过QQ机器人分享知识库中的内容，包括文档、视频教程、工具导航等。
+                </li>
+                <li>
+                  <span className="font-medium text-[var(--text-color)]">更多功能</span>：对接多个mcp，200+API接口
+                </li>
+              </ul>
+              <p>想了解更多可以联系站长。</p>
               <h3 className="text-lg font-semibold text-[var(--text-color)] pt-2">核心亮点</h3>
               <ul className="list-disc pl-5 space-y-2">
                 <li>

@@ -40,12 +40,14 @@ const ResumePage: React.FC = () => {
   }, [fetchResume, modules.length]);
 
   return (
-    <div className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden print:h-auto print:overflow-visible print:bg-white print:block print:w-full print-container">
       {/* 顶部工具栏 */}
-      <ResumeToolbar />
+      <div className="print:hidden">
+        <ResumeToolbar />
+      </div>
 
       {/* 移动端视图切换 */}
-      <div className="lg:hidden flex justify-center p-2 bg-content1 border-b border-default-200">
+      <div className="lg:hidden flex justify-center p-2 bg-content1 border-b border-default-200 print:hidden">
         <Tabs 
           aria-label="View Mode" 
           selectedKey={viewMode} 
@@ -79,13 +81,13 @@ const ResumePage: React.FC = () => {
       </div>
 
       {/* 主体内容区 */}
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative print:block print:static print:overflow-visible print:w-full print:m-0 print:p-0">
         {/* 左侧：编辑区 (移动端根据 viewMode 显示) */}
         <div className={`
           flex-none h-full border-r border-default-200 bg-content2/50
           transition-all duration-300 ease-in-out
           ${viewMode === "edit" ? "w-full lg:w-[40%]" : "w-0 lg:w-[40%] overflow-hidden lg:overflow-visible"}
-          lg:block
+          lg:block print:hidden
         `}>
           <ResumeEditor />
         </div>
@@ -95,6 +97,7 @@ const ResumePage: React.FC = () => {
           flex-1 h-full bg-default-100/50
           transition-all duration-300 ease-in-out
           ${viewMode === "preview" ? "block" : "hidden lg:block"}
+          print:block print:static print:w-full print:h-auto print:bg-white print:m-0 print:p-0
         `}>
           <ResumePreview />
         </div>
