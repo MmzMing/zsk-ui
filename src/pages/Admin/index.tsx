@@ -5,7 +5,10 @@ import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
   FiBarChart2,
   FiTrendingUp,
-  FiRefreshCw
+  FiRefreshCw,
+  FiFileText,
+  FiVideo,
+  FiUsers
 } from "react-icons/fi";
 import type { ColumnConfig, LineConfig } from "@ant-design/plots";
 import { Column, Line } from "@ant-design/plots";
@@ -182,7 +185,19 @@ function AdminPage() {
         ))
       ) : (
         overviewCards.map(item => {
-          const Icon = item.icon;
+          // 处理图标：如果是组件则直接使用，否则根据 key 映射
+          const Icon = (item.icon && typeof item.icon !== 'string')
+            ? item.icon
+            : (() => {
+                switch (item.key) {
+                  case 'content': return FiFileText;
+                  case 'video': return FiVideo;
+                  case 'user': return FiUsers;
+                  case 'trend': return FiTrendingUp;
+                  default: return FiBarChart2;
+                }
+              })();
+
           return (
             <Card
               key={item.key}

@@ -325,8 +325,6 @@ const ForgotPasswordPage: React.FC = () => {
       const result = await verifySliderCaptcha({
         scene: "forgot_email",
         uuid: sliderCaptchaInfo.uuid,
-        email: email.trim(),
-        account: account.trim(),
         ...data,
       });
 
@@ -336,7 +334,7 @@ const ForgotPasswordPage: React.FC = () => {
       }
 
       /** 滑块验证通过后，发送密码重置验证码 */
-      await sendPasswordResetCode(email.trim());
+      await sendPasswordResetCode(email.trim(), result.verifyToken);
 
       setSliderVerified(true);
       setSliderVisible(false);

@@ -61,13 +61,17 @@ export type BackendCaptchaResponse = {
 /** 后端注册请求类型 */
 export type BackendRegisterRequest = {
   /** 用户名 */
-  userName: string;
+  username: string;
   /** 邮箱 */
   email: string;
   /** 密码 */
   password: string;
+  /** 确认密码 */
+  confirmPassword: string;
   /** 验证码 */
   code: string;
+  /** 验证码UUID */
+  uuid: string;
 };
 
 // ===== 前端类型定义 =====
@@ -88,6 +92,8 @@ export type SliderCaptchaData = {
 export type SliderVerifyResult = {
   /** 是否验证通过 */
   passed: boolean;
+  /** 验证通过凭证 */
+  verifyToken?: string;
 };
 
 /** 验证码场景 */
@@ -148,8 +154,12 @@ export type RegisterRequest = {
   email: string;
   /** 密码（RSA加密后） */
   password?: string;
+  /** 确认密码（RSA加密后） */
+  confirmPassword?: string;
   /** 邮箱验证码 */
   code?: string;
+  /** 验证码UUID */
+  uuid?: string;
 };
 
 /** 忘记密码请求 */
@@ -254,6 +264,24 @@ export async function preCheckAndGetCaptcha() {
 }
 
 /**
+ * 根据用户名发送邮箱验证码
+ * @param username 用户名
+ * @returns 是否发送成功
+ */
+export async function sendEmailCodeByUsername(username: string, captchaVerification?: string) {
+  const res = await handleRequest({
+    requestFn: () =>
+      request.instance
+        .post<ApiResponse<boolean>>("/auth/email/code/username", null, {
+          params: { username, captchaVerification },
+        })
+        .then((r) => r.data),
+    apiName: "sendEmailCodeByUsername"
+  });
+  return res.data;
+}
+
+/**
  * 验证滑块验证码（使用邮箱验证码代替）
  * @param body 验证数据
  * @returns 验证结果
@@ -266,37 +294,63 @@ export async function verifySliderCaptcha(body: {
   x?: number;
   [key: string]: unknown;
 }) {
-  /** 1. 如果有邮箱且需要发送验证码 (scene 为 register 或 forgot) */
-  const email = body.email || body.account;
-  if (email && email.includes("@") && body.scene !== "login_email") {
-     const res = await handleRequest({
-      requestFn: () =>
-        request.instance
-          .post<ApiResponse<boolean>>("/auth/email/code", null, {
-            params: { email },
-          })
-          .then((r) => r.data),
-      apiName: "sendEmailCode"
-    });
-    return { passed: res.data === true };
-  }
+  // 1. 验证滑块
+  let verifyToken: string | undefined;
 
-  /** 2. 如果是登录场景或纯滑块验证，调用后端验证接口 */
-  if (body.x !== undefined || body.scene === "login_email") {
-    await handleRequest({
+  if (body.x !== undefined) {
+    const checkRes = await handleRequest({
       requestFn: () =>
         request.instance
-          .post<ApiResponse<void>>("/auth/captcha/check", {
+          .post<ApiResponse<string>>("/auth/captcha/check", {
             uuid: body.uuid,
-            code: String(Math.round(body.x as number))
+            code: String(Math.round(body.x as number)),
           })
           .then((r) => r.data),
       apiName: "checkCaptcha"
     });
-    return { passed: true };
+    
+    if (checkRes.code !== 200) {
+      return { passed: false };
+    }
+    verifyToken = checkRes.data;
   }
 
-  return { passed: false };
+  // 2. 如果有账号，尝试发送验证码
+  const account = body.email || body.account;
+  
+  if (account) {
+    const isEmail = account.includes("@");
+    
+    // 如果是邮箱格式，直接发送邮箱验证码
+    if (isEmail) {
+      const res = await handleRequest({
+        requestFn: () =>
+          request.instance
+            .post<ApiResponse<boolean>>("/auth/email/code", null, {
+              params: { email: account, captchaVerification: verifyToken },
+            })
+            .then((r) => r.data),
+        apiName: "sendEmailCode"
+      });
+      return { passed: !!(res && res.code === 200), verifyToken };
+    }
+    
+    // 如果是用户名格式且是登录场景，发送验证码到关联邮箱
+    if (!isEmail && body.scene === "login_email") {
+      const res = await handleRequest({
+        requestFn: () =>
+          request.instance
+            .post<ApiResponse<boolean>>("/auth/email/code/username", null, {
+              params: { username: account, captchaVerification: verifyToken },
+            })
+            .then((r) => r.data),
+        apiName: "sendEmailCodeByUsername"
+      });
+      return { passed: !!(res && res.code === 200), verifyToken };
+    }
+  }
+
+  return { passed: true, verifyToken };
 }
 
 /**
@@ -327,10 +381,12 @@ export async function login(data: LoginRequest) {
 export async function register(data: RegisterRequest) {
   /** 映射后的后端请求数据 */
   const backendData: BackendRegisterRequest = {
-    userName: data.username,
+    username: data.username,
     email: data.email,
     password: data.password || "",
+    confirmPassword: data.confirmPassword || "",
     code: data.code || "",
+    uuid: data.uuid || "",
   };
 
   const res = await handleRequest({
@@ -384,12 +440,12 @@ export async function refreshToken(refreshToken: string) {
  * @param email 邮箱地址
  * @returns 是否发送成功
  */
-export async function sendPasswordResetCode(email: string) {
+export async function sendPasswordResetCode(email: string, captchaVerification?: string) {
   const res = await handleRequest({
     requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/auth/password/reset/code", null, {
-          params: { email },
+          params: { email, captchaVerification },
         })
         .then((r) => r.data),
     apiName: "sendPasswordResetCode"
@@ -490,12 +546,12 @@ export async function getPublicKey() {
  * @param email 邮箱地址
  * @returns 是否发送成功
  */
-export async function sendEmailCode(email: string) {
+export async function sendEmailCode(email: string, captchaVerification?: string) {
   const res = await handleRequest({
     requestFn: () =>
       request.instance
         .post<ApiResponse<boolean>>("/auth/email/code", null, {
-            params: { email },
+            params: { email, captchaVerification },
           })
         .then((r) => r.data),
       apiName: "sendEmailCode"

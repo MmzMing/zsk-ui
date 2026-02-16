@@ -14,7 +14,8 @@ import {
   Modal,
   ModalBody,
   ModalContent,
-  ModalHeader
+  ModalHeader,
+  addToast
 } from "@heroui/react";
 import { routes } from "@/router/routes";
 import { Shuffle } from "@/components/Motion/Shuffle";
@@ -294,6 +295,7 @@ function RegisterPage() {
         setSliderError("验证失败，请重新尝试");
         return Promise.reject();
       }
+      
       setSliderVerified(true);
       setSliderVisible(false);
       setCodeSent(true);
@@ -342,15 +344,23 @@ function RegisterPage() {
     try {
       const publicKeyData = await getPublicKey();
       const encryptedPassword = await rsaEncrypt(password, publicKeyData.publicKey);
+      const encryptedConfirmPassword = await rsaEncrypt(confirmPassword, publicKeyData.publicKey);
       
       await register({
         username,
         email,
         password: encryptedPassword,
-        code: captcha
+        confirmPassword: encryptedConfirmPassword,
+        code: captcha,
+        uuid: sliderCaptchaInfo?.uuid,
       });
       
       // 注册成功跳转
+      addToast({
+        title: "注册成功",
+        description: "请使用注册的账号登录",
+        color: "success"
+      });
       navigate(routes.login);
     } catch {
       // 错误已由全局拦截器处理，此处仅停止加载状态

@@ -20,7 +20,7 @@ import InteractiveHoverButton from "@/components/Motion/InteractiveHoverButton";
 import { useUserStore } from "@/store/modules/userStore";
 import { useAppStore } from "@/store";
 import { UserAgreementModal, PrivacyPolicyModal } from "@/components/AgreementModals";
-import { verifySliderCaptcha, preCheckAndGetCaptcha, login, getPublicKey, type SliderCaptchaData } from "@/api/auth";
+import { verifySliderCaptcha, preCheckAndGetCaptcha, login, getPublicKey, getThirdPartyAuthUrl, type SliderCaptchaData } from "@/api/auth";
 import { rsaEncrypt } from "@/lib/rsaEncrypt";
 import Shuffle from "@/components/Motion/Shuffle";
 import TextType from "@/components/Motion/TextType";
@@ -271,25 +271,40 @@ function LoginPage() {
     }
     try {
       setSliderError("");
-      const result = await verifySliderCaptcha({
+      
+      // 1. 验证滑块并发送验证码
+      const verifyRes = await verifySliderCaptcha({
         scene: "login_email",
         uuid: sliderCaptchaInfo.uuid,
-        account: account.trim(),
-        ...data
+        x: data.x,
+        account: account
       });
-      if (!result.passed) {
+
+      if (!verifyRes.passed) {
         setSliderError("验证失败，请重新尝试");
         sliderCaptchaRef.current?.refresh();
         return Promise.reject();
       }
+
       setSliderVerified(true);
       setSliderVisible(false);
       setCodeSent(true);
       setCaptchaCountdown(60);
       return Promise.resolve();
     } catch (error) {
-      setSliderError("网络异常，验证失败，请稍后重试");
+      setSliderError(error instanceof Error ? error.message : "网络异常，验证失败，请稍后重试");
       return Promise.reject(error);
+    }
+  };
+
+  const handleThirdPartyLogin = async (type: string) => {
+    try {
+      const url = await getThirdPartyAuthUrl(type);
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "获取授权链接失败，请稍后重试");
     }
   };
 
@@ -337,7 +352,7 @@ function LoginPage() {
         email: isEmail ? account : undefined,
         password: encryptedPassword,
         code: captcha,
-        uuid: sliderCaptchaInfo?.uuid
+        uuid: sliderCaptchaInfo?.uuid,
       });
 
       setToken(res.token);
@@ -644,13 +659,13 @@ function LoginPage() {
 
               <div className="flex justify-center gap-6">
                 {/* 社交登录按钮暂未实现功能，仅展示 UI */}
-                 <Button isIconOnly variant="flat" radius="full" className="bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] hover:bg-[var(--primary-color)]/10" aria-label="Github Login">
+                 <Button isIconOnly variant="flat" radius="full" className="bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] hover:bg-[var(--primary-color)]/10" aria-label="Github Login" onPress={() => handleThirdPartyLogin("github")}>
                   <FaGithub className="text-xl" />
                 </Button>
-                <Button isIconOnly variant="flat" radius="full" className="bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:text-[#12B7F5] hover:bg-[#12B7F5]/10" aria-label="QQ Login">
+                <Button isIconOnly variant="flat" radius="full" className="bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:text-[#12B7F5] hover:bg-[#12B7F5]/10" aria-label="QQ Login" onPress={() => handleThirdPartyLogin("qq")}>
                   <FaQq className="text-xl" />
                 </Button>
-                <Button isIconOnly variant="flat" radius="full" className="bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:text-[#07C160] hover:bg-[#07C160]/10" aria-label="WeChat Login">
+                <Button isIconOnly variant="flat" radius="full" className="bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:text-[#07C160] hover:bg-[#07C160]/10" aria-label="WeChat Login" onPress={() => handleThirdPartyLogin("wechat")}>
                   <FaWeixin className="text-xl" />
                 </Button>
               </div>
