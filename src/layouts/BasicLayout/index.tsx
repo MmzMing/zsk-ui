@@ -11,6 +11,7 @@ import {
 } from "@heroui/react";
 import { routes } from "../../router/routes";
 import SystemSettingsPanel from "../../components/SystemSettings/Panel";
+import { logout } from "../../api/auth";
 import { useAppStore } from "../../store";
 import { useUserStore } from "../../store/modules/userStore";
 import PageTransitionWrapper from "../../components/Motion/PageTransitionWrapper";
@@ -435,12 +436,17 @@ function BasicLayout() {
                   ].join(" "),
                   title: "text-sm font-medium"
                 }}
-                onAction={key => {
+                onAction={async key => {
                   if (key === "admin") {
                     navigate(routes.admin);
                   } else if (key === "profile") {
                     navigate(routes.profile);
                   } else if (key === "logout") {
+                    try {
+                      await logout();
+                    } catch {
+                      // ignore
+                    }
                     try {
                       window.localStorage.removeItem("permissions");
                       window.localStorage.removeItem("userInfo");

@@ -5,6 +5,7 @@ import { FiGrid, FiBell, FiSettings, FiHome, FiUser, FiLogOut, FiEye, FiEyeOff, 
 import { Dock, DockIcon } from "../../components/MagicUI/Dock";
 import MainMenu from "./MainMenu";
 import { useAppStore } from "../../store";
+import { logout } from "../../api/auth";
 import { useUserStore } from "../../store/modules/userStore";
 import { routes } from "../../router/routes";
 
@@ -42,7 +43,12 @@ const OperationBar = ({ onOpenSettings, isFullscreen, toggleFullscreen }: Operat
     setMenuOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      // ignore
+    }
     try {
       window.localStorage.removeItem("permissions");
       window.localStorage.removeItem("userInfo");

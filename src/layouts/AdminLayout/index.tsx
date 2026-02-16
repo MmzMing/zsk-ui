@@ -28,6 +28,7 @@ import {
 import * as Icons from "react-icons/fi";
 import { routes } from "../../router/routes";
 import SystemSettingsPanel from "../../components/SystemSettings/Panel";
+import { logout } from "../../api/auth";
 import { useAppStore } from "../../store";
 import { useUserStore } from "../../store/modules/userStore";
 import PageTransitionWrapper from "../../components/Motion/PageTransitionWrapper";
@@ -200,7 +201,12 @@ function AdminLayout() {
     navigate(routes.home);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      // ignore
+    }
     try {
       window.localStorage.removeItem("permissions");
       window.localStorage.removeItem("userInfo");

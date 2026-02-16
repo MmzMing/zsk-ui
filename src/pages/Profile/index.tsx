@@ -3,6 +3,7 @@ import { Tab, Card, Avatar, Button, Input, Switch } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { FiEdit2, FiSettings, FiHeart, FiStar, FiMessageSquare, FiShield, FiLock, FiLogOut } from "react-icons/fi";
 import { useUserStore } from "../../store/modules/userStore";
+import { logout } from "../../api/auth";
 import { useNavigate } from "react-router-dom";
 import { routes } from "../../router/routes";
 
@@ -10,7 +11,12 @@ function ProfilePage() {
   const { userId, avatar, reset: resetUser } = useUserStore();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+      // ignore
+    }
     resetUser();
     navigate(routes.home);
   };
