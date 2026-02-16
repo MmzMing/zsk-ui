@@ -25,7 +25,6 @@ import {
   fetchAdminMenuTree,
   updateMenuTree,
   createMenu,
-  updateMenu,
   batchDeleteMenu
 } from "@/api/admin/menu";
 import { Loading } from "@/components/Loading";
@@ -236,6 +235,32 @@ function recalcOrder(nodes: MenuNode[], parentId: string | null = null): MenuNod
       next.children = recalcOrder(node.children, node.id);
     }
     return next;
+  });
+}
+
+/**
+ * 更新树中指定节点的属性
+ * @param nodes 菜单节点列表
+ * @param id 目标节点ID
+ * @param patch 要更新的属性
+ * @returns 更新后的树
+ */
+function updateNodeInTree(
+  nodes: MenuNode[],
+  id: string,
+  patch: Partial<MenuNode>
+): MenuNode[] {
+  return nodes.map(node => {
+    if (node.id === id) {
+      return { ...node, ...patch };
+    }
+    if (node.children && node.children.length) {
+      return {
+        ...node,
+        children: updateNodeInTree(node.children, id, patch)
+      };
+    }
+    return node;
   });
 }
 
@@ -499,9 +524,9 @@ function MenuPage() {
   };
 
   /**
-   * 处理树节点拖拽放置
+   * 处理树节点拖拽放置（仅更新本地状态）
    */
-  const handleTreeDrop = async (info: {
+  const handleTreeDrop = (info: {
     dragNode: { key: React.Key };
     node: { key: React.Key };
     dropToGap?: boolean;
@@ -535,30 +560,17 @@ function MenuPage() {
     }
 
     const nextTree = recalcOrder(insertNodeAt(withoutDrag, parentId, index, removed));
-    const res = await updateMenuTree(nextTree);
-    if (res && res.code === 200) {
-      addToast({
-        title: "层级调整成功",
-        color: "success"
-      });
-      loadMenuTree();
-    }
+    setMenuTree(nextTree);
   };
 
   /**
-   * 处理表单字段变更
+   * 处理表单字段变更（仅更新本地状态）
    */
-  const handleFieldChange = async (patch: Partial<MenuNode>) => {
-    if (!activeId || !activeNode) {
+  const handleFieldChange = (patch: Partial<MenuNode>) => {
+    if (!activeId) {
       return;
     }
-    const res = await updateMenu({
-      ...activeNode,
-      ...patch
-    });
-    if (res && res.code === 200) {
-      loadMenuTree();
-    }
+    setMenuTree(prev => updateNodeInTree(prev, activeId, patch));
   };
 
   /**
@@ -572,34 +584,24 @@ function MenuPage() {
   };
 
   /**
-   * 选择图标回调
+   * 选择图标回调（仅更新本地状态）
    */
-  const handleSelectIcon = async (iconId: string) => {
-    if (!iconPickerTargetId || !activeNode) {
+  const handleSelectIcon = (iconId: string) => {
+    if (!iconPickerTargetId) {
       return;
     }
-    const res = await updateMenu({
-      ...activeNode,
-      iconName: iconId
-    });
-    if (res && res.code === 200) {
-      addToast({
-        title: "图标更新成功",
-        color: "success"
-      });
-      loadMenuTree();
-      setIconPickerTargetId(null);
-    }
+    setMenuTree(prev => updateNodeInTree(prev, iconPickerTargetId, { iconName: iconId }));
+    setIconPickerTargetId(null);
   };
 
   /**
    * 保存当前菜单配置到后端
    */
   const handleSave = async () => {
-    const res = await updateMenuTree(menuTree);
+    const res = await updateMenuTree(menuTree, setIsLoading);
     if (res && res.code === 200) {
       addToast({
-        title: "配置已保存",
+        title: "配置保存成功",
         color: "success"
       });
     }
@@ -691,7 +693,7 @@ function MenuPage() {
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-color-secondary)]">
-              <span>已支持拖拽调整菜单层级与排序，当前仅为前端示例数据，未落库。</span>
+              <span>拖拽调整菜单层级与排序后，需点击「保存配置」才会持久化到后端。</span>
             </div>
           </div>
           {message && (
@@ -922,7 +924,7 @@ function MenuPage() {
                     </div>
                   </div>
                   <div className="pt-1 text-[11px] text-[var(--text-color-secondary)]">
-                    配置变更会实时更新当前页面状态，后续可通过保存接口持久化到服务端。
+                    配置变更会实时更新当前页面状态，点击「保存配置」按钮后持久化到后端。
                   </div>
                 </>
               )}

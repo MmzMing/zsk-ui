@@ -210,6 +210,12 @@ export type RoleItem = {
   name: string;
   /** 描述 */
   description: string;
+  /** 角色权限字符串 */
+  roleKey: string;
+  /** 显示顺序 */
+  roleSort: number;
+  /** 角色状态 */
+  status: string;
   /** 创建时间 */
   createdAt: string;
   /** 权限列表 */
@@ -295,6 +301,9 @@ function mapRoleToFrontend(backendData: SysRole): RoleItem {
     id: String(backendData.id || ""),
     name: backendData.roleName || "",
     description: backendData.roleKey || "",
+    roleKey: backendData.roleKey || "",
+    roleSort: backendData.roleSort || 0,
+    status: backendData.status || "0",
     createdAt: backendData.createTime || "",
     permissions: (backendData.menuIds || []).map(String),
   };
@@ -331,16 +340,23 @@ export async function fetchUserList(
   const res = await handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<SysUser[]>>("/system/user/list", { params })
+        .get<ApiResponse<{ rows: SysUser[]; total: number }>>("/system/user/list", {
+          params: {
+            pageNum: params.page,
+            pageSize: params.pageSize,
+            userName: params.keyword,
+            phonenumber: params.phone,
+            status: params.status,
+          }
+        })
         .then((r) => r.data),
-    mockData: [],
     apiName: "fetchUserList",
     setLoading,
   });
 
   /** 用户列表映射 */
-  const list = (res.data || []).map(mapUserToFrontend);
-  return { code: 200, msg: "ok", data: { list, total: list.length } };
+  const list = (res.data?.rows || []).map(mapUserToFrontend);
+  return { code: 200, msg: "ok", data: { list, total: res.data?.total || 0 } };
 }
 
 /**
@@ -360,7 +376,6 @@ export async function createUser(
       request.instance
         .post<ApiResponse<boolean>>("/system/user", backendData)
         .then((r) => r.data),
-    mockData: true,
     apiName: "createUser",
     setLoading,
   });
@@ -383,7 +398,6 @@ export async function updateUser(
       request.instance
         .put<ApiResponse<boolean>>("/system/user", backendData)
         .then((r) => r.data),
-    mockData: true,
     apiName: "updateUser",
     setLoading,
   });
@@ -404,7 +418,6 @@ export async function deleteUser(
       request.instance
         .delete<ApiResponse<boolean>>(`/system/user/${id}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "deleteUser",
     setLoading,
   });
@@ -427,7 +440,6 @@ export async function batchDeleteUsers(
       request.instance
         .delete<ApiResponse<boolean>>(`/system/user/${idsStr}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "batchDeleteUsers",
     setLoading,
   });
@@ -452,7 +464,6 @@ export async function toggleUserStatus(
           status: status === "enabled" ? "0" : "1",
         })
         .then((r) => r.data),
-    mockData: true,
     apiName: "toggleUserStatus",
     setLoading,
   });
@@ -473,7 +484,6 @@ export async function resetPassword(
       request.instance
         .put<ApiResponse<boolean>>(`/system/user/${id}/reset-password`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "resetPassword",
     setLoading,
   });
@@ -496,7 +506,6 @@ export async function batchResetPassword(
       request.instance
         .put<ApiResponse<boolean>>(`/system/user/${idsStr}/reset-password`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "batchResetPassword",
     setLoading,
   });
@@ -519,7 +528,6 @@ export async function fetchRoleList(
       request.instance
         .get<ApiResponse<SysRole[]>>("/system/role/list", { params })
         .then((r) => r.data),
-    mockData: [],
     apiName: "fetchRoleList",
     setLoading,
   });
@@ -546,7 +554,6 @@ export async function createRole(
       request.instance
         .post<ApiResponse<boolean>>("/system/role", backendData)
         .then((r) => r.data),
-    mockData: true,
     apiName: "createRole",
     setLoading,
   });
@@ -569,7 +576,6 @@ export async function updateRole(
       request.instance
         .put<ApiResponse<boolean>>("/system/role", backendData)
         .then((r) => r.data),
-    mockData: true,
     apiName: "updateRole",
     setLoading,
   });
@@ -590,7 +596,6 @@ export async function deleteRole(
       request.instance
         .delete<ApiResponse<boolean>>(`/system/role/${id}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "deleteRole",
     setLoading,
   });
@@ -613,7 +618,6 @@ export async function batchDeleteRoles(
       request.instance
         .delete<ApiResponse<boolean>>(`/system/role/${idsStr}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "batchDeleteRoles",
     setLoading,
   });
@@ -634,7 +638,6 @@ export async function batchCopyRoles(
       request.instance
         .post<ApiResponse<boolean>>("/system/role/copy", { ids })
         .then((r) => r.data),
-    mockData: true,
     apiName: "batchCopyRoles",
     setLoading,
   });

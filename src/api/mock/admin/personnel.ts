@@ -44,6 +44,9 @@ export const mockAdminRoles: RoleItem[] = [
     id: "8201",
     name: "系统管理员",
     description: "拥有后台所有模块的访问与配置权限，用于项目初始配置阶段。",
+    roleKey: "admin",
+    roleSort: 1,
+    status: "0",
     createdAt: "2026-01-10 09:00:00",
     permissions: [
       "dashboard:view",
@@ -60,6 +63,9 @@ export const mockAdminRoles: RoleItem[] = [
     id: "8202",
     name: "内容运营",
     description: "负责日常内容上架与调整，可查看核心监控数据，但无法修改系统配置。",
+    roleKey: "content_ops",
+    roleSort: 2,
+    status: "0",
     createdAt: "2026-01-11 13:20:15",
     permissions: ["dashboard:view", "dashboard:analysis", "ops:log"]
   },
@@ -67,6 +73,9 @@ export const mockAdminRoles: RoleItem[] = [
     id: "8203",
     name: "审核员",
     description: "专注于内容的合规性审查，具有审核队列的读写权限。",
+    roleKey: "reviewer",
+    roleSort: 3,
+    status: "0",
     createdAt: "2026-01-12 10:45:00",
     permissions: ["dashboard:view", "ops:log"]
   }

@@ -48,6 +48,7 @@ import {
   resetPassword,
   batchResetPassword
 } from "@/api/admin/personnel";
+import { useUserStore } from "@/store/modules/userStore";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -85,6 +86,7 @@ function UserPage() {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const { userId: currentUserId } = useUserStore();
 
   // 筛选条件状态
   const [keyword, setKeyword] = useState("");
@@ -242,6 +244,14 @@ function UserPage() {
       }
     } else if (userForm.id) {
       const userId = userForm.id;
+      if (userId === currentUserId && !userForm.enabled) {
+        addToast({
+          title: "操作受限",
+          description: "不允许禁用当前登录账号。",
+          color: "warning"
+        });
+        return;
+      }
       const res = await updateUser({
         id: userId,
         username: trimmedUsername,
@@ -309,6 +319,14 @@ function UserPage() {
    * @param user 目标用户对象
    */
   const handleToggleStatus = async (user: UserItem) => {
+    if (user.id === currentUserId) {
+      addToast({
+        title: "操作受限",
+        description: "不允许调整当前登录账号的状态。",
+        color: "warning"
+      });
+      return;
+    }
     const nextStatus = user.status === "enabled" ? "disabled" : "enabled";
     const res = await toggleUserStatus(user.id, nextStatus);
     if (res && res.code === 200) {
@@ -629,11 +647,8 @@ function UserPage() {
                     >
                       <TableCell className="px-3 py-2">
                         <div className="flex flex-col gap-0.5">
-                          <span className="font-mono text-xs break-all">
+                          <span className="font-mono break-all">
                             {user.username}
-                          </span>
-                          <span className="text-xs text-[var(--text-color-secondary)]">
-                            ID: {user.id}
                           </span>
                         </div>
                       </TableCell>
@@ -729,10 +744,6 @@ function UserPage() {
                 showControls
               />
             </div>
-          </div>
-          <div className="mt-1 flex flex-col gap-1 text-xs text-[var(--text-color-secondary)]">
-            <span>列表支持按账号、姓名、手机号、角色与状态组合筛选，便于快速定位目标用户。</span>
-            <span>当前分页与筛选条件可用于拼接服务端用户列表查询接口的请求参数。</span>
           </div>
         </div>
       </Card>

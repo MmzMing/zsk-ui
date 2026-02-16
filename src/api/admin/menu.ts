@@ -201,7 +201,6 @@ export async function fetchAdminMenuTree(
       request.instance
         .get<ApiResponse<SysMenu[]>>("/system/menu/list")
         .then((r) => r.data),
-    mockData: [],
     apiName: "fetchAdminMenuTree",
     setLoading,
   });
@@ -229,7 +228,6 @@ export async function updateMenuTree(
       request.instance
         .put<ApiResponse<boolean>>("/system/menu/batch", menuList)
         .then((r) => r.data),
-    mockData: true,
     apiName: "updateMenuTree",
     setLoading,
   });
@@ -253,7 +251,6 @@ export async function createMenu(
       request.instance
         .post<ApiResponse<boolean>>("/system/menu", backendData)
         .then((r) => r.data),
-    mockData: true,
     apiName: "createMenu",
     setLoading,
   });
@@ -277,7 +274,6 @@ export async function updateMenu(
       request.instance
         .put<ApiResponse<boolean>>("/system/menu", backendData)
         .then((r) => r.data),
-    mockData: true,
     apiName: "updateMenu",
     setLoading,
   });
@@ -298,7 +294,6 @@ export async function deleteMenu(
       request.instance
         .delete<ApiResponse<boolean>>(`/system/menu/${id}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "deleteMenu",
     setLoading,
   });
@@ -322,7 +317,6 @@ export async function batchDeleteMenu(
       request.instance
         .delete<ApiResponse<boolean>>(`/system/menu/${idsStr}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "batchDeleteMenu",
     setLoading,
   });

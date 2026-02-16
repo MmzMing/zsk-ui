@@ -428,7 +428,6 @@ export async function fetchDocumentList(params: {
           params,
         })
         .then((r) => r.data),
-    mockData: { rows: [], total: 0 },
     apiName: "fetchDocumentList",
   });
 
@@ -453,7 +452,6 @@ export async function getDocumentDetail(
       request.instance
         .get<ApiResponse<DocNote>>(`/note/${id}`)
         .then((r) => r.data),
-    mockData: null,
     apiName: "getDocumentDetail",
   });
 
@@ -495,7 +493,6 @@ export async function createDocument(
       request.instance
         .post<ApiResponse<string>>("/note", backendData)
         .then((r) => r.data),
-    mockData: "mock_doc_id_" + Date.now(),
     apiName: "createDocument",
   });
 }
@@ -516,7 +513,6 @@ export async function updateDocument(
       request.instance
         .put<ApiResponse<boolean>>("/note", backendData)
         .then((r) => r.data),
-    mockData: true,
     apiName: "updateDocument",
   });
 }
@@ -535,7 +531,6 @@ export async function deleteDocument(
       request.instance
         .delete<ApiResponse<boolean>>(`/note/${idsStr}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "deleteDocument",
   });
 }
@@ -557,7 +552,6 @@ export async function fetchDraftList(params: {
           params,
         })
         .then((r) => r.data),
-    mockData: { rows: [], total: 0 },
     apiName: "fetchDraftList",
   });
 
@@ -586,7 +580,6 @@ export async function batchUpdateDocumentStatus(data: {
           status: data.status,
         })
         .then((r) => r.data),
-    mockData: true,
     apiName: "batchUpdateDocumentStatus",
   });
 }
@@ -609,7 +602,6 @@ export async function moveDocumentCategory(
           category,
         })
         .then((r) => r.data),
-    mockData: true,
     apiName: "moveDocumentCategory",
   });
 }
@@ -628,7 +620,6 @@ export async function fetchDocumentCategories(): Promise<
       request.instance
         .get<ApiResponse<DocCategory[]>>("/note/category/list")
         .then((r) => r.data),
-    mockData: [],
     apiName: "fetchDocumentCategories",
   });
 }
@@ -643,7 +634,6 @@ export async function fetchTagOptions(): Promise<ApiResponse<DocTag[]>> {
       request.instance
         .get<ApiResponse<DocTag[]>>("/note/tag/list")
         .then((r) => r.data),
-    mockData: [],
     apiName: "fetchTagOptions",
   });
 }
@@ -665,7 +655,6 @@ export async function fetchDocumentComments(
           `/note/comment/list?docId=${docId}`
         )
         .then((r) => r.data),
-    mockData: [],
     apiName: "fetchDocumentComments",
   });
 }
@@ -683,7 +672,6 @@ export async function deleteDocumentComment(
       request.instance
         .delete<ApiResponse<boolean>>(`/note/comment/${commentId}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "deleteDocumentComment",
   });
 }
@@ -709,7 +697,6 @@ export async function fetchDocumentReviewQueue(params: {
           { params }
         )
         .then((r) => r.data),
-    mockData: { rows: [], total: 0 },
     apiName: "fetchDocumentReviewQueue",
   });
 
@@ -735,7 +722,6 @@ export async function fetchDocumentReviewLogs(params: {
           params,
         })
         .then((r) => r.data),
-    mockData: [],
     apiName: "fetchDocumentReviewLogs",
   });
 }
@@ -759,7 +745,6 @@ export async function submitDocumentReview(data: {
           reason: data.reason,
         })
         .then((r) => r.data),
-    mockData: true,
     apiName: "submitDocumentReview",
   });
 }
@@ -786,10 +771,6 @@ export async function initDocumentUpload(
           }
         )
         .then((r) => r.data),
-    mockData: {
-      uploadId: "mock_upload_id_" + Date.now(),
-      needUpload: true,
-    },
     apiName: "initDocumentUpload",
   });
 }
@@ -809,7 +790,6 @@ export async function finishDocumentUpload(
           uploadId: data.uploadId,
         })
         .then((r) => r.data),
-    mockData: true,
     apiName: "finishDocumentUpload",
   });
 }
@@ -831,7 +811,6 @@ export async function fetchDocumentUploadTaskList(params: {
           params,
         })
         .then((r) => r.data),
-    mockData: [],
     apiName: "fetchDocumentUploadTaskList",
   });
 
@@ -852,7 +831,6 @@ export async function removeDocumentUploadTask(
       request.instance
         .delete<ApiResponse<boolean>>(`/note/upload/task/${id}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "removeDocumentUploadTask",
   });
 }
@@ -871,7 +849,6 @@ export async function batchRemoveDocumentUploadTasks(
       request.instance
         .delete<ApiResponse<boolean>>(`/note/upload/task/${idsStr}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "batchRemoveDocumentUploadTasks",
   });
 }
@@ -889,7 +866,6 @@ export async function retryDocumentUploadTask(
       request.instance
         .post<ApiResponse<boolean>>(`/note/upload/task/${id}/retry`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "retryDocumentUploadTask",
   });
 }

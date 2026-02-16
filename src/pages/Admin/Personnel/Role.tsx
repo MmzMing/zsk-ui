@@ -476,6 +476,9 @@ function RolePage() {
               <TableHeader className="bg-[var(--bg-elevated)]/80">
                 <TableColumn className="px-3 py-2 text-left font-medium">角色名称</TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">角色描述</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">角色权限</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">显示顺序</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">状态</TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">权限数</TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">创建时间</TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">操作</TableColumn>
@@ -503,6 +506,21 @@ function RolePage() {
                       <span className="line-clamp-1 max-w-[200px]">{role.description}</span>
                     </TableCell>
                     <TableCell className="px-3 py-2">
+                      <span className="text-xs">{role.roleKey}</span>
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
+                      <span className="text-xs">{role.roleSort}</span>
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${
+                        role.status === '0' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {role.status === '0' ? '正常' : '停用'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Chip size="sm" variant="flat" color="primary" className="text-xs">
                         {formatPermissionLabel(role.permissions.length, totalPermissionCount)}
                       </Chip>
@@ -528,7 +546,7 @@ function RolePage() {
                           startContent={<FiLayers className="text-xs" />}
                           onPress={() => handleOpenAssignPermission(role)}
                         >
-                          分配权限
+                          权限
                         </Button>
                         <Button
                           size="sm"
@@ -541,7 +559,6 @@ function RolePage() {
                         </Button>
                         <Button
                           size="sm"
-                          color="danger"
                           variant="light"
                           className="h-7 text-xs"
                           startContent={<FiTrash2 className="text-xs" />}
