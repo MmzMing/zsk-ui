@@ -1,60 +1,35 @@
-// ===== 1. 依赖导入区域 =====
-import { request, handleRequest } from "../axios";
+/**
+ * 视频管理相关 API
+ * @module api/admin/video
+ * @description 提供视频管理、上传、审核、评论等功能接口
+ */
+
+import { request, handleRequest } from "../request";
 import type { ApiResponse } from "../types";
-import {
-  mockVideos,
-  mockReviewQueueItems,
-  mockVideoUploadTasks,
-  mockVideoCategories,
-  mockTagOptions,
-  mockVideoDrafts,
-  mockReviewLogs,
-  mockViolationReasons,
-  mockComments,
-} from "../mock/admin/video";
 
-// ===== 2. TODO待处理导入区域 =====
-
-// ===== 3. 状态控制逻辑区域 =====
-
-// ===== 4. 通用工具函数区域 =====
-
-/** 分片大小（5MB） */
+/** 分片上传的块大小（5MB） */
 const CHUNK_SIZE = 5 * 1024 * 1024;
 
-// ===== 5. 注释代码函数区 =====
-
-// ===== 6. 错误处理函数区域 =====
-
-// ===== 7. 数据处理函数区域 =====
-
-// ===== 8. UI渲染逻辑区域 =====
-
-// ===== 9. 页面初始化与事件绑定 =====
-
-// ===== 10. TODO任务管理区域 =====
-
-// ===== 11. 导出区域 =====
-
-// ===== 后端类型定义 =====
-
-/** 后端视频详情类型 */
+/**
+ * 后端视频详情类型
+ * @description 对应后端 video_detail 表的实体结构
+ */
 export type BackendVideoDetail = {
-  /** 主键ID */
+  /** 视频ID（主键） */
   id?: number;
-  /** 文件ID */
+  /** 文件ID（关联文件表） */
   fileId?: string;
-  /** 所属用户ID */
+  /** 用户ID（上传者） */
   userId?: number;
   /** 视频标题 */
   videoTitle?: string;
-  /** 大类 */
+  /** 大类编码 */
   broadCode?: string;
-  /** 小类 */
+  /** 小类编码 */
   narrowCode?: string;
-  /** 标签 */
+  /** 标签（逗号分隔） */
   tags?: string;
-  /** 视频描述 */
+  /** 文件内容/描述 */
   fileContent?: string;
   /** 浏览量 */
   viewCount?: number;
@@ -64,41 +39,44 @@ export type BackendVideoDetail = {
   commentCount?: number;
   /** 收藏量 */
   collectCount?: number;
-  /** 审核状态 */
+  /** 审核状态（0-待审核 1-通过 2-拒绝） */
   auditStatus?: number;
   /** 审核意见 */
   auditMind?: string;
-  /** 状态 */
+  /** 视频状态（1-正常 2-下线 3-草稿） */
   status?: number;
-  /** 是否置顶 */
+  /** 是否置顶（0-否 1-是） */
   isPinned?: number;
-  /** 是否推荐 */
+  /** 是否推荐（0-否 1-是） */
   isRecommended?: number;
   /** 创建时间 */
   createTime?: string;
   /** 更新时间 */
   updateTime?: string;
-  /** 封面图URL（关联查询） */
+  /** 封面图URL */
   coverUrl?: string;
-  /** 视频播放地址（关联查询） */
+  /** 视频URL */
   videoUrl?: string;
 };
 
-/** 后端评论类型 */
+/**
+ * 后端视频评论类型
+ * @description 对应后端 video_comment 表的实体结构
+ */
 export type BackendVideoComment = {
-  /** 主键ID */
+  /** 评论ID（主键） */
   id?: number;
   /** 视频ID */
   videoId?: string;
-  /** 评论人ID */
+  /** 评论用户ID */
   commentUserId?: string;
   /** 评论内容 */
   commentContent?: string;
-  /** 父评论ID */
+  /** 父评论ID（用于回复） */
   parentCommentId?: number;
-  /** 审核状态 */
+  /** 审核状态（0-待审核 1-通过 2-拒绝） */
   auditStatus?: number;
-  /** 评论状态 */
+  /** 评论状态（0-正常 1-删除） */
   status?: number;
   /** 点赞数 */
   likeCount?: number;
@@ -106,7 +84,11 @@ export type BackendVideoComment = {
   createTime?: string;
 };
 
-/** 后端分页结果类型 */
+/**
+ * 分页结果类型
+ * @description 通用分页查询返回结构
+ * @template T 数据项类型
+ */
 export type PageResult<T> = {
   /** 数据列表 */
   rows: T[];
@@ -114,25 +96,29 @@ export type PageResult<T> = {
   total: number;
 };
 
-/** 文件信息类型 */
+/**
+ * 文件信息类型
+ * @description 上传文件后返回的文件信息
+ */
 export type FileInfo = {
   /** 文件ID */
   id: number;
   /** 文件名 */
   fileName: string;
-  /** 文件大小 */
+  /** 文件大小（字节） */
   fileSize: number;
-  /** 文件类型 */
+  /** 文件类型（MIME类型） */
   fileType: string;
-  /** 文件路径 */
+  /** 文件存储路径 */
   filePath: string;
-  /** 文件URL */
+  /** 文件访问URL */
   fileUrl?: string;
 };
 
-// ===== 前端类型定义 =====
-
-/** 视频分类类型 */
+/**
+ * 视频分类类型
+ * @description 用于视频分类树形结构展示
+ */
 export type VideoCategory = {
   /** 分类ID */
   id: string;
@@ -142,7 +128,10 @@ export type VideoCategory = {
   children: { id: string; name: string }[];
 };
 
-/** 视频标签类型 */
+/**
+ * 视频标签类型
+ * @description 用于标签选择器的选项数据
+ */
 export type VideoTag = {
   /** 标签ID */
   id: string;
@@ -150,10 +139,20 @@ export type VideoTag = {
   name: string;
 };
 
-/** 上传任务状态 */
+/**
+ * 上传任务状态类型
+ * @description 视频上传任务的状态枚举
+ * - waiting: 等待上传
+ * - uploading: 上传中
+ * - success: 上传成功
+ * - error: 上传失败
+ */
 export type UploadTaskStatus = "waiting" | "uploading" | "success" | "error";
 
-/** 上传任务项 */
+/**
+ * 上传任务项
+ * @description 用于上传任务列表展示的单条数据
+ */
 export type UploadTaskItem = {
   /** 任务ID */
   id: string;
@@ -161,17 +160,17 @@ export type UploadTaskItem = {
   title: string;
   /** 文件名 */
   fileName: string;
-  /** 分类 */
+  /** 分类代码 */
   category: string;
   /** 标签列表 */
   tags?: string[];
-  /** 文件大小 */
+  /** 文件大小（字节） */
   size: number;
   /** 任务状态 */
   status: UploadTaskStatus;
-  /** 上传进度 */
+  /** 上传进度（0-100） */
   progress: number;
-  /** 是否已AI审核 */
+  /** 是否通过AI审核 */
   isAiChecked: boolean;
   /** AI风险等级 */
   aiRiskLevel?: "low" | "medium" | "high";
@@ -179,34 +178,48 @@ export type UploadTaskItem = {
   coverImage?: string;
   /** 创建时间 */
   createdAt: string;
-  /** 是否开启水印 */
+  /** 是否启用水印 */
   watermarkEnabled?: boolean;
   /** 水印配置 */
   watermarkConfig?: {
+    /** 水印类型：text-文字水印，image-图片水印 */
     type: "text" | "image";
+    /** 文字内容（文字水印时使用） */
     text?: string;
+    /** 字体大小 */
     fontSize?: number;
+    /** 透明度（0-1） */
     opacity: number;
+    /** 位置 */
     position: string;
+    /** 图片名称（图片水印时使用） */
     imageName?: string;
+    /** 缩放比例 */
     scale?: number;
+    /** 是否自适应 */
     autoFit?: boolean;
   };
 };
 
-/** 上传任务列表查询参数 */
+/**
+ * 上传任务列表查询参数
+ * @description 分页查询上传任务列表的请求参数
+ */
 export type UploadTaskListParams = {
-  /** 当前页码 */
+  /** 当前页码，从1开始 */
   page: number;
   /** 每页条数 */
   pageSize: number;
-  /** 状态过滤 */
+  /** 状态筛选 */
   status?: UploadTaskStatus | "all";
-  /** 关键词 */
+  /** 关键字搜索 */
   keyword?: string;
 };
 
-/** 上传任务列表响应 */
+/**
+ * 上传任务列表响应数据
+ * @description 分页查询上传任务列表的返回结构
+ */
 export type UploadTaskListResponse = {
   /** 任务列表 */
   list: UploadTaskItem[];
@@ -214,7 +227,17 @@ export type UploadTaskListResponse = {
   total: number;
 };
 
-/** 视频状态 */
+/**
+ * 视频状态类型
+ * @description 视频在系统中的生命周期状态
+ * - draft: 草稿状态
+ * - published: 已发布状态
+ * - offline: 已下线状态
+ * - pending: 待审核状态
+ * - approved: 审核通过状态
+ * - rejected: 审核拒绝状态
+ * - scheduled: 定时发布状态
+ */
 export type VideoStatus =
   | "draft"
   | "published"
@@ -224,35 +247,38 @@ export type VideoStatus =
   | "rejected"
   | "scheduled";
 
-/** 视频项类型 */
+/**
+ * 视频列表项
+ * @description 用于视频列表展示的单条数据
+ */
 export type VideoItem = {
   /** 视频ID */
   id: string;
   /** 视频标题 */
   title: string;
-  /** 分类 */
+  /** 分类代码 */
   category: string;
-  /** 状态 */
+  /** 视频状态 */
   status: VideoStatus;
-  /** 时长 */
+  /** 视频时长 */
   duration: string;
   /** 播放量 */
   plays: number;
-  /** 点赞量 */
+  /** 点赞数 */
   likes: number;
-  /** 评论量 */
+  /** 评论数 */
   comments: number;
   /** 创建时间 */
   createdAt: string;
   /** 更新时间 */
   updatedAt: string;
-  /** 封面图 */
+  /** 封面图URL */
   cover?: string;
   /** 标签列表 */
   tags?: string[];
-  /** 视频地址 */
+  /** 视频URL */
   videoUrl?: string;
-  /** 视频地址(兼容) */
+  /** 访问URL */
   url?: string;
   /** 视频描述 */
   description?: string;
@@ -264,21 +290,27 @@ export type VideoItem = {
   recommended?: boolean;
 };
 
-/** 视频列表查询参数 */
+/**
+ * 视频列表查询参数
+ * @description 分页查询视频列表的请求参数
+ */
 export type VideoListParams = {
-  /** 当前页码 */
+  /** 当前页码，从1开始 */
   page: number;
   /** 每页条数 */
   pageSize: number;
-  /** 状态过滤 */
+  /** 状态筛选 */
   status?: VideoStatus | "all";
-  /** 分类过滤 */
+  /** 分类筛选 */
   category?: string;
-  /** 关键词 */
+  /** 关键字搜索 */
   keyword?: string;
 };
 
-/** 视频列表响应 */
+/**
+ * 视频列表响应数据
+ * @description 分页查询视频列表的返回结构
+ */
 export type VideoListResponse = {
   /** 视频列表 */
   list: VideoItem[];
@@ -286,26 +318,43 @@ export type VideoListResponse = {
   total: number;
 };
 
-/** 批量更新视频状态请求参数 */
+/**
+ * 批量更新视频状态请求参数
+ * @description 批量更新视频状态时提交的数据结构
+ */
 export type BatchUpdateVideoStatusRequest = {
   /** 视频ID列表 */
   ids: string[];
-  /** 目标状态 */
+  /** 目标状态（不包括草稿状态） */
   status: Exclude<VideoStatus, "draft">;
 };
 
-/** 审核队列类型 */
+/**
+ * 审核队列类型
+ * @description 审核队列的分类
+ * - ai: AI审核队列
+ * - manual: 人工审核队列
+ */
 export type ReviewQueueType = "ai" | "manual";
 
-/** 审核状态 */
+/**
+ * 审核状态类型
+ * @description 视频审核流程中的状态枚举
+ */
 export type ReviewStatus = "pending" | "approved" | "rejected";
 
-/** 风险等级 */
+/**
+ * 风险等级类型
+ * @description 视频内容风险评估等级
+ */
 export type RiskLevel = "low" | "medium" | "high";
 
-/** 审核队列项 */
+/**
+ * 审核队列项
+ * @description 用于审核队列列表展示的单条数据
+ */
 export type ReviewQueueItem = {
-  /** 队列ID */
+  /** 审核ID */
   id: string;
   /** 视频标题 */
   title: string;
@@ -317,13 +366,16 @@ export type ReviewQueueItem = {
   status: ReviewStatus;
   /** 风险等级 */
   riskLevel: RiskLevel;
-  /** 是否已AI审核 */
+  /** 是否通过AI检查 */
   isAiChecked: boolean;
   /** 创建时间 */
   createdAt: string;
 };
 
-/** 审核日志项 */
+/**
+ * 审核日志项
+ * @description 用于记录审核历史操作日志
+ */
 export type ReviewLogItem = {
   /** 日志ID */
   id: string;
@@ -337,11 +389,14 @@ export type ReviewLogItem = {
   reviewedAt: string;
   /** 审核结果 */
   result: "approved" | "rejected";
-  /** 备注 */
+  /** 审核备注 */
   remark: string;
 };
 
-/** 草稿项 */
+/**
+ * 草稿项
+ * @description 用于草稿列表展示的单条数据
+ */
 export type DraftItem = {
   /** 草稿ID */
   id: string;
@@ -349,7 +404,7 @@ export type DraftItem = {
   title: string;
   /** 分类 */
   category: string;
-  /** 视频描述 */
+  /** 描述 */
   description: string;
   /** 封面图 */
   coverImage?: string;
@@ -359,13 +414,16 @@ export type DraftItem = {
   updatedAt: string;
 };
 
-/** 审核队列查询参数 */
+/**
+ * 审核队列查询参数
+ * @description 分页查询审核队列的请求参数
+ */
 export type ReviewQueueParams = {
   /** 队列类型 */
   queueType: ReviewQueueType;
-  /** 状态过滤 */
+  /** 审核状态筛选 */
   status?: ReviewStatus | "all";
-  /** 关键词 */
+  /** 关键字搜索 */
   keyword?: string;
   /** 当前页码 */
   page: number;
@@ -373,19 +431,25 @@ export type ReviewQueueParams = {
   pageSize: number;
 };
 
-/** 审核队列响应 */
+/**
+ * 审核队列响应数据
+ * @description 分页查询审核队列的返回结构
+ */
 export type ReviewQueueResponse = {
-  /** 审核项列表 */
+  /** 审核列表 */
   list: ReviewQueueItem[];
   /** 总条数 */
   total: number;
 };
 
-/** 提交审核结果请求参数 */
+/**
+ * 提交审核请求参数
+ * @description 提交单个视频审核结果的数据结构
+ */
 export type SubmitReviewRequest = {
   /** 审核ID */
   reviewId: string;
-  /** 审核结果 */
+  /** 审核结果（不包括待审核状态） */
   status: Exclude<ReviewStatus, "pending">;
   /** 拒绝原因 */
   reason?: string;
@@ -393,7 +457,10 @@ export type SubmitReviewRequest = {
   violationIds?: string[];
 };
 
-/** 批量提交审核结果请求参数 */
+/**
+ * 批量提交审核请求参数
+ * @description 批量提交视频审核结果的数据结构
+ */
 export type SubmitBatchReviewRequest = {
   /** 审核ID列表 */
   reviewIds: string[];
@@ -403,157 +470,181 @@ export type SubmitBatchReviewRequest = {
   reason?: string;
 };
 
-/** 视频评论项 */
+/**
+ * 评论项
+ * @description 用于视频评论列表展示的单条数据
+ */
 export type CommentItem = {
+  /** 评论ID */
   id: string;
+  /** 视频ID */
   videoId: string;
+  /** 用户名 */
   username: string;
+  /** 用户头像 */
   avatar: string;
+  /** 评论内容 */
   content: string;
+  /** 创建时间 */
   createdAt: string;
 };
 
-/** 章节项类型 */
+/**
+ * 章节项
+ * @description 视频章节信息
+ */
 export type ChapterItem = {
   /** 章节ID */
   id: string;
   /** 章节标题 */
   title: string;
-  /** 章节时间点 */
+  /** 时间点（格式化字符串） */
   time: string;
-  /** 时间点（秒） */
+  /** 时间点（秒数） */
   timeInSeconds: number;
 };
 
-/** 权限类型 */
+/**
+ * 权限类型
+ * @description 视频访问权限设置
+ * - public: 公开
+ * - private: 私有
+ * - password: 密码访问
+ */
 export type PermissionType = "public" | "private" | "password";
 
-// ===== 字段映射函数 =====
-
 /**
- * 状态数字转前端字符串
- * @param status 后端状态值
- * @param auditStatus 审核状态值
+ * 状态映射：后端转前端
+ * @description 将后端的数字状态码转换为前端的状态字符串
+ * @param status 视频状态（1-正常 2-下线 3-草稿）
+ * @param auditStatus 审核状态（0-待审核 1-通过 2-拒绝）
  * @returns 前端状态字符串
  */
-function mapStatusToFrontend(status: number, auditStatus: number): VideoStatus {
+const mapStatusToFrontend = (status: number, auditStatus: number): VideoStatus => {
   if (status === 3) return "draft";
   if (status === 2) return "offline";
   if (auditStatus === 0) return "pending";
   if (auditStatus === 2) return "rejected";
   return "published";
-}
+};
 
 /**
- * 视频详情后端转前端字段映射
+ * 视频数据后端转前端字段映射
+ * @description 将后端 BackendVideoDetail 类型转换为前端 VideoItem 类型
  * @param backendData 后端视频数据
  * @returns 前端视频数据
  */
-function mapVideoToFrontend(backendData: BackendVideoDetail): VideoItem {
-  return {
-    id: String(backendData.id || ""),
-    title: backendData.videoTitle || "",
-    category: backendData.broadCode || "",
-    status: mapStatusToFrontend(backendData.status || 1, backendData.auditStatus || 1),
-    duration: "",
-    plays: backendData.viewCount || 0,
-    likes: backendData.likeCount || 0,
-    comments: backendData.commentCount || 0,
-    createdAt: backendData.createTime || "",
-    updatedAt: backendData.updateTime || "",
-    cover: backendData.coverUrl || "",
-    tags: backendData.tags ? backendData.tags.split(",") : [],
-    videoUrl: backendData.videoUrl || "",
-    description: backendData.fileContent || "",
-    pinned: backendData.isPinned === 1,
-    recommended: backendData.isRecommended === 1,
-  };
-}
+const mapVideoToFrontend = (backendData: BackendVideoDetail): VideoItem => ({
+  id: String(backendData.id || ""),
+  title: backendData.videoTitle || "",
+  category: backendData.broadCode || "",
+  status: mapStatusToFrontend(backendData.status || 1, backendData.auditStatus || 1),
+  duration: "",
+  plays: backendData.viewCount || 0,
+  likes: backendData.likeCount || 0,
+  comments: backendData.commentCount || 0,
+  createdAt: backendData.createTime || "",
+  updatedAt: backendData.updateTime || "",
+  cover: backendData.coverUrl || "",
+  tags: backendData.tags ? backendData.tags.split(",") : [],
+  videoUrl: backendData.videoUrl || "",
+  description: backendData.fileContent || "",
+  pinned: backendData.isPinned === 1,
+  recommended: backendData.isRecommended === 1,
+});
 
 /**
- * 评论后端转前端字段映射
+ * 评论数据后端转前端字段映射
+ * @description 将后端 BackendVideoComment 类型转换为前端 CommentItem 类型
  * @param backendData 后端评论数据
  * @returns 前端评论数据
  */
-function mapCommentToFrontend(backendData: BackendVideoComment): CommentItem {
-  return {
-    id: String(backendData.id || ""),
-    videoId: backendData.videoId || "",
-    username: "用户" + backendData.commentUserId,
-    avatar: "",
-    content: backendData.commentContent || "",
-    createdAt: backendData.createTime || "",
-  };
-}
+const mapCommentToFrontend = (backendData: BackendVideoComment): CommentItem => ({
+  id: String(backendData.id || ""),
+  videoId: backendData.videoId || "",
+  username: "用户" + backendData.commentUserId,
+  avatar: "",
+  content: backendData.commentContent || "",
+  createdAt: backendData.createTime || "",
+});
 
 /**
- * 草稿后端转前端字段映射
+ * 草稿数据后端转前端字段映射
+ * @description 将后端 BackendVideoDetail 类型转换为前端 DraftItem 类型
  * @param backendData 后端视频数据
  * @returns 前端草稿数据
  */
-function mapDraftToFrontend(backendData: BackendVideoDetail): DraftItem {
-  return {
-    id: String(backendData.id || ""),
-    title: backendData.videoTitle || "",
-    category: backendData.broadCode || "",
-    description: backendData.fileContent || "",
-    coverImage: backendData.coverUrl || "",
-    createdAt: backendData.createTime || "",
-    updatedAt: backendData.updateTime || "",
-  };
-}
-
-// ===== 分片上传相关函数 =====
+const mapDraftToFrontend = (backendData: BackendVideoDetail): DraftItem => ({
+  id: String(backendData.id || ""),
+  title: backendData.videoTitle || "",
+  category: backendData.broadCode || "",
+  description: backendData.fileContent || "",
+  coverImage: backendData.coverUrl || "",
+  createdAt: backendData.createTime || "",
+  updatedAt: backendData.updateTime || "",
+});
 
 /**
- * 计算文件MD5
- * @param file 文件对象
- * @returns MD5字符串
+ * 计算文件MD5哈希值
+ * @description 使用SHA-256算法计算文件的哈希值，用于秒传检测
+ * @param file 要计算的文件
+ * @returns 文件的哈希值字符串
  */
-async function calculateMD5(file: File): Promise<string> {
-  /** 使用Web Crypto API计算SHA-256作为文件标识 */
+const calculateMD5 = async (file: File): Promise<string> => {
   const arrayBuffer = await file.arrayBuffer();
   const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// ===== API 函数 =====
+};
 
 /**
  * 获取视频分类列表
+ * @description 获取所有视频分类，支持树形结构
+ * @param setLoading 加载状态回调函数（可选）
+ * @returns 视频分类列表
  */
-export async function fetchVideoCategories(): Promise<ApiResponse<VideoCategory[]>> {
+export async function fetchVideoCategories(
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<VideoCategory[]>> {
   return handleRequest({
     requestFn: () =>
       request.instance
         .get<ApiResponse<VideoCategory[]>>("/video/category/list")
         .then((r) => r.data),
-    mockData: mockVideoCategories,
     apiName: "fetchVideoCategories",
+    setLoading,
   });
 }
 
 /**
- * 获取标签选项
+ * 获取视频标签选项
+ * @description 获取所有可用标签，用于标签选择器
+ * @param setLoading 加载状态回调函数（可选）
+ * @returns 标签列表
  */
-export async function fetchTagOptions(): Promise<ApiResponse<VideoTag[]>> {
+export async function fetchTagOptions(
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<VideoTag[]>> {
   return handleRequest({
     requestFn: () =>
       request.instance
         .get<ApiResponse<VideoTag[]>>("/video/category/tag/list")
         .then((r) => r.data),
-    mockData: mockTagOptions,
     apiName: "fetchTagOptions",
+    setLoading,
   });
 }
 
 /**
  * 获取视频列表
+ * @description 分页查询视频列表，支持状态、分类和关键字筛选
  * @param params 查询参数
+ * @param setLoading 加载状态回调函数（可选）
+ * @returns 视频列表及总数
  */
 export async function fetchVideoList(
-  params: VideoListParams
+  params: VideoListParams,
+  setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<VideoListResponse>> {
   const res = await handleRequest({
     requestFn: () =>
@@ -567,55 +658,33 @@ export async function fetchVideoList(
           },
         })
         .then((r) => r.data),
-    mockData: {
-      rows: mockVideos.map((v) => ({
-        id: Number(v.id),
-        videoTitle: v.title,
-        broadCode: v.category,
-        viewCount: v.plays,
-        likeCount: v.likes,
-        commentCount: v.comments,
-        status: 1,
-        createTime: v.createdAt,
-      })),
-      total: mockVideos.length,
-    },
     apiName: "fetchVideoList",
+    setLoading,
   });
 
   const list = (res.data?.rows || []).map(mapVideoToFrontend);
   return { code: 200, msg: "ok", data: { list, total: res.data?.total || 0 } };
 }
 
-/**
- * 获取视频详情
- * @param id 视频ID
- */
-export async function fetchVideoDetail(id: string): Promise<ApiResponse<VideoItem>> {
+export async function fetchVideoDetail(
+  id: string,
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<VideoItem>> {
   const res = await handleRequest({
     requestFn: () =>
       request.instance
         .get<ApiResponse<BackendVideoDetail>>(`/video/detail/${id}`)
         .then((r) => r.data),
-    mockData: {
-      id: Number(id),
-      videoTitle: mockVideos.find((v) => v.id === id)?.title || "",
-      broadCode: mockVideos.find((v) => v.id === id)?.category || "",
-      viewCount: mockVideos.find((v) => v.id === id)?.plays || 0,
-      status: 1,
-    },
     apiName: "fetchVideoDetail",
+    setLoading,
   });
 
   return { code: 200, msg: "ok", data: mapVideoToFrontend(res.data as BackendVideoDetail) };
 }
 
-/**
- * 更新视频信息
- * @param data 视频信息
- */
 export async function updateVideo(
-  data: Partial<VideoItem> & { id: string }
+  data: Partial<VideoItem> & { id: string },
+  setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
   const backendData = {
     id: Number(data.id),
@@ -632,48 +701,43 @@ export async function updateVideo(
       request.instance
         .put<ApiResponse<boolean>>("/video/detail", backendData)
         .then((r) => r.data),
-    mockData: true,
     apiName: "updateVideo",
+    setLoading,
   });
 }
 
-/**
- * 删除视频
- * @param id 视频ID
- */
-export async function deleteVideo(id: string): Promise<ApiResponse<boolean>> {
+export async function deleteVideo(
+  id: string,
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
       request.instance
         .delete<ApiResponse<boolean>>(`/video/detail/${id}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "deleteVideo",
+    setLoading,
   });
 }
 
-/**
- * 批量删除视频
- * @param ids 视频ID列表
- */
-export async function batchDeleteVideos(ids: string[]): Promise<ApiResponse<boolean>> {
+export async function batchDeleteVideos(
+  ids: string[],
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<boolean>> {
   const idsStr = ids.join(",");
   return handleRequest({
     requestFn: () =>
       request.instance
         .delete<ApiResponse<boolean>>(`/video/detail/${idsStr}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "batchDeleteVideos",
+    setLoading,
   });
 }
 
-/**
- * 批量更新视频状态
- * @param data 更新参数
- */
 export async function batchUpdateVideoStatus(
-  data: BatchUpdateVideoStatusRequest
+  data: BatchUpdateVideoStatusRequest,
+  setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
   const statusMap: Record<string, number> = {
     published: 1,
@@ -691,19 +755,15 @@ export async function batchUpdateVideoStatus(
           status: statusMap[data.status] || 1,
         })
         .then((r) => r.data),
-    mockData: true,
     apiName: "batchUpdateVideoStatus",
+    setLoading,
   });
 }
 
-/**
- * 切换视频置顶状态
- * @param id 视频ID
- * @param pinned 是否置顶
- */
 export async function toggleVideoPinned(
   id: string,
-  pinned: boolean
+  pinned: boolean,
+  setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
@@ -712,19 +772,15 @@ export async function toggleVideoPinned(
           params: { pinned: pinned ? 1 : 0 },
         })
         .then((r) => r.data),
-    mockData: true,
     apiName: "toggleVideoPinned",
+    setLoading,
   });
 }
 
-/**
- * 切换视频推荐状态
- * @param id 视频ID
- * @param recommended 是否推荐
- */
 export async function toggleVideoRecommended(
   id: string,
-  recommended: boolean
+  recommended: boolean,
+  setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
@@ -733,16 +789,15 @@ export async function toggleVideoRecommended(
           params: { recommended: recommended ? 1 : 0 },
         })
         .then((r) => r.data),
-    mockData: true,
     apiName: "toggleVideoRecommended",
+    setLoading,
   });
 }
 
-/**
- * 获取视频评论列表
- * @param videoId 视频ID
- */
-export async function fetchVideoComments(videoId: string): Promise<ApiResponse<CommentItem[]>> {
+export async function fetchVideoComments(
+  videoId: string,
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<CommentItem[]>> {
   const res = await handleRequest({
     requestFn: () =>
       request.instance
@@ -750,44 +805,31 @@ export async function fetchVideoComments(videoId: string): Promise<ApiResponse<C
           params: { videoId },
         })
         .then((r) => r.data),
-    mockData: mockComments
-      .filter((c) => c.videoId === videoId)
-      .map((c) => ({
-        id: Number(c.id),
-        videoId: c.videoId,
-        commentUserId: c.username,
-        commentContent: c.content,
-        createTime: c.createdAt,
-      })),
     apiName: "fetchVideoComments",
+    setLoading,
   });
 
   return { code: 200, msg: "ok", data: (res.data || []).map(mapCommentToFrontend) };
 }
 
-/**
- * 删除视频评论
- * @param commentId 评论ID
- */
-export async function deleteVideoComment(commentId: string): Promise<ApiResponse<boolean>> {
+export async function deleteVideoComment(
+  commentId: string,
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
       request.instance
         .delete<ApiResponse<boolean>>(`/video/comment/${commentId}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "deleteVideoComment",
+    setLoading,
   });
 }
 
-/**
- * 获取草稿列表
- * @param params 分页参数
- */
-export async function fetchDraftList(params: {
-  page: number;
-  pageSize: number;
-}): Promise<ApiResponse<{ list: DraftItem[]; total: number }>> {
+export async function fetchDraftList(
+  params: { page: number; pageSize: number },
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<{ list: DraftItem[]; total: number }>> {
   const res = await handleRequest({
     requestFn: () =>
       request.instance
@@ -795,32 +837,17 @@ export async function fetchDraftList(params: {
           params: { pageNum: params.page, pageSize: params.pageSize },
         })
         .then((r) => r.data),
-    mockData: {
-      rows: mockVideoDrafts.map((d) => ({
-        id: Number(d.id),
-        videoTitle: d.title,
-        broadCode: d.category,
-        fileContent: d.description,
-        coverUrl: d.coverImage,
-        status: 3,
-        createTime: d.createdAt,
-        updateTime: d.updatedAt,
-      })),
-      total: mockVideoDrafts.length,
-    },
     apiName: "fetchDraftList",
+    setLoading,
   });
 
   const list = (res.data?.rows || []).map(mapDraftToFrontend);
   return { code: 200, msg: "ok", data: { list, total: res.data?.total || 0 } };
 }
 
-/**
- * 保存草稿
- * @param data 草稿数据
- */
 export async function saveDraft(
-  data: Omit<DraftItem, "id" | "createdAt" | "updatedAt">
+  data: Omit<DraftItem, "id" | "createdAt" | "updatedAt">,
+  setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<DraftItem>> {
   const backendData = {
     videoTitle: data.title,
@@ -835,8 +862,8 @@ export async function saveDraft(
       request.instance
         .post<ApiResponse<number>>("/video/detail/draft", backendData)
         .then((r) => r.data),
-    mockData: Date.now(),
     apiName: "saveDraft",
+    setLoading,
   });
 
   return {
@@ -851,27 +878,23 @@ export async function saveDraft(
   };
 }
 
-/**
- * 删除草稿
- * @param id 草稿ID
- */
-export async function deleteDraft(id: string): Promise<ApiResponse<boolean>> {
+export async function deleteDraft(
+  id: string,
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
       request.instance
         .delete<ApiResponse<boolean>>(`/video/detail/${id}`)
         .then((r) => r.data),
-    mockData: true,
     apiName: "deleteDraft",
+    setLoading,
   });
 }
 
-/**
- * 获取审核队列
- * @param params 查询参数
- */
 export async function fetchReviewQueue(
-  params: ReviewQueueParams
+  params: ReviewQueueParams,
+  setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<ReviewQueueResponse>> {
   const res = await handleRequest({
     requestFn: () =>
@@ -884,17 +907,8 @@ export async function fetchReviewQueue(
           },
         })
         .then((r) => r.data),
-    mockData: {
-      rows: mockReviewQueueItems.map((item) => ({
-        id: Number(item.id),
-        videoTitle: item.title,
-        broadCode: item.category,
-        auditStatus: item.status === "pending" ? 0 : item.status === "approved" ? 1 : 2,
-        createTime: item.createdAt,
-      })),
-      total: mockReviewQueueItems.length,
-    },
     apiName: "fetchReviewQueue",
+    setLoading,
   });
 
   const list = (res.data?.rows || []).map((row) => ({
@@ -911,11 +925,10 @@ export async function fetchReviewQueue(
   return { code: 200, msg: "ok", data: { list, total: res.data?.total || 0 } };
 }
 
-/**
- * 提交审核结果
- * @param data 审核结果参数
- */
-export async function submitReviewResult(data: SubmitReviewRequest): Promise<ApiResponse<boolean>> {
+export async function submitReviewResult(
+  data: SubmitReviewRequest,
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
       request.instance
@@ -926,17 +939,14 @@ export async function submitReviewResult(data: SubmitReviewRequest): Promise<Api
           violationIds: data.violationIds,
         })
         .then((r) => r.data),
-    mockData: true,
     apiName: "submitReviewResult",
+    setLoading,
   });
 }
 
-/**
- * 批量提交审核结果
- * @param data 批量审核结果参数
- */
 export async function submitBatchReviewResult(
-  data: SubmitBatchReviewRequest
+  data: SubmitBatchReviewRequest,
+  setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
   return handleRequest({
     requestFn: () =>
@@ -947,19 +957,15 @@ export async function submitBatchReviewResult(
           auditMind: data.reason,
         })
         .then((r) => r.data),
-    mockData: true,
     apiName: "submitBatchReviewResult",
+    setLoading,
   });
 }
 
-/**
- * 获取审核日志
- * @param params 查询参数
- */
-export async function fetchReviewLogs(params: {
-  page: number;
-  pageSize: number;
-}): Promise<ApiResponse<PageResult<ReviewLogItem>>> {
+export async function fetchReviewLogs(
+  params: { page: number; pageSize: number },
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<PageResult<ReviewLogItem>>> {
   return handleRequest({
     requestFn: () =>
       request.instance
@@ -967,37 +973,29 @@ export async function fetchReviewLogs(params: {
           params: { pageNum: params.page, pageSize: params.pageSize },
         })
         .then((r) => r.data),
-    mockData: { rows: mockReviewLogs, total: mockReviewLogs.length },
     apiName: "fetchReviewLogs",
+    setLoading,
   });
 }
 
-/**
- * 获取违规原因列表
- */
-export async function fetchViolationReasons(): Promise<ApiResponse<{ id: string; label: string }[]>> {
+export async function fetchViolationReasons(
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<{ id: string; label: string }[]>> {
   return handleRequest({
     requestFn: () =>
       request.instance
         .get<ApiResponse<{ id: string; label: string }[]>>("/video/audit/violation-reasons")
         .then((r) => r.data),
-    mockData: mockViolationReasons,
     apiName: "fetchViolationReasons",
+    setLoading,
   });
 }
 
-// ===== 文件上传相关 =====
-
-/**
- * 初始化分片上传
- * @param fileName 文件名
- * @param contentType 文件类型
- * @param md5 文件MD5
- */
 export async function initMultipartUpload(
   fileName: string,
   contentType: string,
-  md5: string
+  md5: string,
+  setLoading?: (loading: boolean) => void
 ): Promise<string> {
   const res = await handleRequest({
     requestFn: () =>
@@ -1008,22 +1006,17 @@ export async function initMultipartUpload(
           md5,
         })
         .then((r) => r.data),
-    mockData: "mock-upload-id-" + Date.now(),
     apiName: "initMultipartUpload",
+    setLoading,
   });
   return res.data as string;
 }
 
-/**
- * 上传分片
- * @param uploadId 上传ID
- * @param partNumber 分片序号
- * @param chunk 分片数据
- */
 export async function uploadPart(
   uploadId: string,
   partNumber: number,
-  chunk: Blob
+  chunk: Blob,
+  setLoading?: (loading: boolean) => void
 ): Promise<string> {
   const formData = new FormData();
   formData.append("file", chunk);
@@ -1037,24 +1030,18 @@ export async function uploadPart(
           { headers: { "Content-Type": "multipart/form-data" } }
         )
         .then((r) => r.data),
-    mockData: "etag-" + partNumber,
     apiName: "uploadPart",
+    setLoading,
   });
   return res.data as string;
 }
 
-/**
- * 完成分片上传
- * @param fileName 文件名
- * @param uploadId 上传ID
- * @param md5 文件MD5
- * @param parts 分片信息列表
- */
 export async function completeMultipartUpload(
   fileName: string,
   uploadId: string,
   md5: string,
-  parts: { partNumber: number; etag: string }[]
+  parts: { partNumber: number; etag: string }[],
+  setLoading?: (loading: boolean) => void
 ): Promise<void> {
   await handleRequest({
     requestFn: () =>
@@ -1066,31 +1053,23 @@ export async function completeMultipartUpload(
           parts,
         })
         .then((r) => r.data),
-    mockData: undefined,
     apiName: "completeMultipartUpload",
+    setLoading,
   });
 }
 
-/**
- * 分片上传视频（完整流程）
- * @param file 视频文件
- * @param onProgress 进度回调
- */
 export async function uploadVideo(
   file: File,
   onProgress?: (percent: number) => void
 ): Promise<string> {
-  /** 1. 计算MD5 */
   const md5 = await calculateMD5(file);
 
-  /** 2. 初始化分片上传 */
   const uploadId = await initMultipartUpload(
     file.name,
     file.type || "application/octet-stream",
     md5
   );
 
-  /** 3. 分片上传 */
   const chunks = Math.ceil(file.size / CHUNK_SIZE);
   const parts: { partNumber: number; etag: string }[] = [];
 
@@ -1103,23 +1082,20 @@ export async function uploadVideo(
     const etag = await uploadPart(uploadId, partNumber, chunk);
     parts.push({ partNumber, etag });
 
-    /** 更新进度 */
     if (onProgress) {
       onProgress(Math.round(((i + 1) / chunks) * 100));
     }
   }
 
-  /** 4. 完成分片上传 */
   await completeMultipartUpload(file.name, uploadId, md5, parts);
 
   return uploadId;
 }
 
-/**
- * 上传封面图（普通上传）
- * @param file 封面图文件
- */
-export async function uploadCoverImage(file: File): Promise<FileInfo> {
+export async function uploadCoverImage(
+  file: File,
+  setLoading?: (loading: boolean) => void
+): Promise<FileInfo> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -1130,24 +1106,17 @@ export async function uploadCoverImage(file: File): Promise<FileInfo> {
           headers: { "Content-Type": "multipart/form-data" },
         })
         .then((r) => r.data),
-    mockData: {
-      id: Date.now(),
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      filePath: URL.createObjectURL(file),
-    },
     apiName: "uploadCoverImage",
+    setLoading,
   });
 
   return res.data as FileInfo;
 }
 
-/**
- * 上传视频封面（兼容旧接口）
- * @param file 封面文件
- */
-export async function uploadCover(file: Blob): Promise<ApiResponse<string>> {
+export async function uploadCover(
+  file: Blob,
+  setLoading?: (loading: boolean) => void
+): Promise<ApiResponse<string>> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -1158,25 +1127,16 @@ export async function uploadCover(file: Blob): Promise<ApiResponse<string>> {
           headers: { "Content-Type": "multipart/form-data" },
         })
         .then((r) => r.data),
-    mockData: {
-      id: Date.now(),
-      fileName: "cover.jpg",
-      fileSize: file.size,
-      fileType: "image/jpeg",
-      filePath: "public/DefaultImage/MyDefaultHomeVodie.png",
-    },
     apiName: "uploadCover",
+    setLoading,
   });
 
   return { code: 200, msg: "ok", data: (res.data as FileInfo).filePath };
 }
 
-/**
- * 获取上传任务列表
- * @param params 查询参数
- */
 export async function fetchUploadTaskList(
-  params: UploadTaskListParams
+  params: UploadTaskListParams,
+  setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<UploadTaskListResponse>> {
   return handleRequest({
     requestFn: () =>
@@ -1185,10 +1145,7 @@ export async function fetchUploadTaskList(
           params,
         })
         .then((r) => r.data),
-    mockData: {
-      list: mockVideoUploadTasks,
-      total: mockVideoUploadTasks.length,
-    },
     apiName: "fetchUploadTaskList",
+    setLoading,
   });
 }

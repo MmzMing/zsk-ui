@@ -1,5 +1,10 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useState, useEffect } from "react";
+/**
+ * 用户管理页面
+ * @module pages/Admin/Personnel/User
+ * @description 后台用户账号管理，支持新增、编辑、删除、角色分配、密码重置等功能
+ */
+
+import React from "react";
 import {
   SelectItem,
   Button,
@@ -49,11 +54,11 @@ import {
   batchResetPassword
 } from "@/api/admin/personnel";
 import { useUserStore } from "@/store/modules/userStore";
+import { usePageState, useSelection } from "@/hooks";
 
-// ===== 2. TODO待处理导入区域 =====
+/** 每页显示条数 */
+const PAGE_SIZE = 8;
 
-// ===== 3. 状态控制逻辑区域 =====
-// ===== 4. 通用工具函数区域 =====
 /**
  * 创建空的用户表单初始状态
  * @returns 初始化的表单状态对象
@@ -68,49 +73,37 @@ function createEmptyUserForm(): UserFormState {
   };
 }
 
-// ===== 5. 注释代码函数区 =====
-
-// ===== 6. 错误处理函数区域 =====
-
-// ===== 7. 数据处理函数区域 =====
-
-// ===== 8. UI渲染逻辑区域 =====
-
-// ===== 9. 页面初始化与事件绑定 =====
 /**
  * 用户管理页面组件
  * @returns 页面JSX元素
  */
 function UserPage() {
-  // 列表数据与加载状态
-  const [users, setUsers] = useState<UserItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  /** 当前登录用户ID */
   const { userId: currentUserId } = useUserStore();
 
-  // 筛选条件状态
-  const [keyword, setKeyword] = useState("");
-  const [phoneKeyword, setPhoneKeyword] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "enabled" | "disabled">("all");
-  
-  // 分页状态
-  const [page, setPage] = useState(1);
-  const pageSize = 8;
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  /** 分页状态 */
+  const { page, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGE_SIZE });
 
-  // 表单相关状态
-  const [userForm, setUserForm] = useState<UserFormState | null>(null);
-  const [userFormMode, setUserFormMode] = useState<"create" | "edit">("create");
-  const [userFormError, setUserFormError] = useState("");
+  /** 表格选择状态 */
+  const { selectedIds, setSelectedIds, hasSelection, handleTableSelectionChange: handleSelectionChange } = useSelection();
 
-  // 角色分配相关状态
-  const [roleAssign, setRoleAssign] = useState<RoleAssignState | null>(null);
+  /** 列表数据与加载状态 */
+  const [users, setUsers] = React.useState<UserItem[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  // 是否有选中的项
-  const hasSelection = selectedIds.length > 0;
-  // 总页数计算
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  /** 筛选条件状态 */
+  const [keyword, setKeyword] = React.useState("");
+  const [phoneKeyword, setPhoneKeyword] = React.useState("");
+  const [roleFilter, setRoleFilter] = React.useState<string>("all");
+  const [statusFilter, setStatusFilter] = React.useState<"all" | "enabled" | "disabled">("all");
+
+  /** 表单相关状态 */
+  const [userForm, setUserForm] = React.useState<UserFormState | null>(null);
+  const [userFormMode, setUserFormMode] = React.useState<"create" | "edit">("create");
+  const [userFormError, setUserFormError] = React.useState("");
+
+  /** 角色分配相关状态 */
+  const [roleAssign, setRoleAssign] = React.useState<RoleAssignState | null>(null);
 
   /**
    * 获取用户列表数据
@@ -118,7 +111,7 @@ function UserPage() {
   const loadUserList = React.useCallback(async () => {
     const res = await fetchUserList({
       page,
-      pageSize,
+      pageSize: PAGE_SIZE,
       keyword: keyword.trim() || undefined,
       phone: phoneKeyword.trim() || undefined,
       role: roleFilter === "all" ? undefined : roleFilter,
@@ -129,10 +122,10 @@ function UserPage() {
       setUsers(res.data.list);
       setTotal(res.data.total);
     }
-  }, [page, keyword, phoneKeyword, roleFilter, statusFilter]);
+  }, [page, keyword, phoneKeyword, roleFilter, statusFilter, setTotal]);
 
-  // 初始化加载
-  useEffect(() => {
+  /** 初始化加载 */
+  React.useEffect(() => {
     const timer = setTimeout(() => {
       loadUserList();
     }, 0);
@@ -140,15 +133,14 @@ function UserPage() {
   }, [loadUserList]);
 
   /**
-   * 处理表格多选变更
-   * @param keys 选中的key集合
+   * 处理表格选择变更
    */
   const handleTableSelectionChange = (keys: "all" | Set<React.Key>) => {
     if (keys === "all") {
       setSelectedIds(users.map(item => item.id));
       return;
     }
-    setSelectedIds(Array.from(keys).map(String));
+    handleSelectionChange(keys);
   };
 
   /**
@@ -174,7 +166,6 @@ function UserPage() {
 
   /**
    * 打开编辑用户表单
-   * @param user 目标用户对象
    */
   const handleOpenEditUser = (user: UserItem) => {
     setUserForm({
@@ -191,15 +182,9 @@ function UserPage() {
 
   /**
    * 处理表单字段变更
-   * @param patch 变更的字段对象
    */
   const handleUserFormChange = (patch: Partial<UserFormState>) => {
-    setUserForm(previous => {
-      if (!previous) {
-        return previous;
-      }
-      return { ...previous, ...patch };
-    });
+    setUserForm(previous => previous ? { ...previous, ...patch } : null);
   };
 
   /**
@@ -211,12 +196,11 @@ function UserPage() {
   };
 
   /**
-   * 提交用户表单（新增或更新）
+   * 提交用户表单
    */
   const handleSubmitUserForm = async () => {
-    if (!userForm) {
-      return;
-    }
+    if (!userForm) return;
+
     const trimmedUsername = userForm.username.trim();
     const trimmedName = userForm.name.trim();
     if (!trimmedUsername || !trimmedName) {
@@ -233,27 +217,17 @@ function UserPage() {
         status: userForm.enabled ? "enabled" : "disabled"
       });
       if (res && res.code === 200) {
-        addToast({
-          title: "用户新增成功",
-          description: `已新增用户 ${trimmedUsername}。`,
-          color: "success"
-        });
+        addToast({ title: "用户新增成功", description: `已新增用户 ${trimmedUsername}。`, color: "success" });
         loadUserList();
-        setUserForm(null);
-        setUserFormError("");
+        handleCloseUserForm();
       }
     } else if (userForm.id) {
-      const userId = userForm.id;
-      if (userId === currentUserId && !userForm.enabled) {
-        addToast({
-          title: "操作受限",
-          description: "不允许禁用当前登录账号。",
-          color: "warning"
-        });
+      if (userForm.id === currentUserId && !userForm.enabled) {
+        addToast({ title: "操作受限", description: "不允许禁用当前登录账号。", color: "warning" });
         return;
       }
       const res = await updateUser({
-        id: userId,
+        id: userForm.id,
         username: trimmedUsername,
         name: trimmedName,
         phone: userForm.phone.trim(),
@@ -261,36 +235,25 @@ function UserPage() {
         status: userForm.enabled ? "enabled" : "disabled"
       });
       if (res && res.code === 200) {
-        addToast({
-          title: "用户更新成功",
-          description: `已更新用户 ${trimmedUsername} 的资料。`,
-          color: "success"
-        });
+        addToast({ title: "用户更新成功", description: `已更新用户 ${trimmedUsername} 的资料。`, color: "success" });
         loadUserList();
-        setUserForm(null);
-        setUserFormError("");
+        handleCloseUserForm();
       }
     }
   };
 
   /**
    * 删除单个用户
-   * @param user 目标用户对象
    */
   const handleDeleteUser = async (user: UserItem) => {
     const confirmed = window.confirm(`确定要删除用户 ${user.username} 吗？此操作需谨慎。`);
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
+
     const res = await deleteUser(user.id);
     if (res && res.code === 200) {
-      addToast({
-        title: "用户删除成功",
-        description: `已删除用户 ${user.username}。`,
-        color: "success"
-      });
+      addToast({ title: "用户删除成功", description: `已删除用户 ${user.username}。`, color: "success" });
       loadUserList();
-      setSelectedIds(previous => previous.filter(id => id !== user.id));
+      setSelectedIds(prev => prev.filter(id => id !== user.id));
     }
   };
 
@@ -298,50 +261,36 @@ function UserPage() {
    * 批量删除用户
    */
   const handleBatchDelete = async () => {
-    if (selectedIds.length === 0) return;
+    if (!hasSelection) return;
     const confirmed = window.confirm(`确定要删除选中的 ${selectedIds.length} 个用户吗？`);
     if (!confirmed) return;
 
     const res = await batchDeleteUsers(selectedIds);
     if (res && res.code === 200) {
-      addToast({
-        title: "批量删除成功",
-        description: `已成功删除 ${selectedIds.length} 个用户。`,
-        color: "success"
-      });
+      addToast({ title: "批量删除成功", description: `已成功删除 ${selectedIds.length} 个用户。`, color: "success" });
       setSelectedIds([]);
       loadUserList();
     }
   };
 
   /**
-   * 切换用户状态（启用/禁用）
-   * @param user 目标用户对象
+   * 切换用户状态
    */
   const handleToggleStatus = async (user: UserItem) => {
     if (user.id === currentUserId) {
-      addToast({
-        title: "操作受限",
-        description: "不允许调整当前登录账号的状态。",
-        color: "warning"
-      });
+      addToast({ title: "操作受限", description: "不允许调整当前登录账号的状态。", color: "warning" });
       return;
     }
     const nextStatus = user.status === "enabled" ? "disabled" : "enabled";
     const res = await toggleUserStatus(user.id, nextStatus);
     if (res && res.code === 200) {
-      addToast({
-        title: "状态更新成功",
-        description: `用户 ${user.username} 已${nextStatus === "enabled" ? "启用" : "禁用"}。`,
-        color: "success"
-      });
+      addToast({ title: "状态更新成功", description: `用户 ${user.username} 已${nextStatus === "enabled" ? "启用" : "禁用"}。`, color: "success" });
       loadUserList();
     }
   };
 
   /**
    * 重置用户密码
-   * @param user 目标用户对象
    */
   const handleResetPwd = async (user: UserItem) => {
     const confirmed = window.confirm(`确定要重置用户 ${user.username} 的密码吗？`);
@@ -349,11 +298,7 @@ function UserPage() {
 
     const res = await resetPassword(user.id);
     if (res && res.code === 200) {
-      addToast({
-        title: "密码重置成功",
-        description: `用户 ${user.username} 的密码已重置为初始密码。`,
-        color: "success"
-      });
+      addToast({ title: "密码重置成功", description: `用户 ${user.username} 的密码已重置为初始密码。`, color: "success" });
     }
   };
 
@@ -361,39 +306,28 @@ function UserPage() {
    * 批量重置密码
    */
   const handleBatchResetPwd = async () => {
-    if (selectedIds.length === 0) return;
+    if (!hasSelection) return;
     const confirmed = window.confirm(`确定要为选中的 ${selectedIds.length} 个用户重置密码吗？`);
     if (!confirmed) return;
 
     const res = await batchResetPassword(selectedIds);
     if (res && res.code === 200) {
-      addToast({
-        title: "批量重置成功",
-        description: `已成功重置 ${selectedIds.length} 个用户的密码。`,
-        color: "success"
-      });
+      addToast({ title: "批量重置成功", description: `已成功重置 ${selectedIds.length} 个用户的密码。`, color: "success" });
     }
   };
 
   /**
    * 打开分配角色对话框
-   * @param user 目标用户对象
    */
   const handleOpenAssignRole = (user: UserItem) => {
-    setRoleAssign({
-      userId: user.id,
-      name: user.name,
-      roles: [...user.roles]
-    });
+    setRoleAssign({ userId: user.id, name: user.name, roles: [...user.roles] });
   };
 
   /**
    * 确认分配角色
    */
   const handleConfirmAssignRole = async () => {
-    if (!roleAssign) {
-      return;
-    }
+    if (!roleAssign) return;
     const user = users.find(u => u.id === roleAssign.userId);
     if (!user) return;
 
@@ -406,48 +340,24 @@ function UserPage() {
       status: user.status
     });
     if (res && res.code === 200) {
-      addToast({
-        title: "角色分配成功",
-        description: `已更新用户 ${roleAssign.name} 的角色配置。`,
-        color: "success"
-      });
+      addToast({ title: "角色分配成功", description: `已更新用户 ${roleAssign.name} 的角色配置。`, color: "success" });
       loadUserList();
       setRoleAssign(null);
     }
   };
 
   /**
-   * 处理批量导入操作（占位）
+   * 批量导入操作（占位）
    */
   const handleBatchImport = () => {
-    addToast({
-      title: "批量导入",
-      description: "已触发批量导入占位操作，实际需通过上传文件并解析后调用 /api/admin/user/import 接口。",
-      color: "primary"
-    });
+    addToast({ title: "批量导入", description: "已触发批量导入占位操作。", color: "primary" });
   };
 
   /**
-   * 处理批量导出操作（占位）
+   * 批量导出操作（占位）
    */
   const handleBatchExport = () => {
-    addToast({
-      title: "导出用户",
-      description: `已提交导出当前筛选结果的任务，共 ${total} 个用户，实际导出逻辑待接入 /api/admin/user/export 接口。`,
-      color: "primary"
-    });
-  };
-
-  /**
-   * 处理页码变更
-   * @param next 下一页页码
-   */
-  const handlePageChange = (next: number) => {
-    if (next < 1 || next > totalPages) {
-      return;
-    }
-    setPage(next);
-    setSelectedIds([]);
+    addToast({ title: "导出用户", description: `已提交导出当前筛选结果的任务，共 ${total} 个用户。`, color: "primary" });
   };
 
   return (
@@ -925,7 +835,4 @@ function UserPage() {
   );
 }
 
-// ===== 10. TODO任务管理区域 =====
-
-// ===== 11. 导出区域 =====
 export default UserPage;

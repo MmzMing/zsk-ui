@@ -1,17 +1,24 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useMemo, useEffect, useState, useCallback } from "react";
+/**
+ * 数据分析页面
+ * @module pages/Admin/Analysis
+ * @description 后台数据分析页面，展示指标卡片和时间分布图表
+ */
+
+import React, { useMemo, useEffect, useCallback } from "react";
 import { Card, Chip } from "@heroui/react";
 import { FiBarChart2 } from "react-icons/fi";
 import type { ColumnConfig } from "@ant-design/plots";
 import { Column } from "@ant-design/plots";
-import { useAppStore } from "../../store";
+import { useAppStore } from "@/store";
 import { 
   fetchAnalysisMetrics, 
   fetchAnalysisTimeDistribution,
   type AnalysisMetricItem,
   type AnalysisTimeDistributionItem
-} from "../../api/admin/dashboard";
-import Loading from "../../components/Loading";
+} from "@/api/admin/dashboard";
+import Loading from "@/components/Loading";
+import { useAdminDataLoader } from "@/hooks";
+import { handleError } from "@/utils";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -22,12 +29,12 @@ import Loading from "../../components/Loading";
 function AnalysisPage() {
   const { themeMode } = useAppStore();
   
-  /** 指标卡片数据 */
-  const [metricCards, setMetricCards] = useState<AnalysisMetricItem[]>([]);
-  /** 大屏图表数据 */
-  const [bigScreenData, setBigScreenData] = useState<AnalysisTimeDistributionItem[]>([]);
-  /** 加载状态 */
-  const [isLoading, setIsLoading] = useState(true);
+  /** 指标卡片数据加载器 */
+  const { data: metricCards, loading: metricsLoading, loadData: loadMetricsData } = useAdminDataLoader<AnalysisMetricItem[]>();
+  /** 大屏图表数据加载器 */
+  const { data: bigScreenData, loading: distributionLoading, loadData: loadDistributionData } = useAdminDataLoader<AnalysisTimeDistributionItem[]>();
+  /** 整体加载状态 */
+  const isLoading = metricsLoading || distributionLoading;
 
   /** 图表主题配置 */
   const chartTheme = useMemo(() => {
@@ -43,7 +50,7 @@ function AnalysisPage() {
   /** 图表配置项 */
   const columnConfig: ColumnConfig = useMemo(
     () => ({
-      data: bigScreenData,
+      data: bigScreenData || [],
       isGroup: true,
       xField: "time",
       yField: "value",
@@ -93,18 +100,24 @@ function AnalysisPage() {
    * 获取分析页面初始化数据
    */
   const handleFetchAnalysisData = useCallback(async () => {
-    setIsLoading(true);
     try {
-      const [metricsRes, distributionRes] = await Promise.all([
-        fetchAnalysisMetrics(),
-        fetchAnalysisTimeDistribution({})
+      await Promise.all([
+        loadMetricsData(() => fetchAnalysisMetrics(), {
+          showErrorToast: true,
+          errorMessage: '获取指标数据失败'
+        }),
+        loadDistributionData(() => fetchAnalysisTimeDistribution({}), {
+          showErrorToast: true,
+          errorMessage: '获取分布数据失败'
+        })
       ]);
-      setMetricCards(metricsRes);
-      setBigScreenData(distributionRes);
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: '加载分析数据失败'
+      });
     }
-  }, []);
+  }, [loadMetricsData, loadDistributionData]);
 
   // ===== 8. UI渲染逻辑区域 =====
   /**
@@ -162,7 +175,7 @@ function AnalysisPage() {
             </Card>
           ))
         ) : (
-          metricCards.map(item => (
+          (metricCards || []).map(item => (
             <Card
               key={item.key}
               className="border border-[var(--border-color)] bg-[var(--bg-elevated)]/95"

@@ -24,7 +24,10 @@ import type { ApiResponse } from "../types";
 
 // ===== 后端类型定义 =====
 
-/** 后端登录响应类型 */
+/**
+ * 后端登录响应类型
+ * @description 用户登录成功后后端返回的数据结构
+ */
 export type BackendLoginResponse = {
   /** 访问令牌 */
   accessToken: string;
@@ -44,7 +47,10 @@ export type BackendLoginResponse = {
   avatar: string;
 };
 
-/** 后端验证码响应类型 */
+/**
+ * 后端验证码响应类型
+ * @description 获取滑块验证码时后端返回的数据结构
+ */
 export type BackendCaptchaResponse = {
   /** 验证码UUID */
   uuid: string;
@@ -58,7 +64,10 @@ export type BackendCaptchaResponse = {
   x?: number;
 };
 
-/** 后端注册请求类型 */
+/**
+ * 后端注册请求类型
+ * @description 用户注册时提交到后端的数据结构
+ */
 export type BackendRegisterRequest = {
   /** 用户名 */
   username: string;
@@ -76,7 +85,10 @@ export type BackendRegisterRequest = {
 
 // ===== 前端类型定义 =====
 
-/** 滑块验证码数据 */
+/**
+ * 滑块验证码数据
+ * @description 前端滑块验证码组件使用的数据结构
+ */
 export type SliderCaptchaData = {
   /** 验证码UUID */
   uuid: string;
@@ -88,7 +100,10 @@ export type SliderCaptchaData = {
   y?: number;
 };
 
-/** 滑块验证结果 */
+/**
+ * 滑块验证结果
+ * @description 滑块验证后的返回结果
+ */
 export type SliderVerifyResult = {
   /** 是否验证通过 */
   passed: boolean;
@@ -96,10 +111,19 @@ export type SliderVerifyResult = {
   verifyToken?: string;
 };
 
-/** 验证码场景 */
+/**
+ * 验证码场景
+ * @description 不同业务场景下的验证码类型
+ * - login_email: 邮箱登录
+ * - forgot_email: 忘记密码
+ * - register_email: 邮箱注册
+ */
 export type SliderScene = "login_email" | "forgot_email" | "register_email";
 
-/** RSA公钥响应 */
+/**
+ * RSA公钥响应
+ * @description 获取RSA公钥用于密码加密
+ */
 export type PublicKeyResponse = {
   /** RSA公钥（Base64编码） */
   publicKey: string;
@@ -109,7 +133,10 @@ export type PublicKeyResponse = {
   keyVersion: string;
 };
 
-/** 登录请求 */
+/**
+ * 登录请求
+ * @description 用户登录时提交的数据结构，支持多种登录方式
+ */
 export type LoginRequest = {
   /** 用户名 */
   username?: string;
@@ -125,7 +152,10 @@ export type LoginRequest = {
   type: "account" | "email" | "phone";
 };
 
-/** 登录响应 */
+/**
+ * 登录响应
+ * @description 用户登录成功后前端使用的数据结构
+ */
 export type LoginResponse = {
   /** 访问令牌 */
   token: string;
@@ -146,7 +176,10 @@ export type LoginResponse = {
   };
 };
 
-/** 注册请求 */
+/**
+ * 注册请求
+ * @description 用户注册时提交的数据结构
+ */
 export type RegisterRequest = {
   /** 用户名 */
   username: string;
@@ -162,7 +195,10 @@ export type RegisterRequest = {
   uuid?: string;
 };
 
-/** 忘记密码请求 */
+/**
+ * 忘记密码请求
+ * @description 用户忘记密码时提交的数据结构
+ */
 export type ForgotPasswordRequest = {
   /** 邮箱 */
   email: string;

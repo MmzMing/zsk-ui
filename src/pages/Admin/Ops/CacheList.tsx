@@ -1,5 +1,10 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useState, useEffect, useCallback } from "react";
+/**
+ * 缓存列表管理页面
+ * @module pages/Admin/Ops/CacheList
+ * @description 缓存键值管理，支持搜索、筛选、批量刷新与删除等操作
+ */
+
+import React, { useCallback } from "react";
 import {
   SelectItem,
   Button,
@@ -26,96 +31,78 @@ import {
   batchDeleteCache,
   refreshSingleCache,
   deleteSingleCache,
-} from "../../../api/admin/ops";
+} from "@/api/admin/ops";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
+import { usePageState, useSelection } from "@/hooks";
 
-// ===== 2. TODO待处理导入区域 =====
+/** 每页显示条数 */
+const PAGE_SIZE = 8;
 
-// ===== 3. 状态控制逻辑区域 =====
-/** 缓存列表页面组件 */
+/**
+ * 格式化存储大小
+ */
+function formatSize(value: number): string {
+  if (value >= 1024) {
+    const mb = value / 1024;
+    return `${mb.toFixed(1)} MB`;
+  }
+  return `${value.toFixed(1)} KB`;
+}
+
+/**
+ * 格式化过期时间
+ */
+function formatTtl(ttl: number | null): string {
+  if (ttl === null) return "永不过期";
+  if (ttl <= 0) return "已过期";
+  if (ttl < 60) return `${ttl} 秒`;
+  
+  const minutes = Math.floor(ttl / 60);
+  const seconds = ttl % 60;
+  if (minutes < 60) {
+    return seconds ? `${minutes} 分 ${seconds} 秒` : `${minutes} 分钟`;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  const restMinutes = minutes % 60;
+  return restMinutes ? `${hours} 小时 ${restMinutes} 分` : `${hours} 小时`;
+}
+
+/**
+ * 缓存列表管理页面组件
+ * @returns 页面JSX元素
+ */
 function CacheListPage() {
-  /** 加载状态 */
-  const [loading, setLoading] = useState(false);
-  /** 搜索关键字 */
-  const [keyword, setKeyword] = useState("");
-  /** 实例筛选 */
-  const [instanceFilter, setInstanceFilter] = useState<string>("all");
-  /** 过期时间筛选类型 */
-  const [ttlFilter, setTtlFilter] = useState<"all" | "expiring" | "no-expire">("all");
+  /** 分页状态 */
+  const { page, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGE_SIZE });
+
+  /** 表格选择状态 */
+  const { selectedIds, setSelectedIds, hasSelection, handleTableSelectionChange } = useSelection();
+
+  /** 数据与加载状态 */
+  const [loading, setLoading] = React.useState(false);
+  const [items, setItems] = React.useState<CacheKeyItem[]>([]);
+  const [cacheInstances, setCacheInstances] = React.useState<{ id: string; name: string }[]>([]);
+
+  /** 筛选条件状态 */
+  const [keyword, setKeyword] = React.useState("");
+  const [instanceFilter, setInstanceFilter] = React.useState("all");
+  const [ttlFilter, setTtlFilter] = React.useState<"all" | "expiring" | "no-expire">("all");
+
   /** 当前页码 */
-  const [page, setPage] = useState(1);
-  /** 缓存键列表数据 */
-  const [items, setItems] = useState<CacheKeyItem[]>([]);
-  /** 选中的 ID 列表 */
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  /** 缓存实例列表 */
-  const [cacheInstances, setCacheInstances] = useState<{ id: string; name: string }[]>([]);
-  /** 总记录数 */
-  const [total, setTotal] = useState(0);
-
-  /** 每页记录数 */
-  const pageSize = 8;
-  /** 总页数 */
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  /** 当前显示的页码 */
   const currentPage = Math.min(page, totalPages);
-  /** 是否有选中的项 */
-  const hasSelection = selectedIds.length > 0;
 
-  // ===== 4. 通用工具函数区域 =====
-  /**
-   * 格式化存储大小
-   * @param value 大小值 (KB)
-   * @returns 格式化后的字符串
-   */
-  const formatSize = (value: number) => {
-    if (value >= 1024) {
-      const mb = value / 1024;
-      return `${mb.toFixed(1)} MB`;
-    }
-    return `${value.toFixed(1)} KB`;
-  };
-
-  /**
-   * 格式化过期时间
-   * @param ttl 过期时间 (秒)
-   * @returns 格式化后的字符串
-   */
-  const formatTtl = (ttl: number | null) => {
-    if (ttl === null) return "永不过期";
-    if (ttl <= 0) return "已过期";
-    if (ttl < 60) return `${ttl} 秒`;
-    
-    const minutes = Math.floor(ttl / 60);
-    const seconds = ttl % 60;
-    if (minutes < 60) {
-      return seconds ? `${minutes} 分 ${seconds} 秒` : `${minutes} 分钟`;
-    }
-    
-    const hours = Math.floor(minutes / 60);
-    const restMinutes = minutes % 60;
-    return restMinutes ? `${hours} 小时 ${restMinutes} 分` : `${hours} 小时`;
-  };
-
-  // ===== 5. 注释代码函数区 =====
-
-  // ===== 6. 错误处理函数区域 =====
   /**
    * 统一错误提示
-   * @param error 错误对象
-   * @param prefix 错误前缀
    */
   const showErrorFn = useCallback((error: unknown, prefix: string) => {
     const message = error instanceof Error ? error.message : String(error);
-    addToast({
-      title: `${prefix}失败`,
-      description: message,
-      color: "danger"
-    });
+    addToast({ title: `${prefix}失败`, description: message, color: "danger" });
   }, []);
 
-  // ===== 7. 数据处理函数区域 =====
-  /** 加载缓存实例列表 */
+  /**
+   * 加载缓存实例列表
+   */
   const loadInstances = useCallback(async () => {
     const data = await getCacheInstancesData({
       onError: (err) => showErrorFn(err, "加载实例列表")
@@ -123,13 +110,15 @@ function CacheListPage() {
     if (data) setCacheInstances(data);
   }, [showErrorFn]);
 
-  /** 加载缓存键列表 */
+  /**
+   * 加载缓存键列表
+   */
   const loadData = useCallback(async () => {
     const data = await getCacheKeysListData({
       keyword,
       instanceId: instanceFilter,
       page,
-      pageSize,
+      pageSize: PAGE_SIZE,
       setLoading,
       onError: (err) => showErrorFn(err, "加载缓存数据")
     });
@@ -137,21 +126,27 @@ function CacheListPage() {
       setItems(data.list);
       setTotal(data.total);
     }
-  }, [keyword, instanceFilter, page, showErrorFn]);
+  }, [keyword, instanceFilter, page, showErrorFn, setTotal]);
+
+  /** 初始化加载实例列表 */
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      loadInstances();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadInstances]);
+
+  /** 数据变更时加载列表 */
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      loadData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadData]);
 
   /**
-   * 表格选择变更回调
-   * @param keys 选择的键集合
+   * 重置筛选条件
    */
-  const handleTableSelectionChange = (keys: "all" | Set<React.Key>) => {
-    if (keys === "all") {
-      setSelectedIds(items.map(item => item.id));
-      return;
-    }
-    setSelectedIds(Array.from(keys).map(String));
-  };
-
-  /** 重置筛选条件 */
   const handleResetFilter = () => {
     setKeyword("");
     setInstanceFilter("all");
@@ -160,7 +155,9 @@ function CacheListPage() {
     setSelectedIds([]);
   };
 
-  /** 批量刷新选中的缓存键 */
+  /**
+   * 批量刷新选中的缓存键
+   */
   const handleBatchRefresh = async () => {
     if (!hasSelection) return;
     const success = await batchRefreshCache({
@@ -169,16 +166,14 @@ function CacheListPage() {
       onError: (err) => showErrorFn(err, "批量刷新")
     });
     if (success) {
-      addToast({
-        title: "批量刷新成功",
-        description: `已提交 ${selectedIds.length} 个键的刷新任务。`,
-        color: "success"
-      });
+      addToast({ title: "批量刷新成功", description: `已提交 ${selectedIds.length} 个键的刷新任务。`, color: "success" });
       setSelectedIds([]);
     }
   };
 
-  /** 批量删除选中的缓存键 */
+  /**
+   * 批量删除选中的缓存键
+   */
   const handleBatchDelete = async () => {
     if (!hasSelection) return;
     const success = await batchDeleteCache({
@@ -187,11 +182,7 @@ function CacheListPage() {
       onError: (err) => showErrorFn(err, "批量删除")
     });
     if (success) {
-      addToast({
-        title: "批量删除成功",
-        description: `已成功删除 ${selectedIds.length} 个缓存键。`,
-        color: "success"
-      });
+      addToast({ title: "批量删除成功", description: `已成功删除 ${selectedIds.length} 个缓存键。`, color: "success" });
       setSelectedIds([]);
       loadData();
     }
@@ -199,7 +190,6 @@ function CacheListPage() {
 
   /**
    * 刷新单个缓存键
-   * @param item 缓存键项
    */
   const handleItemRefresh = async (item: CacheKeyItem) => {
     const success = await refreshSingleCache({
@@ -208,17 +198,12 @@ function CacheListPage() {
       onError: (err) => showErrorFn(err, "刷新缓存")
     });
     if (success) {
-      addToast({
-        title: "刷新成功",
-        description: `已对键 ${item.key} 触发单次刷新操作。`,
-        color: "success"
-      });
+      addToast({ title: "刷新成功", description: `已对键 ${item.key} 触发单次刷新操作。`, color: "success" });
     }
   };
 
   /**
    * 删除单个缓存键
-   * @param item 缓存键项
    */
   const handleItemDelete = async (item: CacheKeyItem) => {
     const success = await deleteSingleCache({
@@ -227,42 +212,10 @@ function CacheListPage() {
       onError: (err) => showErrorFn(err, "删除缓存")
     });
     if (success) {
-      addToast({
-        title: "删除成功",
-        description: `已删除缓存键 ${item.key}。`,
-        color: "success"
-      });
+      addToast({ title: "删除成功", description: `已删除缓存键 ${item.key}。`, color: "success" });
       loadData();
     }
   };
-
-  /**
-   * 页码变更回调
-   * @param next 下一页页码
-   */
-  const handlePageChange = (next: number) => {
-    if (next < 1 || next > totalPages) return;
-    setPage(next);
-    setSelectedIds([]);
-  };
-
-  // ===== 8. UI渲染逻辑区域 =====
-  // ===== 9. 页面初始化与事件绑定 =====
-  /** 初始化加载实例列表 */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadInstances();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadInstances]);
-
-  /** 数据变更时加载列表 */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadData();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadData]);
 
   return (
     <div className="space-y-4">
@@ -482,7 +435,4 @@ function CacheListPage() {
   );
 }
 
-// ===== 10. TODO任务管理区域 =====
-
-// ===== 11. 导出区域 =====
 export default CacheListPage;

@@ -111,8 +111,6 @@ export const SlicedImage: React.FC<{
                       left: `${imgLeftPercent}%`,
                       filter: `brightness(${config.brightness}) contrast(${config.contrast}) grayscale(${config.grayscale})`,
                     }}
-                    onLoad={() => console.log('Image loaded:', src)}
-                    onError={() => console.error('Image load failed:', src)}
                   />
                 </div>
               </div>

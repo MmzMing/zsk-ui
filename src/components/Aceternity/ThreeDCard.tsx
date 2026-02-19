@@ -7,7 +7,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { cn } from "../../lib/utils";
+import { cn } from "@/utils";
 
 // ===== 2. TODO待处理导入区域 =====
 

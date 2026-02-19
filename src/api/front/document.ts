@@ -1,57 +1,43 @@
-// ===== 1. 依赖导入区域 =====
-import { request, handleRequest } from "../axios";
-import { mockDocData, mockDocComments } from "../mock/front/docDetail";
+/**
+ * 文档相关 API
+ * @module api/front/document
+ * @description 提供文档详情、评论、点赞、收藏等功能接口
+ */
+
+import { request, handleRequest } from "../request";
 import type { ApiResponse } from "../types";
 
-// ===== 2. TODO待处理导入区域 =====
-
-// ===== 3. 状态控制逻辑区域 =====
-
-// ===== 4. 通用工具函数区域 =====
-
-// ===== 5. 注释代码函数区 =====
-
-// ===== 6. 错误处理函数区域 =====
-
-// ===== 7. 数据处理函数区域 =====
-
-// ===== 8. UI渲染逻辑区域 =====
-
-// ===== 9. 页面初始化与事件绑定 =====
-
-// ===== 10. TODO任务管理区域 =====
-
-// ===== 11. 导出区域 =====
-
 /**
- * 目录项类型定义
+ * 目录项
+ * @description 文档目录树形结构节点
  */
 export interface TocItem {
-  /** 标识符 */
+  /** 目录项ID */
   id: string;
-  /** 文本内容 */
+  /** 目录项文本 */
   text: string;
-  /** 层级 */
+  /** 标题级别（1-6） */
   level: number;
-  /** 子节点 */
+  /** 子目录列表 */
   children: TocItem[];
 }
 
 /**
- * 文档详情类型
+ * 文档详情
+ * @description 文档详情页展示的完整数据
  */
 export type DocDetail = {
   /** 文档ID */
   id: string;
-  /** 标题 */
+  /** 文档标题 */
   title: string;
-  /** 内容 (HTML 或 Markdown) */
+  /** 文档内容（Markdown格式） */
   content: string;
-  /** 分类 */
+  /** 分类名称 */
   category: string;
-  /** 日期 */
+  /** 发布日期 */
   date: string;
-  /** 封面图地址 */
+  /** 封面图URL */
   coverUrl?: string;
   /** 作者信息 */
   author: {
@@ -59,102 +45,105 @@ export type DocDetail = {
     id: string;
     /** 作者名称 */
     name: string;
-    /** 头像 */
+    /** 作者头像 */
     avatar: string;
-    /** 粉丝数 */
+    /** 粉丝数（格式化字符串） */
     fans: string;
-    /** 是否已关注 */
+    /** 当前用户是否已关注 */
     isFollowing: boolean;
   };
   /** 统计数据 */
   stats: {
-    /** 阅读数 */
+    /** 浏览量（格式化字符串） */
     views: string;
     /** 点赞数 */
     likes: number;
     /** 收藏数 */
     favorites: number;
-    /** 日期 */
+    /** 发布日期 */
     date?: string;
-    /** 是否已点赞 */
+    /** 当前用户是否已点赞 */
     isLiked: boolean;
-    /** 是否已收藏 */
+    /** 当前用户是否已收藏 */
     isFavorited: boolean;
   };
   /** 推荐文档列表 */
   recommendations: {
-    /** 文档ID */
+    /** 推荐文档ID */
     id: string;
-    /** 标题 */
+    /** 推荐文档标题 */
     title: string;
-    /** 阅读数 */
+    /** 浏览量（格式化字符串） */
     views: string;
   }[];
 };
 
 /**
- * 评论项类型
+ * 评论项
+ * @description 文档评论的单条数据
  */
 export type CommentItem = {
   /** 评论ID */
   id: string;
   /** 评论内容 */
   content: string;
-  /** 作者信息 */
+  /** 评论作者信息 */
   author: {
     /** 作者ID */
     id: string;
-    /** 名称 */
+    /** 作者名称 */
     name: string;
-    /** 头像 */
+    /** 作者头像 */
     avatar: string;
   };
-  /** 创建时间 */
+  /** 评论时间 */
   createdAt: string;
   /** 点赞数 */
   likes: number;
-  /** 是否已点赞 */
+  /** 当前用户是否已点赞 */
   isLiked: boolean;
   /** 回复列表 */
   replies?: CommentItem[];
-  /** 回复对象 */
+  /** 回复目标信息（回复评论时存在） */
   replyTo?: {
-    /** 用户ID */
+    /** 被回复者ID */
     id: string;
-    /** 用户名称 */
+    /** 被回复者名称 */
     name: string;
   };
 };
 
 /**
- * 发表评论参数
+ * 发布评论参数
+ * @description 发布文档评论时提交的数据
  */
 export interface PostCommentParams {
   /** 文档ID */
   docId: string;
   /** 评论内容 */
   content: string;
-  /** 父级评论ID */
+  /** 父评论ID（回复评论时使用） */
   parentId?: string;
-  /** 回复目标用户ID */
+  /** 回复目标评论ID */
   replyToId?: string;
-}
+};
 
 /**
  * 获取文档详情
+ * @description 根据文档ID获取完整的文档信息
  * @param id 文档ID
- * @param setLoading 加载状态回调
+ * @param setLoading 加载状态回调函数（可选）
+ * @returns 文档详情数据
  */
 export async function fetchDocDetail(
   id: string,
   setLoading?: (loading: boolean) => void
-) {
+): Promise<DocDetail> {
   const { data } = await handleRequest({
     requestFn: () =>
       request.instance
         .get<ApiResponse<DocDetail>>(`/document/detail/${id}`)
         .then((r) => r.data),
-    mockData: mockDocData,
     setLoading,
     apiName: "fetchDocDetail",
   });
@@ -163,99 +152,69 @@ export async function fetchDocDetail(
 
 /**
  * 切换文档点赞状态
+ * @description 点赞或取消点赞文档
  * @param id 文档ID
+ * @returns 点赞状态和点赞数
  */
-export async function toggleDocLike(id: string) {
-  const { data } = await handleRequest({
-    requestFn: () =>
-      request.instance
-        .post<ApiResponse<{ isLiked: boolean; count: number }>>(
-          `/document/like/${id}`
-        )
-        .then((r) => r.data),
-    mockData: {
-      isLiked: !mockDocData.stats.isLiked,
-      count: mockDocData.stats.likes + 1,
-    },
-    apiName: "toggleDocLike",
-  });
-  return data;
+export async function toggleDocLike(
+  id: string
+): Promise<{ isLiked: boolean; count: number }> {
+  return request.post(`/document/like/${id}`);
 }
 
 /**
  * 切换文档收藏状态
+ * @description 收藏或取消收藏文档
  * @param id 文档ID
+ * @returns 收藏状态和收藏数
  */
-export async function toggleDocFavorite(id: string) {
-  const { data } = await handleRequest({
-    requestFn: () =>
-      request.instance
-        .post<ApiResponse<{ isFavorited: boolean; count: number }>>(
-          `/document/favorite/${id}`
-        )
-        .then((r) => r.data),
-    mockData: {
-      isFavorited: !mockDocData.stats.isFavorited,
-      count: mockDocData.stats.favorites + 1,
-    },
-    apiName: "toggleDocFavorite",
-  });
-  return data;
+export async function toggleDocFavorite(
+  id: string
+): Promise<{ isFavorited: boolean; count: number }> {
+  return request.post(`/document/favorite/${id}`);
 }
 
 /**
  * 获取文档评论列表
+ * @description 分页获取文档评论，支持排序
  * @param id 文档ID
- * @param params 分页及排序参数
+ * @param params 分页和排序参数
+ * @returns 评论列表和总数
  */
 export async function fetchDocComments(
   id: string,
-  params: { page: number; pageSize: number; sort?: "hot" | "new" }
-) {
-  const { data } = await handleRequest({
-    requestFn: () =>
-      request.instance
-        .get<ApiResponse<{ list: CommentItem[]; total: number }>>(
-          `/document/comments/${id}`,
-          { params }
-        )
-        .then((r) => r.data),
-    mockData: { list: mockDocComments, total: mockDocComments.length },
-    apiName: "fetchDocComments",
-  });
-  return data;
+  params: {
+    /** 当前页码 */
+    page: number;
+    /** 每页条数 */
+    pageSize: number;
+    /** 排序方式：hot-热门，new-最新 */
+    sort?: "hot" | "new";
+  }
+): Promise<{ list: CommentItem[]; total: number }> {
+  return request.get(`/document/comments/${id}`, { params });
 }
 
 /**
- * 发表文档评论
- * @param data 评论数据
+ * 发布文档评论
+ * @description 发布新评论或回复评论
+ * @param params 评论参数
+ * @returns 新发布的评论数据
  */
-export async function postDocComment(data: PostCommentParams) {
-  const { data: resData } = await handleRequest({
-    requestFn: () =>
-      request.instance
-        .post<ApiResponse<CommentItem>>(`/document/comment`, data)
-        .then((r) => r.data),
-    mockData: mockDocComments[0],
-    apiName: "postDocComment",
-  });
-  return resData;
+export async function postDocComment(
+  params: PostCommentParams
+): Promise<CommentItem> {
+  return request.post("/document/comment", params);
 }
 
 /**
- * 切换文档评论点赞状态
+ * 切换评论点赞状态
+ * @description 点赞或取消点赞评论
  * @param commentId 评论ID
+ * @returns 点赞状态和点赞数
  */
-export async function toggleDocCommentLike(commentId: string) {
-  const { data } = await handleRequest({
-    requestFn: () =>
-      request.instance
-        .post<ApiResponse<{ isLiked: boolean; likes: number }>>(
-          `/document/comment/like/${commentId}`
-        )
-        .then((r) => r.data),
-    mockData: { isLiked: true, likes: 10 },
-    apiName: "toggleDocCommentLike",
-  });
-  return data;
+export async function toggleDocCommentLike(
+  commentId: string
+): Promise<{ isLiked: boolean; count: number }> {
+  return request.post(`/document/comment/like/${commentId}`);
 }

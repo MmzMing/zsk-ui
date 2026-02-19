@@ -1,5 +1,10 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useMemo, useState, useRef, useEffect, useCallback } from "react";
+/**
+ * 视频管理列表页面
+ * @module pages/Admin/Video/List
+ * @description 视频内容管理，支持列表展示、筛选、编辑、状态切换等功能
+ */
+
+import React, { useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -40,12 +45,8 @@ import {
   FiMessageSquare
 } from "react-icons/fi";
 import ReactPlayer from "react-player";
-import { useAppStore } from "../../../store";
-
-// 修复 ReactPlayer 类型问题
-const Player = ReactPlayer as unknown as React.ComponentType<Record<string, unknown>>;
-
-import { routes } from "../../../router/routes";
+import { useAppStore } from "@/store";
+import { routes } from "@/router/routes";
 import {
   fetchVideoList,
   updateVideo,
@@ -60,18 +61,32 @@ import {
   type CommentItem
 } from "@/api/admin/video";
 import { Loading } from "@/components/Loading";
+import { usePageState, useSelection } from "@/hooks";
 
-// ===== 2. TODO待处理导入区域 =====
+/** 修复 ReactPlayer 类型问题 */
+const Player = ReactPlayer as unknown as React.ComponentType<Record<string, unknown>>;
 
-// ===== 3. 状态控制逻辑区域 =====
-/**
- * 视频状态过滤类型
- */
+/** 每页显示条数 */
+const PAGE_SIZE = 8;
+
+/** 视频分类常量 */
+const VIDEO_CATEGORIES = ["前端基础", "工程实践", "效率方法", "个人成长", "系统设计"];
+
+/** 图表模拟数据 */
+const CHART_DATA = [
+  { date: "01-12", plays: 120 },
+  { date: "01-13", plays: 268 },
+  { date: "01-14", plays: 356 },
+  { date: "01-15", plays: 412 },
+  { date: "01-16", plays: 298 },
+  { date: "01-17", plays: 520 },
+  { date: "01-18", plays: 489 }
+];
+
+/** 视频状态过滤类型 */
 type StatusFilter = "all" | VideoStatus;
 
-/**
- * 视频表单状态类型
- */
+/** 视频表单状态类型 */
 type VideoFormState = {
   id: string;
   title: string;
@@ -87,29 +102,8 @@ type VideoFormState = {
   relatedVideos: VideoItem[];
 };
 
-// ===== 4. 通用工具函数区域 =====
-/**
- * 视频分类常量
- */
-const VIDEO_CATEGORIES = ["前端基础", "工程实践", "效率方法", "个人成长", "系统设计"];
-
-/**
- * 图表模拟数据
- */
-const CHART_DATA = [
-  { date: "01-12", plays: 120 },
-  { date: "01-13", plays: 268 },
-  { date: "01-14", plays: 356 },
-  { date: "01-15", plays: 412 },
-  { date: "01-16", plays: 298 },
-  { date: "01-17", plays: 520 },
-  { date: "01-18", plays: 489 }
-];
-
 /**
  * 获取状态文本标签
- * @param status 视频状态
- * @returns 对应的中文文本
  */
 function getStatusLabel(status: VideoStatus): string {
   const statusMap: Record<VideoStatus, string> = {
@@ -126,8 +120,6 @@ function getStatusLabel(status: VideoStatus): string {
 
 /**
  * 获取状态颜色类型
- * @param status 视频状态
- * @returns 对应的颜色标识
  */
 function getStatusColor(status: VideoStatus): "default" | "primary" | "secondary" | "success" | "warning" | "danger" {
   const colorMap: Record<VideoStatus, "default" | "primary" | "secondary" | "success" | "warning" | "danger"> = {
@@ -142,66 +134,49 @@ function getStatusColor(status: VideoStatus): "default" | "primary" | "secondary
   return colorMap[status] || "default";
 }
 
-// ===== 5. 注释代码函数区 =====
-
-// ===== 6. 错误处理函数区域 =====
-/**
- * 显示全局错误提示
- * @param message 错误消息
- */
-function showErrorFn(message: string) {
-  addToast({
-    title: "错误",
-    description: message,
-    color: "danger"
-  });
-}
-
-// ===== 7. 数据处理函数区域 =====
 /**
  * 处理标签字符串转换为数组
- * @param tagsStr 标签字符串（逗号分隔）
- * @returns 标签数组
  */
-function handleProcessTags(tagsStr: string): string[] {
-  return tagsStr
-    .split(/[,，]/)
-    .map(t => t.trim())
-    .filter(Boolean);
+function processTags(tagsStr: string): string[] {
+  return tagsStr.split(/[,，]/).map(t => t.trim()).filter(Boolean);
 }
 
-// ===== 8. UI渲染逻辑区域 =====
-
-// ===== 9. 页面初始化与事件绑定 =====
 /**
- * 视频管理列表页面
+ * 视频管理列表页面组件
  * @returns 页面JSX元素
  */
 function VideoListPage() {
-  // --- 状态定义 ---
-  const [videos, setVideos] = useState<VideoItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [keyword, setKeyword] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [page, setPage] = useState(1);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
-  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
-  const [editingVideo, setEditingVideo] = useState<VideoFormState | null>(null);
-  const [commentVideoId, setCommentVideoId] = useState<string | null>(null);
-  const [comments, setComments] = useState<CommentItem[]>([]);
-  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
-  
+  const navigate = useNavigate();
+  const { themeMode } = useAppStore();
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  /** 分页状态 */
+  const { page, pageSize, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGE_SIZE });
+
+  /** 表格选择状态 */
+  const { selectedIds, setSelectedIds, hasSelection, handleTableSelectionChange } = useSelection();
+
+  /** 列表数据与加载状态 */
+  const [videos, setVideos] = React.useState<VideoItem[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  /** 筛选条件状态 */
+  const [keyword, setKeyword] = React.useState("");
+  const [categoryFilter, setCategoryFilter] = React.useState<string>("all");
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
+
+  /** 弹窗状态 */
+  const [activeVideoId, setActiveVideoId] = React.useState<string | null>(null);
+  const [previewVideoUrl, setPreviewVideoUrl] = React.useState<string | null>(null);
+  const [editingVideo, setEditingVideo] = React.useState<VideoFormState | null>(null);
+  const [commentVideoId, setCommentVideoId] = React.useState<string | null>(null);
+  const [comments, setComments] = React.useState<CommentItem[]>([]);
+  const [isCommentsLoading, setIsCommentsLoading] = React.useState(false);
+
+  /** Modal 控制器 */
   const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onClose: onPreviewClose } = useDisclosure();
   const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
   const { isOpen: isCommentOpen, onOpen: onCommentOpen, onClose: onCommentClose } = useDisclosure();
-  const { themeMode } = useAppStore();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const navigate = useNavigate();
-
-  // --- 逻辑计算 ---
-  const pageSize = 8;
 
   /**
    * 加载视频列表数据
@@ -209,69 +184,50 @@ function VideoListPage() {
   const loadVideoList = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetchVideoList({
-        page: 1,
-        pageSize: 1000
-      });
+      const res = await fetchVideoList({ page: 1, pageSize: 1000 });
       if (res && res.code === 200) {
         setVideos(res.data.list);
+        setTotal(res.data.list.length);
       }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [setTotal]);
 
-  // 初始化加载
-  useEffect(() => {
+  /** 初始化加载 */
+  React.useEffect(() => {
     const timer = setTimeout(() => {
       loadVideoList();
     }, 0);
     return () => clearTimeout(timer);
   }, [loadVideoList]);
 
-  /**
-   * 过滤后的视频列表
-   */
+  /** 过滤后的视频列表 */
   const filteredVideos = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
     return videos.filter(item => {
-      if (categoryFilter !== "all" && item.category !== categoryFilter) {
-        return false;
-      }
-      if (statusFilter !== "all" && item.status !== statusFilter) {
-        return false;
-      }
+      if (categoryFilter !== "all" && item.category !== categoryFilter) return false;
+      if (statusFilter !== "all" && item.status !== statusFilter) return false;
       if (trimmed) {
         const content = `${item.title} ${item.category} ${item.id}`.toLowerCase();
-        if (!content.includes(trimmed)) {
-          return false;
-        }
+        if (!content.includes(trimmed)) return false;
       }
       return true;
     });
   }, [videos, keyword, categoryFilter, statusFilter]);
 
-  // 分页计算
-  const total = filteredVideos.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  /** 分页数据计算 */
   const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const pageItems = filteredVideos.slice(startIndex, startIndex + pageSize);
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const pageItems = filteredVideos.slice(startIndex, startIndex + PAGE_SIZE);
 
-  const hasSelection = selectedIds.length > 0;
-
-  /**
-   * 推荐位显示逻辑
-   */
+  /** 推荐位显示逻辑 */
   const displayRecommended = useMemo(() => {
     const pinned = videos.filter(v => v.pinned);
     const recommended = videos.filter(v => v.recommended && !v.pinned);
-    const result = [...pinned, ...recommended];
-    return result.slice(0, 4);
+    return [...pinned, ...recommended].slice(0, 4);
   }, [videos]);
 
-  // --- 事件处理函数 ---
-  
   /**
    * 处理搜索与筛选重置
    */
@@ -284,30 +240,7 @@ function VideoListPage() {
   };
 
   /**
-   * 处理分页切换
-   * @param next 下一页页码
-   */
-  const handlePageChange = (next: number) => {
-    if (next < 1 || next > totalPages) return;
-    setPage(next);
-    setSelectedIds([]);
-  };
-
-  /**
-   * 处理表格选择变更
-   * @param keys 选中的key集合
-   */
-  const handleTableSelectionChange = (keys: "all" | Set<React.Key>) => {
-    if (keys === "all") {
-      setSelectedIds(pageItems.map(item => item.id));
-      return;
-    }
-    setSelectedIds(Array.from(keys).map(String));
-  };
-
-  /**
    * 打开编辑弹窗
-   * @param item 视频项
    */
   const handleOpenEdit = (item: VideoItem) => {
     setEditingVideo({
@@ -333,7 +266,7 @@ function VideoListPage() {
   const handleUpdateVideo = async () => {
     if (!editingVideo) return;
     if (!editingVideo.title.trim()) {
-      showErrorFn("视频标题不能为空");
+      addToast({ title: "错误", description: "视频标题不能为空", color: "danger" });
       return;
     }
 
@@ -345,18 +278,14 @@ function VideoListPage() {
         category: editingVideo.category,
         description: editingVideo.description,
         cover: editingVideo.cover,
-        tags: handleProcessTags(editingVideo.tags),
+        tags: processTags(editingVideo.tags),
         status: editingVideo.status,
         pinned: editingVideo.pinned,
         recommended: editingVideo.recommended
       });
 
       if (res && res.code === 200) {
-        addToast({
-          title: "更新成功",
-          description: `视频「${editingVideo.title}」已更新`,
-          color: "success"
-        });
+        addToast({ title: "更新成功", description: `视频「${editingVideo.title}」已更新`, color: "success" });
         loadVideoList();
         onEditClose();
       }
@@ -367,7 +296,6 @@ function VideoListPage() {
 
   /**
    * 切换置顶状态
-   * @param item 视频项
    */
   const handleTogglePinned = async (item: VideoItem) => {
     const nextPinned = !item.pinned;
@@ -375,11 +303,7 @@ function VideoListPage() {
     try {
       const res = await toggleVideoPinned(item.id, nextPinned);
       if (res && res.code === 200) {
-        addToast({
-          title: nextPinned ? "已设为置顶" : "已取消置顶",
-          description: `视频「${item.title}」状态已更新`,
-          color: "success"
-        });
+        addToast({ title: nextPinned ? "已设为置顶" : "已取消置顶", description: `视频「${item.title}」状态已更新`, color: "success" });
         loadVideoList();
       }
     } finally {
@@ -389,7 +313,6 @@ function VideoListPage() {
 
   /**
    * 切换推荐状态
-   * @param item 视频项
    */
   const handleToggleRecommended = async (item: VideoItem) => {
     const nextRecommended = !item.recommended;
@@ -397,11 +320,7 @@ function VideoListPage() {
     try {
       const res = await toggleVideoRecommended(item.id, nextRecommended);
       if (res && res.code === 200) {
-        addToast({
-          title: nextRecommended ? "已设为推荐" : "已取消推荐",
-          description: `视频「${item.title}」状态已更新`,
-          color: "success"
-        });
+        addToast({ title: nextRecommended ? "已设为推荐" : "已取消推荐", description: `视频「${item.title}」状态已更新`, color: "success" });
         loadVideoList();
       }
     } finally {
@@ -411,23 +330,14 @@ function VideoListPage() {
 
   /**
    * 批量更新视频状态
-   * @param status 目标状态
    */
   const handleBatchUpdateStatus = async (status: Exclude<VideoStatus, "draft">) => {
-    if (selectedIds.length === 0) return;
+    if (!hasSelection) return;
     setIsLoading(true);
     try {
-      const res = await batchUpdateVideoStatus({
-        ids: selectedIds,
-        status
-      });
-
+      const res = await batchUpdateVideoStatus({ ids: selectedIds, status });
       if (res && res.code === 200) {
-        addToast({
-          title: "批量操作成功",
-          description: `已成功更新 ${selectedIds.length} 个视频的状态`,
-          color: "success"
-        });
+        addToast({ title: "批量操作成功", description: `已成功更新 ${selectedIds.length} 个视频的状态`, color: "success" });
         setSelectedIds([]);
         loadVideoList();
       }
@@ -440,7 +350,7 @@ function VideoListPage() {
    * 批量删除视频
    */
   const handleBatchDelete = async () => {
-    if (selectedIds.length === 0) return;
+    if (!hasSelection) return;
     const confirmed = window.confirm(`确定要删除选中的 ${selectedIds.length} 个视频吗？此操作不可撤销。`);
     if (!confirmed) return;
 
@@ -448,11 +358,7 @@ function VideoListPage() {
     try {
       const res = await batchDeleteVideos(selectedIds);
       if (res && res.code === 200) {
-        addToast({
-          title: "批量删除成功",
-          description: `已删除 ${selectedIds.length} 个视频`,
-          color: "success"
-        });
+        addToast({ title: "批量删除成功", description: `已删除 ${selectedIds.length} 个视频`, color: "success" });
         setSelectedIds([]);
         loadVideoList();
       }
@@ -471,7 +377,6 @@ function VideoListPage() {
 
   /**
    * 加载视频评论
-   * @param videoId 视频ID
    */
   const loadComments = async (videoId: string) => {
     setCommentVideoId(videoId);
@@ -489,17 +394,12 @@ function VideoListPage() {
 
   /**
    * 删除评论
-   * @param commentId 评论ID
    */
   const handleDeleteComment = async (commentId: string) => {
     if (!window.confirm("确定要删除这条评论吗？")) return;
     const res = await deleteVideoComment(commentId);
     if (res && res.code === 200) {
-      addToast({
-        title: "删除成功",
-        description: "该评论已被移除",
-        color: "success"
-      });
+      addToast({ title: "删除成功", description: "该评论已被移除", color: "success" });
       if (commentVideoId) {
         const resList = await fetchVideoComments(commentVideoId);
         if (resList && resList.code === 200) {
@@ -526,18 +426,14 @@ function VideoListPage() {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL("image/png");
         setEditingVideo({ ...editingVideo, cover: dataUrl });
-        addToast({
-          title: "截图成功",
-          description: "已将当前视频帧设为封面",
-          color: "success"
-        });
+        addToast({ title: "截图成功", description: "已将当前视频帧设为封面", color: "success" });
       }
     } catch {
-      showErrorFn("视频源可能存在跨域限制，无法截取");
+      addToast({ title: "错误", description: "视频源可能存在跨域限制，无法截取", color: "danger" });
     }
   };
 
-  // --- 图表配置 ---
+  /** 图表配置 */
   const chartTheme = useMemo(() => {
     if (themeMode === "dark") return "classicDark";
     if (themeMode === "light") return "classic";
@@ -550,41 +446,21 @@ function VideoListPage() {
     yField: "plays",
     height: 180,
     autoFit: true,
-    columnStyle: {
-      radiusTopLeft: 4,
-      radiusTopRight: 4
-    },
+    columnStyle: { radiusTopLeft: 4, radiusTopRight: 4 },
     color: "var(--primary-color)",
     padding: [12, 12, 32, 32],
     xAxis: {
       label: {
-        style: {
-          fill: "var(--text-color-secondary)",
-          fontSize: 10,
-          fontFamily: "ArkPixel-12px"
-        }
+        style: { fill: "var(--text-color-secondary)", fontSize: 10, fontFamily: "ArkPixel-12px" }
       }
     },
     yAxis: {
       label: {
-        style: {
-          fill: "var(--text-color-secondary)",
-          fontSize: 10,
-          fontFamily: "ArkPixel-12px"
-        }
+        style: { fill: "var(--text-color-secondary)", fontSize: 10, fontFamily: "ArkPixel-12px" }
       },
-      grid: {
-        line: {
-          style: {
-            stroke: "var(--border-color)",
-            lineWidth: 0.5
-          }
-        }
-      }
+      grid: { line: { style: { stroke: "var(--border-color)", lineWidth: 0.5 } } }
     },
-    tooltip: {
-      showTitle: false
-    },
+    tooltip: { showTitle: false },
     theme: chartTheme
   };
 
@@ -1295,7 +1171,4 @@ function VideoListPage() {
   );
 }
 
-// ===== 10. TODO任务管理区域 =====
-
-// ===== 11. 导出区域 =====
 export default VideoListPage;

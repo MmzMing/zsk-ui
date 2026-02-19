@@ -1,7 +1,7 @@
 // ===== 1. 依赖导入区域 =====
 import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { cn } from "../../lib/utils";
+import { cn } from "@/utils";
 
 // ===== 2. TODO待处理导入区域 =====
 

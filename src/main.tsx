@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import { HeroUIProvider } from "@heroui/react";
 import App from "./App";
 import "./assets/styles/index.css";
-import { bindDebugConsole } from "./lib/utils";
+import { bindDebugConsole } from "./utils";
 
 declare global {
   interface Window {

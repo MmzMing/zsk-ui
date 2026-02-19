@@ -1,4 +1,9 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 用户详情页面
+ * @module pages/UserDetail
+ * @description 用户个人主页，展示用户资料、作品、收藏等信息
+ */
+
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -21,17 +26,18 @@ import {
   FiPlay,
   FiEye
 } from "react-icons/fi";
-import { useUserStore } from "../../store";
+import { useUserStore } from "@/store";
 import { 
   fetchUserProfile, 
   fetchUserWorks, 
   fetchUserFavorites,
-  toggleFollowUser,
+  toggleFollow,
   type UserProfile,
-  type UserWorkItem
-} from "../../api/front/user";
-import { routes } from "../../router/routes";
-import Loading from "../../components/Loading";
+  type UserWorkItem,
+  type UserFavoriteItem
+} from "@/api/front/user";
+import { routes } from "@/router/routes";
+import Loading from "@/components/Loading";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -47,7 +53,7 @@ function UserDetail() {
   /** 用户作品列表 */
   const [works, setWorks] = useState<UserWorkItem[]>([]);
   /** 用户收藏列表 */
-  const [favorites, setFavorites] = useState<UserWorkItem[]>([]);
+  const [favorites, setFavorites] = useState<UserFavoriteItem[]>([]);
   /** 页面整体加载状态 */
   const [isLoading, setIsLoading] = useState(true);
   /** 作品列表加载状态 */
@@ -122,7 +128,7 @@ function UserDetail() {
    * 处理作品点击跳转
    * @param work 作品项
    */
-  const handleWorkClick = (work: UserWorkItem) => {
+  const handleWorkClick = (work: UserWorkItem | UserFavoriteItem) => {
     if (work.type === "video") {
       window.open(routes.videoDetail.replace(":id", work.id), "_blank");
     } else {
@@ -137,7 +143,7 @@ function UserDetail() {
     if (!handleCheckLogin() || !user) return;
     
     const newIsFollowing = !user.isFollowing;
-      const res = await toggleFollowUser(user.id);
+      const res = await toggleFollow(user.id);
       
       if (res) {
         setUser(prev => prev ? { 
@@ -163,7 +169,7 @@ function UserDetail() {
    * @param items 作品列表
    * @param type 过滤类型
    */
-  const renderWorkList = (items: UserWorkItem[], type?: string) => {
+  const renderWorkList = (items: (UserWorkItem | UserFavoriteItem)[], type?: string) => {
     const filteredItems = type ? items.filter(w => w.type === type) : items;
     
     if (filteredItems.length === 0) {
@@ -179,6 +185,7 @@ function UserDetail() {
         {filteredItems.map(work => {
           const isVideo = work.type === "video";
           const thumbnail = work.coverUrl || (isVideo ? "/DefaultImage/MyDefaultHomeVodie.png" : "/DefaultImage/MyDefaultImage.jpg");
+          const views = 'views' in work ? work.views : 0;
           
           return (
             <motion.article
@@ -202,7 +209,7 @@ function UserDetail() {
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-0.5 bg-black/60 px-1.5 py-0.5 rounded">
                       {isVideo ? <FiPlay className="w-3 h-3" /> : <FiEye className="w-3 h-3" />}
-                      <span>{work.views}</span>
+                      <span>{views}</span>
                     </span>
                   </div>
                   <span className="rounded bg-black/80 px-1.5 py-0.5">

@@ -1,7 +1,13 @@
+/**
+ * QQBot扩展控制台页面
+ * @module pages/Admin/Bot/QQBot
+ * @description QQBot扩展管理控制台，嵌入第三方管理界面
+ */
+
 import React, { useState } from "react";
 import { Card, Button } from "@heroui/react";
 import { FiExternalLink } from "react-icons/fi";
-import { Loading } from "../../../components/Loading";
+import { Loading } from "@/components/Loading";
 
 function QQBotPage() {
   const [isLoading, setIsLoading] = useState(true);

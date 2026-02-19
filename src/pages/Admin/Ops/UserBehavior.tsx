@@ -1,4 +1,9 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 用户行为分析页面
+ * @module pages/Admin/Ops/UserBehavior
+ * @description 用户操作轨迹分析、风险评估及明细查询功能
+ */
+
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Button,
@@ -15,16 +20,17 @@ import type { LineConfig } from "@ant-design/plots";
 import { Line } from "@ant-design/plots";
 import { getLocalTimeZone } from "@internationalized/date";
 import { FiRotateCcw } from "react-icons/fi";
-import { useAppStore } from "../../../store";
+import { useAppStore } from "@/store";
 import {
   getBehaviorFullData,
   type BehaviorUser,
   type BehaviorRange,
   type BehaviorPoint,
   type BehaviorEvent,
-} from "../../../api/admin/ops";
+} from "@/api/admin/ops";
 import { addToast } from "@heroui/react";
-import { handleDebugOutput } from "@/lib/utils";
+import { handleDebugOutput } from "@/utils";
+import { useAdminDataLoader } from "@/hooks";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -34,8 +40,6 @@ import { handleDebugOutput } from "@/lib/utils";
  */
 function UserBehaviorPage() {
   // ===== 3. 状态控制逻辑区域 =====
-  /** 是否正在加载数据 */
-  const [loading, setLoading] = useState(true);
   /** 当前选中的用户 ID */
   const [activeUserId, setActiveUserId] = useState<string>("6201");
   /** 时间范围筛选 */
@@ -52,6 +56,12 @@ function UserBehaviorPage() {
   const [events, setEvents] = useState<BehaviorEvent[]>([]);
   /** 行为轨迹时序数据 */
   const [timeline, setTimeline] = useState<BehaviorPoint[]>([]);
+  /** 行为数据加载器 */
+  const { loading, loadData: loadBehaviorData } = useAdminDataLoader<{
+    users: BehaviorUser[];
+    events: BehaviorEvent[];
+    timeline: BehaviorPoint[];
+  }>();
 
   // ===== 4. 通用工具函数区域 =====
   /**
@@ -121,16 +131,16 @@ function UserBehaviorPage() {
 
   /** 当前选中的用户对象 */
   const activeUser = useMemo(
-    () => users.find((item) => item.id === activeUserId) ?? users[0],
+    () => (users || []).find((item) => item.id === activeUserId) ?? (users || [])[0],
     [users, activeUserId]
   );
 
   /** 过滤后的行为事件列表 */
-  const filteredEvents = useMemo(() => events, [events]);
+  const filteredEvents = useMemo(() => events || [], [events]);
 
   /** 转换后的图表数据 */
   const lineData = useMemo(() => {
-    return timeline.map((item) => ({
+    return (timeline || []).map((item) => ({
       time: item.time,
       value: item.count,
     }));
@@ -187,12 +197,15 @@ function UserBehaviorPage() {
   // ===== 7. 数据处理函数区域 =====
   /** 加载用户行为相关数据 */
   const loadData = useCallback(async () => {
-    const result = await getBehaviorFullData({
+    const result = await loadBehaviorData(() => getBehaviorFullData({
       userId: activeUserId,
       range,
       keyword,
-      setLoading,
+      setLoading: () => {},
       onError: (err) => showErrorFn(err, "加载行为分析数据"),
+    }), {
+      showErrorToast: true,
+      errorMessage: '加载用户行为数据失败'
     });
 
     if (result) {
@@ -200,7 +213,7 @@ function UserBehaviorPage() {
       setTimeline(result.timeline);
       setEvents(result.events);
     }
-  }, [activeUserId, range, keyword, showErrorFn]);
+  }, [activeUserId, range, keyword, showErrorFn, loadBehaviorData]);
 
   /** 重置所有筛选条件 */
   const handleResetFilter = useCallback(() => {

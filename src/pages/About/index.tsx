@@ -1,4 +1,9 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 关于页面
+ * @module pages/About
+ * @description 网站关于页面，展示技术栈、FAQ等信息
+ */
+
 import React, { useEffect, useState, useCallback } from "react";
 import { 
   Accordion, 
@@ -6,7 +11,7 @@ import {
   Button, 
   Avatar
 } from "@heroui/react";
-import { CardContainer, CardBody, CardItem } from "../../components/Aceternity/ThreeDCard";
+import { CardContainer, CardBody, CardItem } from "@/components/Aceternity/ThreeDCard";
 import { 
   FiMail, 
   FiPhone, 
@@ -28,14 +33,14 @@ import {
   SiRedis, 
   SiApacherocketmq 
 } from "react-icons/si";
-import LogoLoop from "../../components/Motion/LogoLoop";
-import Loading from "../../components/Loading";
+import LogoLoop from "@/components/Motion/LogoLoop";
+import Loading from "@/components/Loading";
 import { 
   fetchTechStack, 
   fetchFAQ, 
   type TechStackItem, 
   type FAQCategory 
-} from "../../api/front/about";
+} from "@/api/front/about";
 
 // ===== 2. TODO待处理导入区域 =====
 

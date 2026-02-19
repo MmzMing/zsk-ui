@@ -1,49 +1,56 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 视频推荐组件
+ * @module pages/Home/components/VideoRecommend
+ * @description 首页视频推荐区域，展示推荐视频列表
+ */
+
 import { AnimatePresence, motion } from "framer-motion";
-import React, { useEffect, useState } from "react";
+import React, { useState, useMemo } from "react";
 import { FiPlay, FiClock, FiEye } from "react-icons/fi";
 import {
   fetchHomeVideos,
-  mockHomeVideos,
-  type HomeVideo as VideoItem,
-} from "../../../api/front/home";
-import VideoPlayer from "../../../components/VideoPlayer";
-import { routes } from "../../../router/routes";
-import TextHoverEffect from "../../../components/Aceternity/TextHoverEffect";
+  type HomeVideo,
+  type Subtitle
+} from "@/api/front/home";
+import VideoPlayer from "@/components/VideoPlayer";
+import { routes } from "@/router/routes";
+import TextHoverEffect from "@/components/Aceternity/TextHoverEffect";
+import { useAsyncList } from "@/hooks";
+
+// ===== 2. TODO待处理导入区域 =====
 
 // ===== 3. 状态控制逻辑区域 =====
+/** 默认封面图 */
 const DEFAULT_COVER = "/DefaultImage/MyDefaultHomeVodie.png";
 
+// ===== 4. 通用工具函数区域 =====
+
+// ===== 5. 注释代码函数区 =====
+
+// ===== 6. 错误处理函数区域 =====
+
+// ===== 7. 数据处理函数区域 =====
+
+// ===== 8. UI渲染逻辑区域 =====
+/**
+ * 视频推荐组件
+ */
 export default function VideoRecommend() {
   // ===== 3. 状态控制逻辑区域 =====
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
-  const [videoList, setVideoList] = useState<VideoItem[]>(() => mockHomeVideos);
 
+  // ===== 使用共享 Hook 加载视频列表 =====
+  const { list: videoList } = useAsyncList(fetchHomeVideos, { delay: 0 });
+
+  /** 当前激活的视频项 */
   const activeItem = activeVideoId
-    ? videoList.find((i) => i.id === activeVideoId)
+    ? videoList.find((i: HomeVideo) => i.id === activeVideoId)
     : undefined;
 
-  // ===== 9. 页面初始化与事件绑定 =====
-  /**
-   * 加载视频列表数据
-   */
-  const loadVideos = React.useCallback(async () => {
-    const data = await fetchHomeVideos();
-    if (data) {
-      setVideoList(data);
-    }
-  }, []);
+  /** 限制展示数量，避免页面过长 */
+  const displayList = useMemo(() => videoList.slice(0, 5), [videoList]);
 
-  // 初始化加载
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadVideos();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadVideos]);
-
-  // ===== 8. UI渲染逻辑区域 =====
-
+  // ===== 事件处理 =====
   /**
    * 处理视频点击
    */
@@ -65,9 +72,6 @@ export default function VideoRecommend() {
   const handleNavigate = (id: string) => {
     window.open(routes.videoDetail.replace(":id", id), "_blank");
   };
-
-  // 限制展示数量，避免页面过长
-  const displayList = videoList.slice(0, 5);
 
   return (
     <section className="relative w-full bg-[var(--bg-elevated)] text-[var(--text-color)]">
@@ -117,7 +121,7 @@ export default function VideoRecommend() {
       </div>
 
       {/* 2. Video Blocks */}
-      {displayList.map((item, index) => (
+      {displayList.map((item: HomeVideo, index: number) => (
         <div 
           key={item.id} 
           className="sticky top-0 h-screen w-full flex items-center justify-center bg-[var(--bg-elevated)] overflow-hidden border-t border-[var(--border-color)]"
@@ -281,7 +285,7 @@ export default function VideoRecommend() {
                 onClose={handleCloseVideo}
                 title={activeItem?.title}
                 poster={activeItem?.cover || DEFAULT_COVER}
-                subtitles={activeItem?.subtitles?.map((s) => ({
+                subtitles={activeItem?.subtitles?.map((s: Subtitle) => ({
                   src: s.src,
                   label: s.label,
                   language: s.lang,

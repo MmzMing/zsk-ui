@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MediaPlayerInstance, useMediaState, useMediaRemote, VolumeSlider } from '@vidstack/react';
 import { FaVolumeUp, FaVolumeMute, FaCompress, FaExpand } from 'react-icons/fa';
 import { RiFullscreenLine } from 'react-icons/ri';
+import { handleDebugOutput } from '@/utils';
 
 interface MobileControlsProps {
   playerRef: React.RefObject<MediaPlayerInstance | null>;
@@ -44,7 +45,11 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
           }
         }
       } catch (err) {
-        console.error('Failed to enter horizontal fullscreen:', err);
+        handleDebugOutput({
+          debugLevel: "error",
+          debugMessage: "Failed to enter horizontal fullscreen:",
+          debugDetail: err,
+        });
       }
     }
   };

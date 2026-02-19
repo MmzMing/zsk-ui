@@ -1,4 +1,9 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 视频上传页面
+ * @module pages/Admin/Video/Upload
+ * @description 视频上传管理，支持分片上传、封面编辑、草稿保存等功能
+ */
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Button,
@@ -25,7 +30,7 @@ import {
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { CategoryCascader } from "@/components/Admin/CategoryCascader";
 import { CoverEditor } from "@/components/Admin/CoverEditor";
-import { captureVideoFrame } from "@/lib/videoUtils";
+import { captureVideoFrame } from "@/utils";
 import {
   uploadVideo,
   fetchVideoCategories,
@@ -41,6 +46,8 @@ import {
   type ChapterItem,
   type PermissionType
 } from "@/api/admin/video";
+import { useAdminDataLoader } from "@/hooks";
+import { handleError } from "@/utils";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -79,9 +86,50 @@ export default function VideoUploadPage() {
   
   // 选项数据
   const [categories, setCategories] = useState<VideoCategory[]>([]);
-  // const [subCategories, setSubCategories] = useState<{ id: string; name: string }[]>([]); // 不再需要单独的状态，直接从 categories 推导
   const [tags, setTags] = useState<VideoTag[]>([]);
   const [draft, setDraft] = useState<DraftItem | null>(null);
+
+  // 使用自定义 hook 加载初始数据
+  const {
+    data: initialData,
+    loading: initialLoading,
+    loadData: loadInitialData
+  } = useAdminDataLoader<{ categories: VideoCategory[]; tags: VideoTag[]; draft: DraftItem | null }>();
+
+  /** 加载初始数据 */
+  const loadInitialDataAsync = useCallback(async () => {
+    await loadInitialData(async () => {
+      const [catsRes, tagsRes, draftsRes] = await Promise.all([
+        fetchVideoCategories(),
+        fetchTagOptions(),
+        fetchDraftList({ page: 1, pageSize: 1 })
+      ]);
+
+      return {
+        categories: catsRes.data || [],
+        tags: tagsRes.data || [],
+        draft: draftsRes.data?.list?.[0] || null
+      };
+    }, {
+      showErrorToast: true,
+      errorMessage: '加载初始数据失败'
+    });
+  }, [loadInitialData]);
+
+  // 当初始数据加载完成后更新状态
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.categories) {
+        setCategories(initialData.categories);
+      }
+      if (initialData.tags) {
+        setTags(initialData.tags);
+      }
+      if (initialData.draft) {
+        setDraft(initialData.draft);
+      }
+    }
+  }, [initialData]);
 
   // 拖拽状态
   const [isDragOver, setIsDragOver] = useState(false);
@@ -162,31 +210,7 @@ export default function VideoUploadPage() {
     }
   };
 
-  /**
-   * 加载初始数据（分类、标签、草稿）
-   */
-  const loadInitialData = useCallback(async () => {
-      setLoading(true);
-      // 使用 allSettled 或者直接 await，让全局错误处理接管
-      // 这里为了简单，如果任何一个失败，不影响其他数据的设置（如果需要）
-      // 但通常 Promise.all 更适合并行依赖
-      try {
-        const [catsRes, tagsRes, draftsRes] = await Promise.all([
-          fetchVideoCategories(),
-          fetchTagOptions(),
-          fetchDraftList({ page: 1, pageSize: 1 })
-        ]);
 
-        if (catsRes.data) setCategories(catsRes.data);
-        if (tagsRes.data) setTags(tagsRes.data);
-
-        if (draftsRes.data && draftsRes.data.list.length > 0) {
-          setDraft(draftsRes.data.list[0]);
-        }
-      } finally {
-        setLoading(false);
-      }
-  }, []);
 
   const processFile = (selectedFile: File) => {
     if (!selectedFile.type.startsWith("video/")) {
@@ -312,6 +336,11 @@ export default function VideoUploadPage() {
         setDraft(res.data);
         showMessage("草稿保存成功", "success");
       }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: "保存草稿失败"
+      });
     } finally {
       setLoading(false);
     }
@@ -333,13 +362,6 @@ export default function VideoUploadPage() {
       showMessage("请选择视频分类", "error");
       return;
     }
-    // 检查是否选择了最终分类（在扁平化模式下，categoryId 和 subCategoryId 通常都会被设置，或者只设置 subCategoryId）
-    // 为了兼容性，我们主要检查 subCategoryId 是否存在（如果是有子分类的情况）或者 categoryId
-    if (!subCategoryId && !categoryId) {
-       showMessage("请选择视频分类", "error");
-       return;
-    }
-
     if (permission === "password" && !password) {
       showMessage("请设置访问密码", "error");
       return;
@@ -347,16 +369,16 @@ export default function VideoUploadPage() {
 
     setLoading(true);
     
-    // 上传封面
-    let finalCoverUrl = coverUrl;
-    if (coverBlob) {
-          const coverRes = await uploadCover(coverBlob);
-          if (coverRes.code === 200 && coverRes.data) {
-             finalCoverUrl = coverRes.data;
-          }
-    }
-
     try {
+      // 上传封面
+      let finalCoverUrl = coverUrl;
+      if (coverBlob) {
+        const coverRes = await uploadCover(coverBlob);
+        if (coverRes.code === 200 && coverRes.data) {
+          finalCoverUrl = coverRes.data;
+        }
+      }
+
       await updateVideo({
         id: videoId,
         title,
@@ -365,7 +387,6 @@ export default function VideoUploadPage() {
         cover: finalCoverUrl,
         tags: Array.from(selectedTags),
         password: permission === "password" ? password : "",
-        // permission 等其他字段需后端支持，此处暂略
         status: "pending" // 提交审核
       });
       
@@ -378,6 +399,11 @@ export default function VideoUploadPage() {
       showMessage("视频已发布，等待审核。", "success");
       // 重置状态
       resetForm();
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: "发布视频失败"
+      });
     } finally {
       setLoading(false);
     }
@@ -433,12 +459,12 @@ export default function VideoUploadPage() {
 
   // ===== 8. UI渲染逻辑区域 =====
   const renderDraftStatusCard = () => {
-    if (!loading && !draft) {
+    if (!initialLoading && !draft) {
       return null;
     }
     return (
       <Card className="p-4 bg-[var(--bg-content)] border border-[var(--border-color)]">
-        {loading ? (
+        {initialLoading ? (
           <p className="text-sm text-[var(--text-color-secondary)]">正在检查草稿状态...</p>
         ) : (
           <div className="flex items-center justify-between gap-4">
@@ -793,10 +819,10 @@ export default function VideoUploadPage() {
   // ===== 9. 页面初始化与事件绑定 =====
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadInitialData();
+      loadInitialDataAsync();
     }, 0);
     return () => clearTimeout(timer);
-  }, [loadInitialData]);
+  }, [loadInitialDataAsync]);
 
   // ===== 10. TODO任务管理区域 =====
 

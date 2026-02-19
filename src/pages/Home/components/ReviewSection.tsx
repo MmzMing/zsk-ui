@@ -1,10 +1,16 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useState, useEffect } from "react";
+/**
+ * 评价展示组件
+ * @module pages/Home/components/ReviewSection
+ * @description 首页用户评价展示区域，使用跑马灯效果展示评价内容
+ */
+
+import React from "react";
 import { FaStar } from "react-icons/fa";
-import { fetchHomeReviews, mockHomeReviews, type HomeReview } from "../../../api/front/home";
-import ScrollFloat from "../../../components/Motion/ScrollFloat";
-import { Marquee } from "../../../components/ui/marquee";
-import { cn } from "../../../lib/utils";
+import { fetchHomeReviews, type HomeReview } from "@/api/front/home";
+import ScrollFloat from "@/components/Motion/ScrollFloat";
+import { Marquee } from "@/components/ui/marquee";
+import { cn } from "@/utils";
+import { useAsyncList } from "@/hooks";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -13,6 +19,10 @@ import { cn } from "../../../lib/utils";
 // ===== 4. 通用工具函数区域 =====
 /**
  * 评价卡片组件
+ * @param name 用户名
+ * @param date 日期
+ * @param body 评价内容
+ * @param source 来源
  */
 const ReviewCard = ({
   name,
@@ -30,7 +40,6 @@ const ReviewCard = ({
       className={cn(
         "relative w-[340px] cursor-pointer overflow-hidden rounded-xl border p-6 flex flex-col gap-2 transition-all duration-300",
         "border-zinc-800 bg-transparent hover:border-zinc-700",
-        // 随机高度模拟不规则感 (通过内容长度自然形成)
         "h-fit min-h-[160px]"
       )}
     >
@@ -73,34 +82,20 @@ const ReviewCard = ({
 // ===== 10. TODO任务管理区域 =====
 
 // ===== 11. 导出区域 =====
+/**
+ * 评价展示区域组件
+ */
 export default function ReviewSection() {
-  // ===== 3. 状态控制逻辑区域 =====
-  const [reviewList, setReviewList] = useState<HomeReview[]>(() => mockHomeReviews);
+  // ===== 使用共享 Hook 加载评价列表 =====
+  const { list: reviewList } = useAsyncList(fetchHomeReviews, { delay: 0 });
 
-  // ===== 9. 页面初始化与事件绑定 =====
-  /**
-   * 加载评价列表数据
-   */
-  const loadReviews = React.useCallback(async () => {
-    const data = await fetchHomeReviews();
-    if (data) {
-      setReviewList(data);
-    }
-  }, []);
-
-  // 初始化加载
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadReviews();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadReviews]);
-
-  // ===== 7. 数据处理函数区域 =====
+  // ===== 数据处理 =====
+  /** 第一行评价 */
   const firstRow = reviewList.slice(0, Math.ceil(reviewList.length / 2));
+  /** 第二行评价 */
   const secondRow = reviewList.slice(Math.ceil(reviewList.length / 2));
 
-  // ===== 8. UI渲染逻辑区域 =====
+  // ===== UI渲染 =====
   return (
     <section className="dark relative flex min-h-[600px] w-full flex-col items-center justify-center overflow-hidden py-24 bg-transparent">
       <div className="mb-16 flex flex-col items-center space-y-3 z-10">
@@ -118,7 +113,7 @@ export default function ReviewSection() {
           className="[--duration:20s] [--gap:1.5rem]"
           repeat={4}
         >
-          {firstRow.map((review) => (
+          {firstRow.map((review: HomeReview) => (
             <ReviewCard
               key={review.id}
               name={review.name}
@@ -134,7 +129,7 @@ export default function ReviewSection() {
           className="[--duration:25s] [--gap:1.5rem]"
           repeat={4}
         >
-          {secondRow.map((review) => (
+          {secondRow.map((review: HomeReview) => (
             <ReviewCard
               key={review.id}
               name={review.name}

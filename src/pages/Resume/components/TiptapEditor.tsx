@@ -1,3 +1,9 @@
+/**
+ * Tiptap富文本编辑器组件
+ * @module pages/Resume/components/TiptapEditor
+ * @description 基于Tiptap的富文本编辑器，支持基本格式化和列表功能
+ */
+
 import React from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";

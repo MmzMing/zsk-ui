@@ -1,5 +1,10 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useMemo, useState, useCallback, useEffect } from "react";
+/**
+ * 系统参数管理页面
+ * @module pages/Admin/System/Param
+ * @description 系统参数配置管理，支持参数增删改查操作
+ */
+
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Button,
   Card,
@@ -30,6 +35,8 @@ import {
   deleteParam,
   batchDeleteParams
 } from "@/api/admin/system";
+import { useAdminTable, useAdminDataLoader } from "@/hooks";
+import { handleError } from "@/utils";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -87,12 +94,6 @@ function ParamPage() {
   const [keyword, setKeyword] = useState("");
   /** 作用域筛选 */
   const [scopeFilter, setScopeFilter] = useState<ParamScope | "all">("all");
-  /** 当前页码 */
-  const [page, setPage] = useState(1);
-  /** 参数列表数据 */
-  const [items, setItems] = useState<ParamItem[]>([]);
-  /** 是否正在加载 */
-  const [isLoading, setIsLoading] = useState(false);
   /** 选中项的 ID 集合 */
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
@@ -114,51 +115,39 @@ function ParamPage() {
   /** 每页条数 */
   const pageSize = 8;
 
-  /**
-   * 过滤后的列表数据
-   */
-  const filteredItems = useMemo(() => {
-    const trimmed = keyword.trim().toLowerCase();
-    return items.filter(item => {
-      if (trimmed) {
-        const content = `${item.key} ${item.name}`.toLowerCase();
-        if (!content.includes(trimmed)) {
-          return false;
-        }
-      }
-      if (scopeFilter !== "all" && item.scope !== scopeFilter) {
-        return false;
-      }
-      return true;
+  // 使用自定义 hook 加载参数列表数据
+  const {
+    data: paramList,
+    loading: isLoading,
+    loadData: loadParamList
+  } = useAdminDataLoader<ParamItem[]>();
+
+  /** 加载参数列表 */
+  const loadParamListData = useCallback(async () => {
+    await loadParamList(async () => {
+      const response = await fetchParamList();
+      return response.data || [];
+    }, {
+      showErrorToast: true,
+      errorMessage: '加载参数列表失败'
     });
-  }, [items, keyword, scopeFilter]);
+  }, [loadParamList]);
 
-  /** 总条数 */
-  const total = filteredItems.length;
-  /** 总页数 */
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  /** 当前页显示的条目 */
-  const pageItems = useMemo(() => {
-    return filteredItems.slice((page - 1) * pageSize, page * pageSize);
-  }, [filteredItems, page, pageSize]);
-
-  /**
-   * 加载参数列表数据
-   */
-  const loadParamList = useCallback(async () => {
-    const res = await fetchParamList(setIsLoading);
-    if (res && res.data) {
-      setItems(res.data);
-    }
-  }, []);
+  // 使用自定义 hook 管理表格数据
+  const {
+    page,
+    total,
+    totalPages,
+    currentPageData: pageItems,
+    handlePageChange: setPage
+  } = useAdminTable<ParamItem>({
+    initialPageSize: pageSize
+  });
 
   // 页面初始化加载
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadParamList();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadParamList]);
+    loadParamListData();
+  }, [loadParamListData]);
 
   /**
    * 重置筛选条件
@@ -227,13 +216,20 @@ function ParamPage() {
    * @param item 参数项
    */
   const handleDeleteParam = async (item: ParamItem) => {
-    const res = await deleteParam(item.id);
-    if (res && res.data) {
-      addToast({
-        title: "参数删除成功",
-        color: "success"
+    try {
+      const res = await deleteParam(item.id);
+      if (res && res.data) {
+        addToast({
+          title: "参数删除成功",
+          color: "success"
+        });
+        loadParamListData();
+      }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: "删除参数失败"
       });
-      loadParamList();
     }
   };
 
@@ -244,15 +240,21 @@ function ParamPage() {
     const ids = Array.from(selectedKeys);
     if (ids.length === 0) return;
 
-    const res = await batchDeleteParams(ids);
-
-    if (res && res.data) {
-      addToast({
-        title: `成功删除 ${ids.length} 个参数`,
-        color: "success"
+    try {
+      const res = await batchDeleteParams(ids);
+      if (res && res.data) {
+        addToast({
+          title: `成功删除 ${ids.length} 个参数`,
+          color: "success"
+        });
+        setSelectedKeys(new Set());
+        loadParamListData();
+      }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: "批量删除参数失败"
       });
-      setSelectedKeys(new Set());
-      loadParamList();
     }
   };
 
@@ -267,20 +269,27 @@ function ParamPage() {
       return;
     }
 
-    const res = await saveParam({
-      ...formState,
-      key: trimmedKey,
-      name: trimmedName,
-      description: formState.description.trim()
-    });
-
-    if (res && res.data) {
-      addToast({
-        title: formState.id ? "参数更新成功" : "参数创建成功",
-        color: "success"
+    try {
+      const res = await saveParam({
+        ...formState,
+        key: trimmedKey,
+        name: trimmedName,
+        description: formState.description.trim()
       });
-      setFormVisible(false);
-      loadParamList();
+
+      if (res && res.data) {
+        addToast({
+          title: formState.id ? "参数更新成功" : "参数创建成功",
+          color: "success"
+        });
+        setFormVisible(false);
+        loadParamListData();
+      }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: formState.id ? "更新参数失败" : "创建参数失败"
+      });
     }
   };
 
@@ -393,7 +402,7 @@ function ParamPage() {
               selectedKeys={selectedKeys}
               onSelectionChange={keys => {
                 if (keys === "all") {
-                  setSelectedKeys(new Set(items.map(item => item.id)));
+                  setSelectedKeys(new Set((paramList || []).map(item => item.id)));
                 } else {
                   setSelectedKeys(keys as Set<string>);
                 }

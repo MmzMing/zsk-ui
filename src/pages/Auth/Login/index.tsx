@@ -1,4 +1,9 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 登录页面
+ * @module pages/Auth/Login
+ * @description 用户登录页面，支持账号/邮箱登录、滑块验证码、第三方登录等功能
+ */
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import SliderCaptcha, { type VerifyParam, type ActionType } from "rc-slider-captcha";
@@ -20,126 +25,85 @@ import InteractiveHoverButton from "@/components/Motion/InteractiveHoverButton";
 import { useUserStore } from "@/store/modules/userStore";
 import { useAppStore } from "@/store";
 import { UserAgreementModal, PrivacyPolicyModal } from "@/components/AgreementModals";
-import { verifySliderCaptcha, preCheckAndGetCaptcha, login, getPublicKey, getThirdPartyAuthUrl, type SliderCaptchaData } from "@/api/auth";
-import { rsaEncrypt } from "@/lib/rsaEncrypt";
+import { verifySliderCaptcha, preCheckAndGetCaptcha, login, getPublicKey, getThirdPartyAuthUrl } from "@/api/auth";
+import { rsaEncrypt } from "@/utils";
 import Shuffle from "@/components/Motion/Shuffle";
 import TextType from "@/components/Motion/TextType";
 import { RiHome4Line } from "react-icons/ri";
 import { FaEye, FaEyeSlash, FaQq, FaWeixin, FaGithub } from "react-icons/fa6";
+import { useBgCarousel, useCountdown, useAuthForm } from "@/hooks";
 
-// ===== 2. TODO待处理导入区域 =====
+/** 登录失败次数存储键 */
+const LOGIN_FAIL_KEY = "auth_login_fail_count";
 
-// ===== 3. 状态控制逻辑区域 =====
-/**
- * 背景图片列表
- */
-const BG_IMAGES = [
-  "/auth/auth-Polling-1.png",
-  "/auth/auth-Polling-2.png",
-  "/auth/auth-Polling-3.png"
-];
+/** 登录失败次数阈值，超过此值需要验证码 */
+const LOGIN_FAIL_THRESHOLD = 5;
 
-// ===== 4. 通用工具函数区域 =====
-/**
- * 校验账号格式
- * @param value 账号值
- * @returns 错误信息，无错误返回空字符串
- */
-const validateAccount = (value: string): string => {
-  const trimmed = value.trim();
-  if (!trimmed) return "请输入账号";
-  if (trimmed.includes("@")) {
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(trimmed)) {
-      return "邮箱格式不正确";
-    }
-    return "";
-  }
-  const usernamePattern = /^[a-zA-Z0-9_.-]{3,20}$/;
-  if (!usernamePattern.test(trimmed)) {
-    return "用户名需为 3-20 位字母、数字或符号 ._-";
-  }
-  return "";
-};
-
-/**
- * 校验密码格式
- * @param value 密码值
- * @returns 错误信息，无错误返回空字符串
- */
-const validatePassword = (value: string): string => {
-  if (!value) return "请输入登录密码";
-  if (value.length < 8) return "密码长度至少 8 位";
-  return "";
-};
-
-/**
- * 校验验证码格式
- * @param value 验证码值
- * @param required 是否必填
- * @returns 错误信息，无错误返回空字符串
- */
-const validateCaptcha = (value: string, required: boolean): string => {
-  if (!value) {
-    return required ? "请输入验证码" : "";
-  }
-  if (!/^\d{6}$/.test(value)) {
-    return "验证码需为 6 位数字";
-  }
-  return "";
-};
-
-// ===== 5. 注释代码函数区 =====
-
-// ===== 6. 错误处理函数区域 =====
-
-// ===== 7. 数据处理函数区域 =====
-
-// ===== 8. UI渲染逻辑区域 =====
 /**
  * 登录页面组件
+ * @returns 登录页面JSX元素
  */
 function LoginPage() {
   const navigate = useNavigate();
   const { setToken, setUserId, setAvatar } = useUserStore();
   const { setIsLoading } = useAppStore();
 
-  // --- 状态定义 ---
-  const [account, setAccount] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [captcha, setCaptcha] = React.useState("");
-  const [agree, setAgree] = React.useState(false);
-  const [submitting, setSubmitting] = React.useState(false);
-  const [passwordVisible, setPasswordVisible] = React.useState(false);
-  const [accountError, setAccountError] = React.useState("");
-  const [passwordError, setPasswordError] = React.useState("");
-  const [captchaError, setCaptchaError] = React.useState("");
-  const [puzzleTop, setPuzzleTop] = React.useState(0);
-  const [formError, setFormError] = React.useState("");
-  const [requireCaptcha, setRequireCaptcha] = React.useState(false);
-  const [captchaCountdown, setCaptchaCountdown] = React.useState(0);
-  const [sliderVisible, setSliderVisible] = React.useState(false);
-  const [sliderVerified, setSliderVerified] = React.useState(false);
-  const [sliderCaptchaInfo, setSliderCaptchaInfo] = React.useState<SliderCaptchaData | null>(null);
-  const [sliderError, setSliderError] = React.useState("");
-  const [showUserAgreement, setShowUserAgreement] = React.useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = React.useState(false);
-  const [codeSent, setCodeSent] = React.useState(false);
-  const [currentBgIndex, setCurrentBgIndex] = React.useState(0);
+  /** 背景图片轮播 */
+  const { currentIndex: currentBgIndex, currentImage } = useBgCarousel({
+    preload: true,
+    autoPlay: true
+  });
 
+  /** 验证码倒计时 */
+  const { countdown: captchaCountdown, start: startCountdown, isCounting: isCountingDown } = useCountdown({
+    duration: 60
+  });
+
+  /** 表单状态管理 */
+  const { state, errors, slider, ui, form, handlers } = useAuthForm({ mode: "login" });
+
+  /** 滑块验证码 ref */
   const sliderCaptchaRef = React.useRef<ActionType>(undefined);
 
-  // ===== 9. 页面初始化与事件绑定 =====
+  /**
+   * 记录登录失败次数
+   */
+  const recordLoginFail = React.useCallback(() => {
+    try {
+      const failRaw = window.localStorage.getItem(LOGIN_FAIL_KEY);
+      const current = failRaw ? Number.parseInt(failRaw, 10) || 0 : 0;
+      const next = current + 1;
+      window.localStorage.setItem(LOGIN_FAIL_KEY, String(next));
+      if (next >= LOGIN_FAIL_THRESHOLD) ui.setRequireCaptcha(true);
+    } catch {
+      // ignore
+    }
+  }, [ui]);
+
+  /**
+   * 重置登录失败次数
+   */
+  const resetLoginFail = React.useCallback(() => {
+    ui.setRequireCaptcha(false);
+    try {
+      window.localStorage.removeItem(LOGIN_FAIL_KEY);
+    } catch {
+      // ignore
+    }
+  }, [ui]);
+
+  /**
+   * 初始化检查登录失败次数
+   */
   React.useEffect(() => {
     let ignore = false;
     const timer = setTimeout(() => {
       if (!ignore) {
-        // 登录失败计数检查
         try {
-          const failRaw = window.localStorage.getItem("auth_login_fail_count");
+          const failRaw = window.localStorage.getItem(LOGIN_FAIL_KEY);
           const fail = failRaw ? Number.parseInt(failRaw, 10) || 0 : 0;
-          if (fail >= 5) {
-            setRequireCaptcha(true);
+          if (fail >= LOGIN_FAIL_THRESHOLD) {
+            ui.setRequireCaptcha(true);
           }
         } catch {
           // ignore
@@ -150,108 +114,35 @@ function LoginPage() {
       ignore = true;
       clearTimeout(timer);
     };
-  }, []);
+  }, [ui]);
 
-  // --- 页面副作用 ---
-  // 背景轮播
-  React.useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentBgIndex((prev) => (prev + 1) % BG_IMAGES.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+  /**
+   * 发送验证码
+   */
+  const handleSendCaptcha = React.useCallback(() => {
+    if (isCountingDown) return;
 
-  // 验证码倒计时
-  React.useEffect(() => {
-    if (!captchaCountdown) return;
-    const timer = window.setInterval(() => {
-      setCaptchaCountdown(prev => {
-        if (prev <= 1) {
-          window.clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [captchaCountdown]);
-
-  // --- 辅助函数 ---
-  const recordLoginFail = () => {
-    try {
-      const failRaw = window.localStorage.getItem("auth_login_fail_count");
-      const current = failRaw ? Number.parseInt(failRaw, 10) || 0 : 0;
-      const next = current + 1;
-      window.localStorage.setItem("auth_login_fail_count", String(next));
-      if (next >= 5) setRequireCaptcha(true);
-    } catch {
-      // ignore
-    }
-  };
-
-  const resetLoginFail = () => {
-    setRequireCaptcha(false);
-    try {
-      window.localStorage.removeItem("auth_login_fail_count");
-    } catch {
-      // ignore
-    }
-  };
-
-  // --- 事件处理函数 ---
-  const handleAccountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setAccount(value);
-    if (!value) {
-      setAccountError("");
-    } else {
-      setAccountError(validateAccount(value));
-    }
-  };
-
-  const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setPassword(value);
-    if (!value) {
-      setPasswordError("");
-    } else {
-      setPasswordError(validatePassword(value));
-    }
-  };
-
-  const handleCaptchaChange = (value: string) => {
-    const digits = value.replace(/\D/g, "");
-    setCaptcha(digits);
-    setCaptchaError(validateCaptcha(digits, requireCaptcha || sliderVerified));
-  };
-
-  const handleSendCaptcha = () => {
-    if (captchaCountdown > 0) return;
-
-    const accountMessage = validateAccount(account);
-    const passwordMessage = validatePassword(password);
-
-    setAccountError(accountMessage);
-    setPasswordError(passwordMessage);
-
-    if (accountMessage || passwordMessage) {
-      setFormError("请先输入正确的账号和密码，再发送验证码");
+    if (!form.validateLogin()) {
+      errors.set("form", "请先输入正确的账号和密码，再发送验证码");
       return;
     }
 
-    setFormError("");
-    setSliderVisible(true);
-    setSliderVerified(false);
-    setSliderCaptchaInfo(null);
-    setSliderError("");
-  };
+    errors.set("form", "");
+    slider.show();
+    slider.setVerified(false);
+    slider.setInfo(null);
+    slider.setError("");
+  }, [isCountingDown, form, errors, slider]);
 
-  const requestSliderCaptcha = async () => {
+  /**
+   * 请求滑块验证码
+   */
+  const requestSliderCaptcha = React.useCallback(async () => {
     try {
       const data = await preCheckAndGetCaptcha();
-      setSliderCaptchaInfo(data);
+      slider.setInfo(data);
       if (data.y) {
-        setPuzzleTop(data.y);
+        slider.setPuzzleTop(data.y);
       }
       return { 
         bgUrl: data.bgUrl, 
@@ -259,100 +150,100 @@ function LoginPage() {
         y: data.y 
       };
     } catch (error) {
-      setSliderError("滑块验证码加载失败，请稍后重试");
+      slider.setError("滑块验证码加载失败，请稍后重试");
       throw error;
     }
-  };
+  }, [slider]);
 
-  const handleSliderVerify = async (data: VerifyParam) => {
-    if (!sliderCaptchaInfo) {
-      setSliderError("验证码已失效，请刷新重试");
+  /**
+   * 处理滑块验证
+   */
+  const handleSliderVerify = React.useCallback(async (data: VerifyParam) => {
+    if (!state.slider.info) {
+      slider.setError("验证码已失效，请刷新重试");
       return Promise.reject();
     }
     try {
-      setSliderError("");
+      slider.setError("");
       
-      // 1. 验证滑块并发送验证码
       const verifyRes = await verifySliderCaptcha({
         scene: "login_email",
-        uuid: sliderCaptchaInfo.uuid,
+        uuid: state.slider.info.uuid,
         x: data.x,
-        account: account
+        account: state.fields.account
       });
 
       if (!verifyRes.passed) {
-        setSliderError("验证失败，请重新尝试");
+        slider.setError("验证失败，请重新尝试");
         sliderCaptchaRef.current?.refresh();
         return Promise.reject();
       }
 
-      setSliderVerified(true);
-      setSliderVisible(false);
-      setCodeSent(true);
-      setCaptchaCountdown(60);
+      slider.setVerified(true);
+      slider.hide();
+      ui.setCodeSent(true);
+      startCountdown();
       return Promise.resolve();
     } catch (error) {
-      setSliderError(error instanceof Error ? error.message : "网络异常，验证失败，请稍后重试");
+      slider.setError(error instanceof Error ? error.message : "网络异常，验证失败，请稍后重试");
       return Promise.reject(error);
     }
-  };
+  }, [state.slider.info, state.fields.account, slider, ui, startCountdown]);
 
-  const handleThirdPartyLogin = async (type: string) => {
+  /**
+   * 第三方登录
+   */
+  const handleThirdPartyLogin = React.useCallback(async (type: string) => {
     try {
       const url = await getThirdPartyAuthUrl(type);
       if (url) {
         window.location.href = url;
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "获取授权链接失败，请稍后重试");
+      errors.set("form", error instanceof Error ? error.message : "获取授权链接失败，请稍后重试");
     }
-  };
+  }, [errors]);
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  /**
+   * 提交登录表单
+   */
+  const handleSubmit = React.useCallback(async (event: React.FormEvent) => {
     event.preventDefault();
-    if (submitting) return;
+    if (state.ui.submitting) return;
 
-    const accountMessage = validateAccount(account);
-    const passwordMessage = validatePassword(password);
-    const captchaMessage = validateCaptcha(captcha, true);
-
-    setAccountError(accountMessage);
-    setPasswordError(passwordMessage);
-    setCaptchaError(captchaMessage);
-
-    if (accountMessage || passwordMessage || captchaMessage) {
-      setFormError("请先修正表单中的错误后再尝试登录");
+    if (!form.validateLogin()) {
+      errors.set("form", "请先修正表单中的错误后再尝试登录");
       recordLoginFail();
       return;
     }
 
-    if (!codeSent || !sliderVerified) {
-      setCaptchaError("请先获取并输入邮箱验证码");
-      setFormError("请先完成滑块验证并获取验证码");
+    if (!state.ui.codeSent || !state.slider.verified) {
+      errors.set("captcha", "请先获取并输入邮箱验证码");
+      errors.set("form", "请先完成滑块验证并获取验证码");
       recordLoginFail();
       return;
     }
 
-    if (!agree) {
-      setFormError("请阅读并同意用户协议和隐私政策");
+    if (!state.fields.agree) {
+      errors.set("form", "请阅读并同意用户协议和隐私政策");
       return;
     }
 
-    setFormError("");
-    setSubmitting(true);
+    errors.set("form", "");
+    ui.setSubmitting(true);
 
     try {
       const publicKeyData = await getPublicKey();
-      const encryptedPassword = await rsaEncrypt(password, publicKeyData.publicKey);
+      const encryptedPassword = await rsaEncrypt(state.fields.password, publicKeyData.publicKey);
 
-      const isEmail = account.includes("@");
+      const isEmail = state.fields.account.includes("@");
       const res = await login({
         type: isEmail ? "email" : "account",
-        username: !isEmail ? account : undefined,
-        email: isEmail ? account : undefined,
+        username: !isEmail ? state.fields.account : undefined,
+        email: isEmail ? state.fields.account : undefined,
         password: encryptedPassword,
-        code: captcha,
-        uuid: sliderCaptchaInfo?.uuid,
+        code: state.fields.captcha,
+        uuid: state.slider.info?.uuid,
       });
 
       setToken(res.token);
@@ -363,12 +254,12 @@ function LoginPage() {
       setIsLoading(true);
       navigate(routes.admin, { state: { fromAuth: true } });
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "网络异常，请稍后再试");
+      errors.set("form", error instanceof Error ? error.message : "网络异常，请稍后再试");
       recordLoginFail();
     } finally {
-      setSubmitting(false);
+      ui.setSubmitting(false);
     }
-  };
+  }, [state, form, errors, ui, recordLoginFail, resetLoginFail, setToken, setUserId, setAvatar, setIsLoading, navigate]);
 
   return (
     <div className="min-h-screen flex bg-[var(--bg-color)] text-[var(--text-color)]">
@@ -376,7 +267,7 @@ function LoginPage() {
         <AnimatePresence>
           <motion.img
             key={currentBgIndex}
-            src={BG_IMAGES[currentBgIndex]}
+            src={currentImage}
             alt="Background"
             initial={{ opacity: 0, scale: 1.1 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -488,10 +379,10 @@ function LoginPage() {
                 label="账号"
                 labelPlacement="inside"
                 isRequired
-                value={account}
-                onChange={handleAccountChange}
+                value={state.fields.account}
+                onChange={handlers.handleAccountChange}
                 description={
-                  account && !accountError ? (
+                  state.fields.account && !state.errors.account ? (
                     <span className="text-emerald-400">账号格式正确</span>
                   ) : (
                     "请输入邮箱或用户名"
@@ -500,8 +391,8 @@ function LoginPage() {
                 size="sm"
                 variant="flat"
                 className="text-xs"
-                isInvalid={!!accountError}
-                errorMessage={accountError}
+                isInvalid={!!state.errors.account}
+                errorMessage={state.errors.account}
                 classNames={{
                   helperWrapper: "min-h-0 p-0 mt-1",
                   description: "text-[11px] font-normal leading-none",
@@ -515,15 +406,15 @@ function LoginPage() {
                 label="密码"
                 labelPlacement="inside"
                 isRequired
-                type={passwordVisible ? "text" : "password"}
-                value={password}
-                onChange={handlePasswordChange}
+                type={state.ui.passwordVisible ? "text" : "password"}
+                value={state.fields.password}
+                onChange={handlers.handlePasswordChange}
                 description="请输入登录密码"
                 size="sm"
                 variant="flat"
                 className="text-xs"
-                isInvalid={!!passwordError}
-                errorMessage={passwordError}
+                isInvalid={!!state.errors.password}
+                errorMessage={state.errors.password}
                 classNames={{
                   helperWrapper: "min-h-0 p-0 mt-1",
                   errorMessage: "text-[11px] font-normal leading-none"
@@ -535,10 +426,10 @@ function LoginPage() {
                     radius="full"
                     size="sm"
                     className="min-w-0 h-auto"
-                    onPress={() => setPasswordVisible(previous => !previous)}
+                    onPress={ui.togglePasswordVisible}
                     aria-label="toggle password visibility"
                   >
-                    {passwordVisible ? (
+                    {state.ui.passwordVisible ? (
                       <FaEyeSlash className="text-2xl text-default-400 pointer-events-none" />
                     ) : (
                       <FaEye className="text-2xl text-default-400 pointer-events-none" />
@@ -553,14 +444,14 @@ function LoginPage() {
                 <div className="flex items-center gap-3">
                   <InputOtp
                     length={6}
-                    value={captcha}
-                    onValueChange={handleCaptchaChange}
+                    value={state.fields.captcha}
+                    onValueChange={handlers.handleCaptchaChange}
                     size="sm"
                     variant="flat"
                     radius="md"
-                    isDisabled={!codeSent}
-                    isInvalid={!!captchaError}
-                    errorMessage={captchaError}
+                    isDisabled={!state.ui.codeSent}
+                    isInvalid={!!state.errors.captcha}
+                    errorMessage={state.errors.captcha}
                     classNames={{
                       base: "flex-1",
                       wrapper: "flex-1",
@@ -574,28 +465,26 @@ function LoginPage() {
                     radius="full"
                     variant="flat"
                     onPress={handleSendCaptcha}
-                    isDisabled={captchaCountdown > 0}
+                    isDisabled={isCountingDown}
                     className="h-9 w-[8.5rem] justify-center text-[11px] font-medium bg-[color-mix(in_srgb,var(--primary-color)_14%,transparent)] text-[var(--primary-color)] hover:bg-[color-mix(in_srgb,var(--primary-color)_20%,transparent)] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {captchaCountdown > 0
-                      ? `${captchaCountdown}s 后可重发`
-                      : "发送邮箱验证码"}
+                    {isCountingDown ? `${captchaCountdown}s 后可重发` : "发送邮箱验证码"}
                   </Button>
                 </div>
               </div>
             </div>
 
             <div className="space-y-3 text-xs">
-              {formError ? (
+              {state.errors.form ? (
                 <div className="rounded-[var(--radius-base)] border border-red-500/60 bg-red-500/5 px-3 py-2 text-[11px] text-red-300">
-                  {formError}
+                  {state.errors.form}
                 </div>
               ) : null}
               <div className="flex items-center justify-between">
                 <div className="inline-flex items-center gap-2 text-xs text-[var(--text-color-secondary)]">
                   <Checkbox
-                    isSelected={agree}
-                    onValueChange={setAgree}
+                    isSelected={state.fields.agree}
+                    onValueChange={handlers.handleAgreeChange}
                     name="agreement"
                   />
                   <span className="inline-flex items-center gap-1">
@@ -604,9 +493,7 @@ function LoginPage() {
                       href="#"
                       underline="hover"
                       className="text-[11px] text-[var(--primary-color)]"
-                      onPress={() => {
-                        setShowUserAgreement(true);
-                      }}
+                      onPress={ui.showUserAgreement}
                     >
                       用户协议
                     </HeroLink>
@@ -615,9 +502,7 @@ function LoginPage() {
                       href="#"
                       underline="hover"
                       className="text-[11px] text-[var(--primary-color)]"
-                      onPress={() => {
-                        setShowPrivacyPolicy(true);
-                      }}
+                      onPress={ui.showPrivacyPolicy}
                     >
                       隐私政策
                     </HeroLink>
@@ -635,18 +520,18 @@ function LoginPage() {
               <InteractiveHoverButton
                 type="submit"
                 disabled={
-                  submitting ||
-                  !agree ||
-                  !account ||
-                  !password ||
-                  Boolean(accountError) ||
-                  Boolean(passwordError) ||
-                  captcha.length !== 6 ||
-                  Boolean(captchaError)
+                  state.ui.submitting ||
+                  !state.fields.agree ||
+                  !state.fields.account ||
+                  !state.fields.password ||
+                  Boolean(state.errors.account) ||
+                  Boolean(state.errors.password) ||
+                  state.fields.captcha.length !== 6 ||
+                  Boolean(state.errors.captcha)
                 }
                 className="w-full"
               >
-                {submitting ? "登录中..." : "立即登录"}
+                {state.ui.submitting ? "登录中..." : "立即登录"}
               </InteractiveHoverButton>
 
               <div className="flex items-center gap-3 my-6">
@@ -658,7 +543,6 @@ function LoginPage() {
               </div>
 
               <div className="flex justify-center gap-6">
-                {/* 社交登录按钮暂未实现功能，仅展示 UI */}
                  <Button isIconOnly variant="flat" radius="full" className="bg-[var(--bg-elevated)] text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] hover:bg-[var(--primary-color)]/10" aria-label="Github Login" onPress={() => handleThirdPartyLogin("github")}>
                   <FaGithub className="text-xl" />
                 </Button>
@@ -686,12 +570,14 @@ function LoginPage() {
       </div>
 
       <Modal
-        isOpen={sliderVisible}
+        isOpen={state.slider.visible}
         onOpenChange={(open) => {
-          setSliderVisible(open);
-          if (!open) {
-            setSliderCaptchaInfo(null);
-            setSliderError("");
+          if (open) {
+            slider.show();
+          } else {
+            slider.hide();
+            slider.setInfo(null);
+            slider.setError("");
           }
         }}
         size="sm"
@@ -717,12 +603,12 @@ function LoginPage() {
                       request={requestSliderCaptcha}
                       onVerify={handleSliderVerify}
                       bgSize={{ width: 300, height: 150 }}
-                      puzzleSize={{ width: 50, height: 50, top: puzzleTop }}
+                      puzzleSize={{ width: 50, height: 50, top: state.slider.puzzleTop }}
                     />
                   </div>
-                  {sliderError ? (
+                  {state.slider.error ? (
                     <div className="text-[11px] text-red-400 w-full text-center">
-                      {sliderError}
+                      {state.slider.error}
                     </div>
                   ) : null}
                 </div>
@@ -733,18 +619,15 @@ function LoginPage() {
       </Modal>
 
       <UserAgreementModal
-        isOpen={showUserAgreement}
-        onOpenChange={setShowUserAgreement}
+        isOpen={state.ui.showUserAgreement}
+        onOpenChange={(open) => open ? ui.showUserAgreement() : ui.hideUserAgreement()}
       />
       <PrivacyPolicyModal
-        isOpen={showPrivacyPolicy}
-        onOpenChange={setShowPrivacyPolicy}
+        isOpen={state.ui.showPrivacyPolicy}
+        onOpenChange={(open) => open ? ui.showPrivacyPolicy() : ui.hidePrivacyPolicy()}
       />
     </div>
   );
 }
 
-// ===== 10. TODO任务管理区域 =====
-
-// ===== 11. 导出区域 =====
 export default LoginPage;

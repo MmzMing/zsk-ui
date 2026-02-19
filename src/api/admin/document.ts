@@ -24,7 +24,10 @@ import type { ApiResponse } from "../types";
 
 // ===== 后端类型定义 =====
 
-/** 后端笔记类型 */
+/**
+ * 后端笔记类型
+ * @description 对应后端 note 表的实体结构，用于文档管理模块的数据交互
+ */
 export type DocNote = {
   /** 主键ID */
   id?: number;
@@ -80,7 +83,10 @@ export type DocNote = {
 
 // ===== 前端类型定义 =====
 
-/** 文档上传初始化请求参数 */
+/**
+ * 文档上传初始化请求参数
+ * @description 用于文档上传前的初始化校验，支持秒传检测
+ */
 export type DocumentUploadInitRequest = {
   /** 文档标题 */
   title: string;
@@ -102,7 +108,10 @@ export type DocumentUploadInitRequest = {
   price?: number;
 };
 
-/** 文档上传初始化响应数据 */
+/**
+ * 文档上传初始化响应数据
+ * @description 后端返回的上传初始化结果，包含上传ID和是否需要上传的标识
+ */
 export type DocumentUploadInitResponse = {
   /** 上传 ID */
   uploadId: string;
@@ -112,7 +121,10 @@ export type DocumentUploadInitResponse = {
   presignedUrl?: string;
 };
 
-/** 文档上传完成请求参数 */
+/**
+ * 文档上传完成请求参数
+ * @description 用于通知后端上传任务完成状态
+ */
 export type DocumentUploadFinishRequest = {
   /** 上传 ID */
   uploadId: string;
@@ -122,7 +134,10 @@ export type DocumentUploadFinishRequest = {
   errorMsg?: string;
 };
 
-/** 文档上传任务项 */
+/**
+ * 文档上传任务项
+ * @description 用于展示上传任务列表中的单个任务信息
+ */
 export type DocumentUploadTaskItem = {
   /** 任务 ID */
   id: string;
@@ -140,7 +155,10 @@ export type DocumentUploadTaskItem = {
   createdAt: string;
 };
 
-/** 文档上传任务列表响应数据 */
+/**
+ * 文档上传任务列表响应数据
+ * @description 分页查询上传任务列表的返回结构
+ */
 export type DocumentUploadTaskListResponse = {
   /** 任务列表 */
   list: DocumentUploadTaskItem[];
@@ -148,7 +166,17 @@ export type DocumentUploadTaskListResponse = {
   total: number;
 };
 
-/** 文档状态类型 */
+/**
+ * 文档状态类型
+ * @description 文档在系统中的生命周期状态
+ * - draft: 草稿状态，未发布
+ * - pending: 待审核状态，已提交等待审核
+ * - approved: 审核通过状态
+ * - rejected: 审核拒绝状态
+ * - offline: 已下线状态
+ * - scheduled: 定时发布状态
+ * - published: 已发布状态
+ */
 export type DocumentStatus =
   | "draft"
   | "pending"
@@ -158,7 +186,10 @@ export type DocumentStatus =
   | "scheduled"
   | "published";
 
-/** 文档列表项 */
+/**
+ * 文档列表项
+ * @description 用于文档列表展示的单条数据结构
+ */
 export type DocumentItem = {
   /** 文档 ID */
   id: string;
@@ -192,7 +223,10 @@ export type DocumentItem = {
   content?: string;
 };
 
-/** 文档分类项 */
+/**
+ * 文档分类项
+ * @description 用于文档分类树形结构展示，支持多级嵌套
+ */
 export type DocCategory = {
   /** 分类 ID */
   id: string;
@@ -202,7 +236,10 @@ export type DocCategory = {
   children?: DocCategory[];
 };
 
-/** 文档标签项 */
+/**
+ * 文档标签项
+ * @description 用于标签选择器的选项数据
+ */
 export type DocTag = {
   /** 标签显示文本 */
   label: string;
@@ -210,7 +247,10 @@ export type DocTag = {
   value: string;
 };
 
-/** 文档列表响应数据 */
+/**
+ * 文档列表响应数据
+ * @description 分页查询文档列表的返回结构
+ */
 export type DocumentListResponse = {
   /** 文档列表 */
   list: DocumentItem[];
@@ -218,13 +258,28 @@ export type DocumentListResponse = {
   total: number;
 };
 
-/** 审核状态类型 */
+/**
+ * 审核状态类型
+ * @description 文档审核流程中的状态枚举
+ * - pending: 待审核
+ * - approved: 审核通过
+ * - rejected: 审核拒绝
+ */
 export type ReviewStatus = "pending" | "approved" | "rejected";
 
-/** 风险等级类型 */
+/**
+ * 风险等级类型
+ * @description 文档内容风险评估等级
+ * - low: 低风险
+ * - medium: 中风险
+ * - high: 高风险
+ */
 export type RiskLevel = "low" | "medium" | "high";
 
-/** 文档审核项 */
+/**
+ * 文档审核项
+ * @description 用于审核队列列表展示的单条数据
+ */
 export type DocumentReviewItem = {
   /** 审核 ID */
   id: string;
@@ -244,7 +299,10 @@ export type DocumentReviewItem = {
   createdAt: string;
 };
 
-/** 文档审核日志项 */
+/**
+ * 文档审核日志项
+ * @description 用于记录审核历史操作日志
+ */
 export type DocumentReviewLogItem = {
   /** 日志 ID */
   id: string;
@@ -262,7 +320,10 @@ export type DocumentReviewLogItem = {
   remark: string;
 };
 
-/** 文档审核队列响应数据 */
+/**
+ * 文档审核队列响应数据
+ * @description 分页查询审核队列的返回结构
+ */
 export type DocumentReviewQueueResponse = {
   /** 审核列表 */
   list: DocumentReviewItem[];
@@ -270,7 +331,10 @@ export type DocumentReviewQueueResponse = {
   total: number;
 };
 
-/** 文档详情数据 */
+/**
+ * 文档详情数据
+ * @description 用于文档编辑和详情展示的完整数据结构
+ */
 export type DocumentDetail = {
   /** 文档 ID */
   id: string;
@@ -286,6 +350,10 @@ export type DocumentDetail = {
   tags: string[];
   /** 封面图 */
   cover?: string;
+  /** 是否置顶 */
+  pinned?: boolean;
+  /** 是否推荐 */
+  recommended?: boolean;
   /** SEO 设置 */
   seo?: {
     /** SEO 标题 */
@@ -297,7 +365,10 @@ export type DocumentDetail = {
   };
 };
 
-/** 文档评论项类型 */
+/**
+ * 文档评论项类型
+ * @description 用于文档评论列表展示的单条数据
+ */
 export type DocCommentItem = {
   /** 评论ID */
   id: string;
@@ -317,8 +388,9 @@ export type DocCommentItem = {
 
 /**
  * 状态映射：后端转前端
- * @param status 笔记状态
- * @param auditStatus 审核状态
+ * @description 将后端的数字状态码转换为前端的状态字符串
+ * @param status 笔记状态（1-正常 2-下线 3-草稿）
+ * @param auditStatus 审核状态（0-待审核 1-通过 2-拒绝）
  * @returns 前端状态字符串
  */
 function mapStatusToFrontend(
@@ -335,8 +407,9 @@ function mapStatusToFrontend(
 
 /**
  * 状态映射：前端转后端
- * @param status 前端状态
- * @returns 后端状态对象
+ * @description 将前端的状态字符串转换为后端的数字状态码
+ * @param status 前端状态字符串
+ * @returns 后端状态对象，包含 status 和 auditStatus 字段
  */
 function mapStatusToBackend(
   status: DocumentStatus
@@ -361,6 +434,7 @@ function mapStatusToBackend(
 
 /**
  * 笔记后端转前端字段映射
+ * @description 将后端 DocNote 类型转换为前端 DocumentItem 类型
  * @param note 后端笔记数据
  * @returns 前端文档数据
  */
@@ -385,6 +459,7 @@ function mapNoteToFrontend(note: DocNote): DocumentItem {
 
 /**
  * 笔记前端转后端字段映射
+ * @description 将前端 DocumentItem 或 DocumentDetail 类型转换为后端 DocNote 类型
  * @param doc 前端文档数据
  * @returns 后端笔记数据
  */
@@ -411,8 +486,14 @@ function mapNoteToBackend(
 
 /**
  * 获取文档列表
- * @param params 分页、状态、分类及关键字参数
- * @returns 文档列表
+ * @description 分页查询文档列表，支持按状态、分类和关键字筛选
+ * @param params 查询参数
+ * @param params.page 当前页码，从1开始
+ * @param params.pageSize 每页条数
+ * @param params.status 文档状态筛选（可选）
+ * @param params.category 分类筛选（可选）
+ * @param params.keyword 关键字搜索（可选）
+ * @returns 文档列表及总数
  */
 export async function fetchDocumentList(params: {
   page: number;
@@ -441,8 +522,9 @@ export async function fetchDocumentList(params: {
 
 /**
  * 获取文档详情
+ * @description 根据文档ID获取完整的文档信息，包含内容和SEO设置
  * @param id 文档 ID
- * @returns 文档详情
+ * @returns 文档详情数据
  */
 export async function getDocumentDetail(
   id: string
@@ -481,7 +563,8 @@ export async function getDocumentDetail(
 
 /**
  * 创建文档
- * @param data 文档详情数据
+ * @description 新建文档记录，保存到数据库
+ * @param data 文档详情数据，包含标题、内容、分类等信息
  * @returns 新建文档的 ID
  */
 export async function createDocument(
@@ -499,8 +582,9 @@ export async function createDocument(
 
 /**
  * 更新文档
+ * @description 更新已有文档的信息
  * @param id 文档 ID
- * @param data 文档详情数据
+ * @param data 要更新的文档数据
  * @returns 是否更新成功
  */
 export async function updateDocument(
@@ -519,7 +603,8 @@ export async function updateDocument(
 
 /**
  * 批量删除文档
- * @param ids ID 列表
+ * @description 根据ID列表批量删除文档，支持物理删除或逻辑删除
+ * @param ids 要删除的文档 ID 列表
  * @returns 是否删除成功
  */
 export async function deleteDocument(
@@ -537,8 +622,12 @@ export async function deleteDocument(
 
 /**
  * 获取草稿列表
- * @param params 分页及搜索参数
- * @returns 草稿列表
+ * @description 分页查询当前用户的草稿文档列表
+ * @param params 查询参数
+ * @param params.page 当前页码，从1开始
+ * @param params.pageSize 每页条数
+ * @param params.search 搜索关键字（可选）
+ * @returns 草稿列表及总数
  */
 export async function fetchDraftList(params: {
   page: number;
@@ -565,7 +654,10 @@ export async function fetchDraftList(params: {
 
 /**
  * 批量更新文档状态
- * @param data ID 列表及目标状态
+ * @description 批量发布或下线文档
+ * @param data 状态更新参数
+ * @param data.ids 要更新的文档 ID 列表
+ * @param data.status 目标状态（published-发布，offline-下线）
  * @returns 是否更新成功
  */
 export async function batchUpdateDocumentStatus(data: {
@@ -586,8 +678,9 @@ export async function batchUpdateDocumentStatus(data: {
 
 /**
  * 批量迁移文档分类
- * @param ids ID 列表
- * @param category 目标分类
+ * @description 将多个文档迁移到指定分类
+ * @param ids 要迁移的文档 ID 列表
+ * @param category 目标分类代码
  * @returns 是否迁移成功
  */
 export async function moveDocumentCategory(
@@ -610,7 +703,8 @@ export async function moveDocumentCategory(
 
 /**
  * 获取文档分类列表
- * @returns 分类列表
+ * @description 获取所有文档分类，支持树形结构
+ * @returns 分类列表，包含父子层级关系
  */
 export async function fetchDocumentCategories(): Promise<
   ApiResponse<DocCategory[]>
@@ -626,7 +720,8 @@ export async function fetchDocumentCategories(): Promise<
 
 /**
  * 获取文档标签选项
- * @returns 标签列表
+ * @description 获取所有可用标签，用于标签选择器
+ * @returns 标签列表，包含 label 和 value 字段
  */
 export async function fetchTagOptions(): Promise<ApiResponse<DocTag[]>> {
   return handleRequest({
@@ -642,6 +737,7 @@ export async function fetchTagOptions(): Promise<ApiResponse<DocTag[]>> {
 
 /**
  * 获取文档评论列表
+ * @description 根据文档ID获取该文档下的所有评论
  * @param docId 文档ID
  * @returns 评论列表
  */
@@ -661,6 +757,7 @@ export async function fetchDocumentComments(
 
 /**
  * 删除文档评论
+ * @description 删除指定评论，管理员权限可删除任意评论
  * @param commentId 评论ID
  * @returns 是否删除成功
  */
@@ -680,8 +777,13 @@ export async function deleteDocumentComment(
 
 /**
  * 获取文档审核队列
- * @param params 分页、状态及关键字参数
- * @returns 审核队列
+ * @description 分页查询待审核文档列表，支持按状态和关键字筛选
+ * @param params 查询参数
+ * @param params.page 当前页码，从1开始
+ * @param params.pageSize 每页条数
+ * @param params.status 审核状态筛选（可选）
+ * @param params.keyword 关键字搜索（可选）
+ * @returns 审核队列及总数
  */
 export async function fetchDocumentReviewQueue(params: {
   page: number;
@@ -709,8 +811,10 @@ export async function fetchDocumentReviewQueue(params: {
 
 /**
  * 获取文档审核日志
- * @param params 文档ID列表
- * @returns 审核日志
+ * @description 查询指定文档的审核历史记录
+ * @param params 查询参数
+ * @param params.docIds 文档ID列表（可选，不传则查询所有）
+ * @returns 审核日志列表
  */
 export async function fetchDocumentReviewLogs(params: {
   docIds?: string[];
@@ -728,7 +832,11 @@ export async function fetchDocumentReviewLogs(params: {
 
 /**
  * 提交文档审核结果
- * @param data 审核 ID、结果及原因
+ * @description 审核员提交审核结论，通过或拒绝文档
+ * @param data 审核提交参数
+ * @param data.reviewId 审核记录 ID
+ * @param data.status 审核结果（approved-通过，rejected-拒绝）
+ * @param data.reason 拒绝原因（拒绝时必填）
  * @returns 是否提交成功
  */
 export async function submitDocumentReview(data: {
@@ -753,8 +861,18 @@ export async function submitDocumentReview(data: {
 
 /**
  * 初始化文档上传
+ * @description 上传前的初始化操作，检测是否支持秒传
  * @param data 上传初始化请求数据
- * @returns 上传初始化结果
+ * @param data.title 文档标题
+ * @param data.fileName 文件名（含扩展名）
+ * @param data.fileSize 文件大小（字节）
+ * @param data.fileMd5 文件 MD5 哈希值，用于秒传检测
+ * @param data.category 分类代码
+ * @param data.tags 标签列表
+ * @param data.description 文档描述（可选）
+ * @param data.isPublic 是否公开
+ * @param data.price 价格（可选，付费文档时使用）
+ * @returns 上传初始化结果，包含上传ID和是否需要上传的标识
  */
 export async function initDocumentUpload(
   data: DocumentUploadInitRequest
@@ -777,7 +895,11 @@ export async function initDocumentUpload(
 
 /**
  * 完成文档上传
+ * @description 通知后端上传任务已完成，触发后续处理流程
  * @param data 上传完成请求数据
+ * @param data.uploadId 上传任务 ID
+ * @param data.status 上传状态（success-成功，error-失败）
+ * @param data.errorMsg 错误信息（失败时填写）
  * @returns 是否完成
  */
 export async function finishDocumentUpload(
@@ -796,8 +918,12 @@ export async function finishDocumentUpload(
 
 /**
  * 获取文档上传任务列表
- * @param params 分页及过滤参数
- * @returns 任务列表
+ * @description 分页查询当前用户的上传任务列表
+ * @param params 查询参数
+ * @param params.page 当前页码，从1开始
+ * @param params.pageSize 每页条数
+ * @param params.status 任务状态筛选（可选）
+ * @returns 任务列表及总数
  */
 export async function fetchDocumentUploadTaskList(params: {
   page: number;
@@ -820,6 +946,7 @@ export async function fetchDocumentUploadTaskList(params: {
 
 /**
  * 移除文档上传任务
+ * @description 从任务列表中移除指定任务
  * @param id 任务 ID
  * @returns 是否移除成功
  */
@@ -837,6 +964,7 @@ export async function removeDocumentUploadTask(
 
 /**
  * 批量移除文档上传任务
+ * @description 批量从任务列表中移除任务
  * @param ids 任务 ID 列表
  * @returns 是否移除成功
  */
@@ -855,6 +983,7 @@ export async function batchRemoveDocumentUploadTasks(
 
 /**
  * 重试文档上传任务
+ * @description 重新尝试失败的上传任务
  * @param id 任务 ID
  * @returns 是否重试成功
  */

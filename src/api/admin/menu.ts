@@ -24,7 +24,10 @@ import type { ApiResponse } from "../types";
 
 // ===== 后端类型定义 =====
 
-/** 后端菜单类型 */
+/**
+ * 后端菜单类型
+ * @description 对应后端 sys_menu 表的实体结构，用于菜单管理模块的数据交互
+ */
 export type SysMenu = {
   /** 主键ID（雪花算法） */
   id?: number;
@@ -62,7 +65,10 @@ export type SysMenu = {
 
 // ===== 前端类型定义 =====
 
-/** 菜单节点类型 */
+/**
+ * 菜单节点类型
+ * @description 用于前端菜单树形结构展示的单个节点数据
+ */
 export type MenuNode = {
   /** 菜单ID */
   id: string;
@@ -88,6 +94,7 @@ export type MenuNode = {
 
 /**
  * 菜单后端转前端字段映射
+ * @description 将后端 SysMenu 类型转换为前端 MenuNode 类型
  * @param backendData 后端菜单数据
  * @returns 前端菜单数据
  */
@@ -107,6 +114,7 @@ function mapMenuToFrontend(backendData: SysMenu): MenuNode {
 
 /**
  * 菜单前端转后端字段映射
+ * @description 将前端 MenuNode 类型转换为后端 SysMenu 类型
  * @param frontendData 前端菜单数据
  * @returns 后端菜单数据
  */
@@ -125,7 +133,8 @@ function mapMenuToBackend(frontendData: Partial<MenuNode>): Partial<SysMenu> {
 
 /**
  * 构建菜单树形结构
- * @param menuList 菜单列表
+ * @description 将扁平的菜单列表转换为树形结构，按 orderNum 排序
+ * @param menuList 菜单列表（扁平结构）
  * @returns 树形结构菜单
  */
 function buildMenuTree(menuList: SysMenu[]): MenuNode[] {
@@ -156,8 +165,9 @@ function buildMenuTree(menuList: SysMenu[]): MenuNode[] {
 
 /**
  * 扁平化菜单树
+ * @description 将树形结构的菜单转换为扁平列表，用于批量提交
  * @param tree 菜单树
- * @param parentId 父级ID
+ * @param parentId 父级ID（默认为0，表示根节点）
  * @returns 扁平化菜单列表
  */
 function flattenMenuTree(tree: MenuNode[], parentId: number = 0): SysMenu[] {
@@ -190,7 +200,8 @@ function flattenMenuTree(tree: MenuNode[], parentId: number = 0): SysMenu[] {
 
 /**
  * 获取管理员菜单树
- * @param setLoading 加载状态回调
+ * @description 获取所有菜单并构建为树形结构，用于菜单管理页面
+ * @param setLoading 加载状态回调函数（可选）
  * @returns 菜单树结构
  */
 export async function fetchAdminMenuTree(
@@ -212,8 +223,9 @@ export async function fetchAdminMenuTree(
 
 /**
  * 更新菜单树结构（批量更新）
+ * @description 批量更新整个菜单树结构，会扁平化后提交
  * @param tree 完整的菜单树结构
- * @param setLoading 加载状态回调
+ * @param setLoading 加载状态回调函数（可选）
  * @returns 是否成功
  */
 export async function updateMenuTree(
@@ -235,8 +247,9 @@ export async function updateMenuTree(
 
 /**
  * 创建新菜单项
+ * @description 新增一个菜单项到系统中
  * @param data 菜单项详情数据
- * @param setLoading 加载状态回调
+ * @param setLoading 加载状态回调函数（可选）
  * @returns 是否成功
  */
 export async function createMenu(
@@ -258,8 +271,9 @@ export async function createMenu(
 
 /**
  * 更新现有菜单项
- * @param data 菜单项详情数据
- * @param setLoading 加载状态回调
+ * @description 更新指定菜单项的信息
+ * @param data 菜单项详情数据，必须包含 id 字段
+ * @param setLoading 加载状态回调函数（可选）
  * @returns 是否成功
  */
 export async function updateMenu(
@@ -281,8 +295,9 @@ export async function updateMenu(
 
 /**
  * 删除菜单项
+ * @description 删除指定的菜单项，如有子菜单需先删除子菜单
  * @param id 菜单项 ID
- * @param setLoading 加载状态回调
+ * @param setLoading 加载状态回调函数（可选）
  * @returns 是否成功
  */
 export async function deleteMenu(
@@ -301,8 +316,9 @@ export async function deleteMenu(
 
 /**
  * 批量删除菜单项
+ * @description 批量删除多个菜单项，如有子菜单需先删除子菜单
  * @param ids 菜单项 ID 列表
- * @param setLoading 加载状态回调
+ * @param setLoading 加载状态回调函数（可选）
  * @returns 是否成功
  */
 export async function batchDeleteMenu(

@@ -1,5 +1,10 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useState, useEffect, useCallback } from "react";
+/**
+ * 系统日志页面
+ * @module pages/Admin/Ops/SystemLog
+ * @description 系统运行日志查看，支持按级别、模块、关键字筛选和导出功能
+ */
+
+import React, { useCallback } from "react";
 import {
   Button,
   Card,
@@ -26,88 +31,80 @@ import {
   SystemLogItem,
   LogLevel,
   getSystemLogListData,
-} from "../../../api/admin/ops";
+} from "@/api/admin/ops";
+import { usePageState } from "@/hooks";
 
-// ===== 2. TODO待处理导入区域 =====
+/** 每页显示条数 */
+const PAGE_SIZE = 8;
 
-function SystemLogPage() {
-  // ===== 3. 状态控制逻辑区域 =====
-  /** 是否正在加载日志 */
-  const [loading, setLoading] = useState(false);
-  /** 当前选中的日志级别 */
-  const [activeLevel, setActiveLevel] = useState<LogLevel | "all">("all");
-  /** 当前选中的模块 */
-  const [activeModule, setActiveModule] = useState("全部模块");
-  /** 搜索关键字 */
-  const [keyword, setKeyword] = useState("");
-  /** 当前页码 */
-  const [page, setPage] = useState(1);
-  /** 日志列表数据 */
-  const [logs, setLogs] = useState<SystemLogItem[]>([]);
-  /** 总记录数 */
-  const [total, setTotal] = useState(0);
-  /** 顶部提示消息 */
-  const [message, setMessage] = useState("");
+/** 日志模块列表 */
+const LOG_MODULES = [
+  "全部模块",
+  "接口网关",
+  "认证中心",
+  "系统监控",
+  "缓存服务",
+  "内容管理",
+  "审核中心",
+  "系统配置",
+];
 
-  // ===== 4. 通用工具函数区域 =====
-  /** 日志模块列表 */
-  const logModules = [
-    "全部模块",
-    "接口网关",
-    "认证中心",
-    "系统监控",
-    "缓存服务",
-    "内容管理",
-    "审核中心",
-    "系统配置",
-  ];
-
-  /** 每页条数 */
-  const pageSize = 6;
-
-  /**
-   * 根据日志级别获取对应的 UI 属性
-   * @param level 日志级别
-   * @returns UI 属性对象
-   */
-  const getLevelChipProps = (level: LogLevel) => {
-    if (level === "ERROR") {
-      return {
-        color: "danger" as const,
-        className: "bg-red-500/10 text-red-500",
-        label: "ERROR",
-      };
-    }
+/**
+ * 根据日志级别获取对应的 UI 属性
+ */
+function getLevelChipProps(level: LogLevel): { color: "danger" | "default"; className: string; label: string } {
+  if (level === "ERROR") {
     return {
-      color: "default" as const,
-      className: "bg-sky-500/10 text-sky-500",
-      label: "INFO",
+      color: "danger" as const,
+      className: "bg-red-500/10 text-red-500",
+      label: "ERROR",
     };
+  }
+  return {
+    color: "default" as const,
+    className: "bg-sky-500/10 text-sky-500",
+    label: "INFO",
   };
+}
 
-  // ===== 5. 注释代码函数区 =====
+/**
+ * 系统日志页面组件
+ * @returns 页面JSX元素
+ */
+function SystemLogPage() {
+  /** 分页状态 */
+  const { page, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGE_SIZE });
 
-  // ===== 6. 错误处理函数区域 =====
+  /** 数据与加载状态 */
+  const [loading, setLoading] = React.useState(false);
+  const [logs, setLogs] = React.useState<SystemLogItem[]>([]);
+
+  /** 筛选条件状态 */
+  const [activeLevel, setActiveLevel] = React.useState<LogLevel | "all">("all");
+  const [activeModule, setActiveModule] = React.useState("全部模块");
+  const [keyword, setKeyword] = React.useState("");
+
+  /** 提示消息 */
+  const [message, setMessage] = React.useState("");
+
+  /** 当前页码 */
+  const currentPage = Math.min(page, totalPages);
+
   /**
    * 统一错误提示处理
-   * @param error 错误对象
-   * @param prefix 错误前缀描述
    */
-  const showErrorFn = (error: unknown, prefix: string) => {
-    const message = error instanceof Error ? error.message : String(error);
-    addToast({
-      title: `${prefix}失败`,
-      description: message,
-      color: "danger",
-    });
-  };
+  const showErrorFn = useCallback((error: unknown, prefix: string) => {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    addToast({ title: `${prefix}失败`, description: errorMessage, color: "danger" });
+  }, []);
 
-  // ===== 7. 数据处理函数区域 =====
-  /** 加载系统日志列表 */
+  /**
+   * 加载系统日志列表
+   */
   const loadData = useCallback(async () => {
     const data = await getSystemLogListData({
       page,
-      pageSize,
+      pageSize: PAGE_SIZE,
       keyword,
       module: activeModule === "全部模块" ? undefined : activeModule,
       level: activeLevel === "all" ? undefined : activeLevel,
@@ -119,9 +116,19 @@ function SystemLogPage() {
       setLogs(data.list);
       setTotal(data.total);
     }
-  }, [activeLevel, activeModule, keyword, page]);
+  }, [activeLevel, activeModule, keyword, page, showErrorFn, setTotal]);
 
-  /** 重置筛选条件 */
+  /** 监听筛选条件变化并加载数据 */
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      loadData();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadData]);
+
+  /**
+   * 重置筛选条件
+   */
   const handleResetFilter = () => {
     setActiveLevel("all");
     setActiveModule("全部模块");
@@ -130,43 +137,23 @@ function SystemLogPage() {
     setMessage("");
   };
 
-  /** 处理导出当前筛选结果 */
+  /**
+   * 处理导出当前筛选结果
+   */
   const handleExportCurrent = () => {
     setMessage(
       `已提交导出当前筛选结果的日志文件，共 ${logs.length} 条记录。实际导出逻辑待接入 /api/admin/ops/logs/export 接口。`
     );
   };
 
-  /** 处理导出全部日志 */
+  /**
+   * 处理导出全部日志
+   */
   const handleExportAll = () => {
     setMessage(
       "已提交导出全部日志的任务，建议在实际环境中限制导出时间范围与最大条数，避免影响系统性能。"
     );
   };
-
-  /** 处理页码切换 */
-  const handlePageChange = (next: number) => {
-    if (next < 1 || next > totalPages) {
-      return;
-    }
-    setPage(next);
-  };
-
-  /** 总页数 */
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  /** 当前显示页码 */
-  const currentPage = Math.min(page, totalPages);
-  /** 当前页显示的数据 */
-  const pageItems = logs;
-
-  // ===== 9. 页面初始化与事件绑定 =====
-  /** 监听筛选条件变化并加载数据 */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadData();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadData]);
 
   // ===== 8. UI渲染逻辑区域 =====
   return (
@@ -207,7 +194,7 @@ function SystemLogPage() {
                 setActiveModule(key ? String(key) : "全部模块");
                 setPage(1);
               }}
-              items={logModules.map((item) => ({
+              items={LOG_MODULES.map((item) => ({
                 label: item,
                 value: item,
               }))}
@@ -336,7 +323,7 @@ function SystemLogPage() {
                 </TableColumn>
               </TableHeader>
               <TableBody
-                items={loading ? [] : pageItems}
+                items={loading ? [] : logs}
                 emptyContent="未找到匹配的日志记录，可调整筛选条件或关键字后重试。"
                 isLoading={loading}
                 loadingContent={
@@ -401,5 +388,4 @@ function SystemLogPage() {
   );
 }
 
-// ===== 11. 导出区域 =====
 export default SystemLogPage;

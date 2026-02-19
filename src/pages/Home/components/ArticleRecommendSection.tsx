@@ -1,12 +1,19 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
+/**
+ * 文章推荐组件
+ * @module pages/Home/components/ArticleRecommendSection
+ * @description 首页文章推荐区域，展示推荐文章列表
+ */
+
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@heroui/react";
 import { useNavigate } from "react-router-dom";
-import { routes } from "../../../router/routes";
-import AnimatedContent from "../../../components/Motion/AnimatedContent";
-import AnimatedList from "../../../components/Motion/AnimatedList";
-import { fetchHomeArticles, mockHomeArticles, type HomeArticle, DEFAULT_ARTICLE_COVER } from "../../../api/front/home";
+import { routes } from "@/router/routes";
+import AnimatedContent from "@/components/Motion/AnimatedContent";
+import AnimatedList from "@/components/Motion/AnimatedList";
+import { fetchHomeArticles, DEFAULT_ARTICLE_COVER, type HomeArticle } from "@/api/front/home";
+import { useScrollSticky, useAsyncDataWithSelection } from "@/hooks";
+import { formatSummary } from "@/utils/textUtils";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -19,18 +26,6 @@ import { fetchHomeArticles, mockHomeArticles, type HomeArticle, DEFAULT_ARTICLE_
 // ===== 6. 错误处理函数区域 =====
 
 // ===== 7. 数据处理函数区域 =====
-/**
- * 格式化文章摘要，超出长度显示省略号
- * @param summary 文章摘要
- * @param maxLength 最大长度
- * @returns 格式化后的摘要
- */
-const formatSummary = (summary: string, maxLength: number = 100): string => {
-  if (!summary) return "";
-  return summary.length > maxLength
-    ? `${summary.slice(0, maxLength)}...`
-    : summary;
-};
 
 // ===== 8. UI渲染逻辑区域 =====
 
@@ -42,50 +37,19 @@ export default function ArticleRecommendSection() {
   // --- 导航钩子 ---
   const navigate = useNavigate();
 
-  // --- 状态与引用 ---
-  /** 文章列表状态 */
-  const [articles, setArticles] = useState<HomeArticle[]>(() => mockHomeArticles);
-  /** 当前选中的文章ID */
-  const [activeArticleId, setActiveArticleId] = useState<string | undefined>(() => mockHomeArticles[0]?.id);
-  /** 容器 DOM 引用 */
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  /** 左侧容器 DOM 引用 */
-  const leftContainerRef = useRef<HTMLDivElement | null>(null);
-  /** 倒数第二个元素的引用，用于滚动计算哨兵 */
-  const secondLastRef = useRef<HTMLDivElement | null>(null);
+  // --- 使用共享 Hook 管理数据和选择状态 ---
+  const { list: articles, selected: activeArticle, select: handleArticleSelect } = useAsyncDataWithSelection(
+    fetchHomeArticles,
+    { delay: 0 }
+  );
 
-  // --- 数据获取 ---
-  /**
-   * 加载文章列表数据
-   */
-  const loadArticles = React.useCallback(async () => {
-    const data = await fetchHomeArticles();
-    if (data) {
-      setArticles(data);
-      // 使用函数式更新，避免依赖 activeArticleId
-      setActiveArticleId(prevId => {
-        if (!prevId && data.length > 0) {
-          return data[0].id;
-        }
-        return prevId;
-      });
-    }
-  }, []);
-
-  // 初始化加载
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadArticles();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadArticles]); // 仅在挂载时获取一次，移除 activeArticleId 依赖以避免点击切换时重复请求
+  // --- 使用共享 Hook 管理 sticky 效果 ---
+  const { stickyRef: leftContainerRef, sentinelRef: secondLastRef, currentTop } = useScrollSticky({
+    stickyTop: 96,
+    breakpoint: 768
+  });
 
   // --- 数据计算 ---
-  /** 当前激活的文章对象 */
-  const activeArticle = useMemo(() => {
-    return articles.find(item => item.id === activeArticleId) || articles[0];
-  }, [articles, activeArticleId]);
-
   /** 格式化后的文章摘要 */
   const trimmedSummary = useMemo(() => 
     activeArticle ? formatSummary(activeArticle.summary) : ""
@@ -97,42 +61,6 @@ export default function ArticleRecommendSection() {
   , [articles]);
 
   // --- 事件处理 ---
-  /**
-   * 处理滚动逻辑，实现左侧 sticky 效果在接近底部时自动上推
-   */
-  const handleScroll = useCallback(() => {
-    if (!leftContainerRef.current || !secondLastRef.current || !containerRef.current) {
-      return;
-    }
-
-    // 仅在桌面端应用此逻辑 (md 也就是 768px 以上)
-    if (window.innerWidth < 768) {
-      leftContainerRef.current.style.top = "";
-      return;
-    }
-
-    /** 左侧容器的位置信息 */
-    const leftRect = leftContainerRef.current.getBoundingClientRect();
-    /** 哨兵元素的位置信息 */
-    const sentinelRect = secondLastRef.current.getBoundingClientRect();
-    /** 基础顶部悬停距离 (对应 CSS 中的 md:top-24 = 96px) */
-    const STICKY_TOP = 96;
-    /** 最大允许的 top 值，计算逻辑：visualTop <= sentinelTop - height */
-    const maxTop = sentinelRect.top - leftRect.height;
-    /** 最终应用到元素的 top 值 */
-    const finalTop = Math.min(STICKY_TOP, maxTop);
-
-    leftContainerRef.current.style.top = `${finalTop}px`;
-  }, []);
-
-  /**
-   * 处理文章选择事件
-   * @param id 文章ID
-   */
-  const handleArticleSelect = (id: string) => {
-    setActiveArticleId(id);
-  };
-
   /**
    * 处理文章跳转详情页事件
    * @param id 文章ID
@@ -147,19 +75,6 @@ export default function ArticleRecommendSection() {
   const handleJumpToSearch = () => {
     navigate(routes.allSearch);
   };
-
-  // --- 生命周期与监听 ---
-  /**
-   * 绑定滚动和窗口调整事件，实现动态 Sticky 效果
-   */
-  useEffect(() => {
-    window.addEventListener("scroll", handleScroll);
-    window.addEventListener("resize", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, [handleScroll]);
 
   // --- 渲染逻辑 ---
   if (!activeArticle) return null;
@@ -200,7 +115,7 @@ export default function ArticleRecommendSection() {
           </div>
 
           {/* 白色装饰线条 */}
-          <div className="w-[1.5px] h-64 bg-gradient-to-b from-white/5 via-white/20 to-white/5 relative flex-none">
+          <div className="w-[1.5px] h-64 bg-gradient-to-b from-white/5 via-white/20 to-white/5 relative flex:none">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/40 blur-[1px]" />
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white/40 blur-[1px]" />
           </div>
@@ -226,13 +141,13 @@ export default function ArticleRecommendSection() {
       </div>
 
       <div 
-        ref={containerRef}
         className="max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-6 md:gap-8 relative z-10"
       >
         {/* 左侧详情展示区 */}
         <div
           ref={leftContainerRef}
-          className="md:basis-3/5 space-y-4 self-start md:sticky md:top-24"
+          className="md:basis-3/5 space-y-4 self-start md:sticky"
+          style={{ top: `${currentTop}px` }}
         >
           <AnimatedContent activeKey={activeArticle.id} className="h-full">
             <motion.div 
@@ -325,7 +240,7 @@ export default function ArticleRecommendSection() {
         {/* 右侧列表选择区 */}
         <div className="md:basis-2/5">
           <AnimatedList className="space-y-0">
-            {articles.map((item, index) => {
+            {articles.map((item: HomeArticle, index: number) => {
               /** 当前项是否被选中 */
               const isActive = item.id === activeArticle.id;
               /** 是否为倒数第二项（哨兵节点） */

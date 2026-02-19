@@ -1,4 +1,9 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 忘记密码页面
+ * @module pages/Auth/ForgotPassword
+ * @description 密码找回页面，支持三步验证流程：身份验证、验证码验证、密码重置
+ */
+
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { routes } from "@/router/routes";
@@ -28,128 +33,42 @@ import {
   getPublicKey,
   type SliderCaptchaData,
 } from "@/api/auth";
-import { rsaEncrypt } from "@/lib/rsaEncrypt";
+import { rsaEncrypt, validateAccount, validateEmail, validateCaptcha, validatePassword, validateConfirmPassword } from "@/utils";
+import { useBgCarousel, useCountdown } from "@/hooks";
 
-// ===== 2. TODO待处理导入区域 =====
-
-// ===== 3. 状态控制逻辑区域 =====
-/**
- * 背景图片列表
- */
-const BG_IMAGES = [
-  "/auth/auth-Polling-1.png",
-  "/auth/auth-Polling-2.png",
-  "/auth/auth-Polling-3.png",
-];
-
-// ===== 4. 通用工具函数区域 =====
-/**
- * 校验账号格式
- * @param value 账号值
- * @returns 错误信息，无错误返回空字符串
- */
-const validateAccount = (value: string): string => {
-  const trimmed = value.trim();
-  if (!trimmed) return "请输入账号";
-  if (trimmed.includes("@")) {
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(trimmed)) {
-      return "邮箱格式不正确";
-    }
-    return "";
-  }
-  const usernamePattern = /^[a-zA-Z0-9_.-]{3,20}$/;
-  if (!usernamePattern.test(trimmed)) {
-    return "用户名需为 3-20 位字母、数字或符号 ._-";
-  }
-  return "";
-};
-
-/**
- * 校验邮箱格式
- * @param value 邮箱值
- * @returns 错误信息，无错误返回空字符串
- */
-const validateEmail = (value: string): string => {
-  const trimmed = value.trim();
-  if (!trimmed) return "请输入邮箱地址";
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(trimmed)) return "邮箱格式不正确";
-  return "";
-};
-
-/**
- * 校验验证码格式
- * @param value 验证码值
- * @param required 是否必填
- * @returns 错误信息，无错误返回空字符串
- */
-const validateCaptcha = (value: string, required: boolean): string => {
-  if (!value) {
-    return required ? "请输入验证码" : "";
-  }
-  if (!/^\d{6}$/.test(value)) {
-    return "验证码需为 6 位数字";
-  }
-  return "";
-};
-
-/**
- * 校验密码格式
- * @param value 密码值
- * @returns 错误信息，无错误返回空字符串
- */
-const validatePassword = (value: string): string => {
-  if (!value) return "请输入登录密码";
-  if (value.length < 8) return "密码长度至少 8 位";
-  return "";
-};
-
-/**
- * 校验确认密码是否一致
- * @param currentPassword 当前密码
- * @param value 确认密码值
- * @returns 错误信息，无错误返回空字符串
- */
-const validateConfirmPassword = (
-  currentPassword: string,
-  value: string
-): string => {
-  if (!value) return "请再次输入密码";
-  if (value !== currentPassword) return "两次输入的密码不一致";
-  return "";
-};
-
-// ===== 5. 注释代码函数区 =====
-
-// ===== 6. 错误处理函数区域 =====
-
-// ===== 7. 数据处理函数区域 =====
-
-// ===== 8. UI渲染逻辑区域 =====
 /**
  * 忘记密码页面组件
+ * @returns 页面JSX元素
  */
 const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
 
+  /** 背景图片轮播 */
+  const { currentIndex: currentBgIndex, currentImage } = useBgCarousel({
+    preload: true,
+    autoPlay: true
+  });
+
+  /** 验证码倒计时 */
+  const { countdown: captchaCountdown, start: startCountdown, isCounting: isCountingDown } = useCountdown({
+    duration: 60
+  });
+
   // --- 状态定义 ---
-  /** 当前背景索引 */
-  const [currentBgIndex, setCurrentBgIndex] = React.useState(0);
+  /** 当前步骤索引 */
+  const [stepIndex, setStepIndex] = React.useState(0);
   /** 账号 */
   const [account, setAccount] = React.useState("");
   /** 邮箱 */
   const [email, setEmail] = React.useState("");
   /** 验证码 */
   const [captcha, setCaptcha] = React.useState("");
-  /** 是否提交中 */
-  const [submitting, setSubmitting] = React.useState(false);
-  /** 当前步骤索引 */
-  const [stepIndex, setStepIndex] = React.useState(0);
   /** 新密码 */
   const [newPassword, setNewPassword] = React.useState("");
   /** 确认密码 */
   const [confirmPassword, setConfirmPassword] = React.useState("");
+  /** 是否提交中 */
+  const [submitting, setSubmitting] = React.useState(false);
   /** 账号错误信息 */
   const [accountError, setAccountError] = React.useState("");
   /** 邮箱错误信息 */
@@ -162,8 +81,6 @@ const ForgotPasswordPage: React.FC = () => {
   const [confirmPasswordError, setConfirmPasswordError] = React.useState("");
   /** 表单全局错误信息 */
   const [formError, setFormError] = React.useState("");
-  /** 验证码倒计时 */
-  const [captchaCountdown, setCaptchaCountdown] = React.useState(0);
   const [puzzleTop, setPuzzleTop] = React.useState(0);
   /** 滑块弹窗可见性 */
   const [sliderVisible, setSliderVisible] = React.useState(false);
@@ -178,44 +95,6 @@ const ForgotPasswordPage: React.FC = () => {
   const [codeSent, setCodeSent] = React.useState(false);
   /** 验证令牌（验证码验证通过后获取） */
   const [verifyToken, setVerifyToken] = React.useState<string>("");
-
-  // --- 页面副作用 ---
-  // 页面初始化
-  React.useEffect(() => {
-    let ignore = false;
-    const timer = setTimeout(() => {
-      if (!ignore) {
-        // 页面初始化逻辑
-      }
-    }, 0);
-    return () => {
-      ignore = true;
-      clearTimeout(timer);
-    };
-  }, []);
-
-  // 背景轮播
-  React.useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentBgIndex((prev) => (prev + 1) % BG_IMAGES.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // 验证码倒计时
-  React.useEffect(() => {
-    if (!captchaCountdown) return;
-    const timer = window.setInterval(() => {
-      setCaptchaCountdown(prev => {
-        if (prev <= 1) {
-          window.clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [captchaCountdown]);
 
   // --- 事件处理函数 ---
   /**
@@ -276,7 +155,7 @@ const ForgotPasswordPage: React.FC = () => {
    * 处理发送验证码请求
    */
   const handleSendCaptcha = () => {
-    if (captchaCountdown > 0) return;
+    if (isCountingDown) return;
     const emailMessage = validateEmail(email);
     setEmailError(emailMessage);
     if (emailMessage) {
@@ -333,13 +212,12 @@ const ForgotPasswordPage: React.FC = () => {
         return Promise.reject();
       }
 
-      /** 滑块验证通过后，发送密码重置验证码 */
       await sendPasswordResetCode(email.trim(), result.verifyToken);
 
       setSliderVerified(true);
       setSliderVisible(false);
       setCodeSent(true);
-      setCaptchaCountdown(60);
+      startCountdown();
       return Promise.resolve();
     } catch (error) {
       setSliderError("网络异常，验证失败，请稍后重试");
@@ -375,10 +253,9 @@ const ForgotPasswordPage: React.FC = () => {
     try {
       const publicKeyData = await getPublicKey();
       const encryptedPassword = await rsaEncrypt(newPassword, publicKeyData.publicKey);
-      
-      /** 使用新的三步流程重置密码 */
+
       await resetPassword(email.trim(), verifyToken, encryptedPassword);
-      
+
       window.setTimeout(() => {
         navigate(routes.login);
       }, 800);
@@ -388,22 +265,6 @@ const ForgotPasswordPage: React.FC = () => {
       setSubmitting(false);
     }
   };
-
-  // ===== 9. 页面初始化与事件绑定 =====
-  // 初始化校验或数据预取（如果有）
-  React.useEffect(() => {
-    let ignore = false;
-    const timer = setTimeout(() => {
-      if (!ignore) {
-        // 这里可以执行页面进入时的初始化逻辑，如检查账号状态等
-        // 目前仅作为重复调用修复模式的占位和参考
-      }
-    }, 0);
-    return () => {
-      ignore = true;
-      clearTimeout(timer);
-    };
-  }, []);
 
   /**
    * 渲染主体 JSX
@@ -415,7 +276,7 @@ const ForgotPasswordPage: React.FC = () => {
         <AnimatePresence mode="wait">
           <motion.img
             key={currentBgIndex}
-            src={BG_IMAGES[currentBgIndex]}
+            src={currentImage}
             alt="Background"
             initial={{ opacity: 0, scale: 1.1 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -581,12 +442,11 @@ const ForgotPasswordPage: React.FC = () => {
                     );
                     return;
                   }
-                  
+
                   setFormError("");
                   setSubmitting(true);
-                  
+
                   try {
-                    /** 验证验证码并获取verifyToken */
                     const token = await verifyResetCode(email.trim(), captcha);
                     setVerifyToken(token);
                     setStepIndex(2);
@@ -652,10 +512,10 @@ const ForgotPasswordPage: React.FC = () => {
                         radius="full"
                         variant="flat"
                         onPress={handleSendCaptcha}
-                        isDisabled={captchaCountdown > 0}
+                        isDisabled={isCountingDown}
                         className="h-9 w-[8.5rem] justify-center text-[11px] font-medium bg-[color-mix(in_srgb,var(--primary-color)_14%,transparent)] text-[var(--primary-color)] hover:bg-[color-mix(in_srgb,var(--primary-color)_20%,transparent)] disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        {captchaCountdown > 0
+                        {isCountingDown
                           ? `${captchaCountdown}s 后可重发`
                           : "发送验证码"}
                       </Button>
@@ -802,5 +662,4 @@ const ForgotPasswordPage: React.FC = () => {
   );
 };
 
-// ===== 11. 导出区域 =====
 export default ForgotPasswordPage;

@@ -1,3 +1,13 @@
+/**
+ * 后台管理布局组件
+ * 提供后台管理系统的整体布局，支持多种布局模式（垂直、水平、混合、双栏、Dock）
+ *
+ * @module layouts/AdminLayout
+ * @author wuhuaming
+ * @date 2026-02-18
+ * @version 1.0
+ */
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -35,18 +45,38 @@ import PageTransitionWrapper from "../../components/Motion/PageTransitionWrapper
 import { adminMenuTree } from "../../config/adminMenu";
 import OperationBar from "./OperationBar";
 
+/** 头部图标按钮样式类名 */
 const headerIconButtonClass =
   "inline-flex items-center justify-center rounded-full w-8 h-8 text-[var(--text-color-secondary)] transition-colors transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-sm hover:bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] hover:text-[var(--primary-color)]";
 
+/** 头部导航按钮样式类名 */
 const adminHeaderNavButtonClass =
   "inline-flex items-center gap-1 px-1 h-10 text-xs border-b-2 border-transparent text-[var(--text-color-secondary)] hover:text-[var(--primary-color)] transition-colors duration-150";
 
+/**
+ * 根据图标名称获取图标组件
+ * @param iconName 图标名称
+ * @returns 图标组件
+ */
 const getIcon = (iconName: string) => {
   // @ts-expect-error - iconName is a string but Icons is an object
   const Icon = Icons[iconName] || Icons.FiList;
   return Icon;
 };
 
+/**
+ * 后台管理布局组件
+ * 提供侧边栏导航、顶部导航、多标签页、面包屑等功能
+ *
+ * 支持的布局模式：
+ * - vertical: 垂直布局，侧边栏包含完整菜单
+ * - horizontal: 水平布局，顶部导航栏包含一级菜单
+ * - mixed: 混合布局，顶部显示一级菜单，侧边栏显示二级菜单
+ * - double: 双栏布局，侧边栏分为图标列和菜单列
+ * - dock: Dock模式，底部显示操作栏
+ *
+ * @returns 后台管理布局组件
+ */
 function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,31 +95,45 @@ function AdminLayout() {
     setIsLoading
   } = useAppStore();
 
-  // Handle PageTransition for login flow
+  /**
+   * 处理页面过渡动画
+   * 登录流程中显示2秒过渡效果
+   */
   useEffect(() => {
     if (isLoading) {
       const timer = setTimeout(() => {
         setIsLoading(false);
-      }, 2000); // Show transition for 2 seconds
+      }, 2000);
       return () => clearTimeout(timer);
     }
   }, [isLoading, setIsLoading]);
 
-  // Check authentication status
+  /**
+   * 检查认证状态
+   * 未登录时跳转到登录页
+   */
   useEffect(() => {
     if (!token) {
       navigate(routes.login);
     }
   }, [token, navigate]);
 
-  // Apply navigation font size via CSS variable
+  /**
+   * 应用导航字体大小
+   * 通过CSS变量设置导航字体大小
+   */
   useEffect(() => {
     document.documentElement.style.setProperty("--nav-font-size", `${fontSize}px`);
   }, [fontSize]);
 
+  /** 设置面板是否可见 */
   const [settingsVisible, setSettingsVisible] = useState(false);
+  /** 是否全屏状态 */
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  /**
+   * 监听全屏状态变化
+   */
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -100,6 +144,9 @@ function AdminLayout() {
     };
   }, []);
 
+  /**
+   * 切换全屏状态
+   */
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
@@ -107,18 +154,25 @@ function AdminLayout() {
       document.exitFullscreen();
     }
   };
+
+  /** 侧边栏是否折叠 */
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => layoutMode === "horizontal"
   );
-  const [openKeys, setOpenKeys] = useState<string[]>(["001"]); // Default dashboard
+  /** 展开的菜单项ID列表 */
+  const [openKeys, setOpenKeys] = useState<string[]>(["001"]);
+  /** 多标签页列表 */
   const [tabs, setTabs] = useState<{ key: string; label: string; path: string }[]>(() => {
     const dashboard = adminMenuTree[0]?.children?.[0];
     return dashboard ? [{ key: dashboard.id, label: dashboard.name, path: dashboard.path }] : [];
   });
   
+  /** 当前悬停的一级菜单ID（用于水平布局的下拉菜单） */
   const [hoverSectionKey, setHoverSectionKey] = useState<string | null>(null);
+  /** 悬停延时定时器引用 */
   const hoverTimerRef = useRef<number | null>(null);
 
+  /** 右键菜单状态 */
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;
@@ -131,6 +185,10 @@ function AdminLayout() {
     tabKey: null
   });
 
+  /**
+   * 监听键盘快捷键
+   * Alt+S 切换侧边栏折叠状态
+   */
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.altKey && (event.key === "s" || event.key === "S")) {
@@ -146,8 +204,8 @@ function AdminLayout() {
 
   const currentPath = location.pathname;
 
+  /** 当前激活的二级菜单项 */
   const activeChild = useMemo(() => {
-    // 1. 完全匹配路径
     const found = adminMenuTree
       .flatMap(section => section.children || [])
       .find(child => child.path === currentPath);
@@ -155,7 +213,6 @@ function AdminLayout() {
       return found;
     }
 
-    // 2. 匹配文档编辑/新建页面的前缀，使其高亮“文档列表”
     if (currentPath.includes(`${routes.admin}/document/edit/`)) {
       return adminMenuTree
         .flatMap(section => section.children || [])
@@ -167,6 +224,7 @@ function AdminLayout() {
 
   const activeKey = activeChild?.id ?? "001001";
 
+  /** 当前激活的一级菜单项 */
   const activeParent = useMemo(() => {
     if (!activeChild) {
       return adminMenuTree[0] ?? null;
@@ -179,16 +237,16 @@ function AdminLayout() {
 
   const activeSectionKey = activeParent?.id ?? "001";
   
-  // 手机端菜单分类选中状态
+  /** 手机端菜单分类选中状态 */
   const [mobileActiveSectionId, setMobileActiveSectionId] = useState<string>(activeSectionKey);
+  /** 手机端菜单是否打开 */
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // 当活跃分类变化时，同步手机端菜单的选中分类
   if (activeSectionKey && mobileActiveSectionId !== activeSectionKey) {
     setMobileActiveSectionId(activeSectionKey);
   }
 
-  // Keep track of tabs based on navigation
+  /** 根据导航更新标签页列表 */
   if (activeChild) {
     const exists = tabs.some(tab => tab.key === activeChild.id);
     if (!exists) {
@@ -197,10 +255,18 @@ function AdminLayout() {
     }
   }
 
+  /**
+   * 处理Logo点击
+   * 跳转到首页
+   */
   const handleLogoClick = () => {
     navigate(routes.home);
   };
 
+  /**
+   * 处理用户登出
+   * 清除用户状态并跳转到首页
+   */
   const handleLogout = async () => {
     try {
       await logout();
@@ -217,6 +283,10 @@ function AdminLayout() {
     navigate(routes.home);
   };
 
+  /**
+   * 处理一级菜单展开/折叠
+   * @param sectionId 一级菜单ID
+   */
   const handleSectionToggle = (sectionId: string) => {
     setOpenKeys(previous => {
       const isOpen = previous.includes(sectionId);
@@ -232,6 +302,10 @@ function AdminLayout() {
     });
   };
 
+  /**
+   * 处理菜单项点击
+   * @param menuId 菜单项ID
+   */
   const handleMenuItemClick = (menuId: string) => {
     const matched = adminMenuTree
       .flatMap(section => section.children || [])
@@ -242,6 +316,10 @@ function AdminLayout() {
     navigate(matched.path);
   };
 
+  /**
+   * 处理一级菜单入口点击
+   * @param sectionId 一级菜单ID
+   */
   const handleSectionEntryClick = (sectionId: string) => {
     const section = adminMenuTree.find(item => item.id === sectionId);
     if (!section || !section.children?.length) {
@@ -251,6 +329,10 @@ function AdminLayout() {
     handleMenuItemClick(first.id);
   };
 
+  /**
+   * 处理标签页点击
+   * @param key 标签页key
+   */
   const handleTabClick = (key: string) => {
     const tab = tabs.find(item => item.key === key);
     if (tab) {
@@ -258,6 +340,10 @@ function AdminLayout() {
     }
   };
 
+  /**
+   * 处理标签页关闭
+   * @param key 标签页key
+   */
   const handleTabClose = (key: string) => {
     setTabs(previous => {
       const filtered = previous.filter(item => item.key !== key);
@@ -277,12 +363,20 @@ function AdminLayout() {
     });
   };
 
+  /**
+   * 关闭其他标签页
+   * @param key 保留的标签页key
+   */
   const handleCloseOthers = (key: string) => {
     setTabs(previous => previous.filter(item => item.key === key));
     const current = tabs.find(item => item.key === key);
     if (current) navigate(current.path);
   };
 
+  /**
+   * 关闭所有标签页
+   * 返回到仪表盘页面
+   */
   const handleCloseAll = () => {
     const dashboard = adminMenuTree[0]?.children?.[0];
     if (dashboard) {
@@ -293,6 +387,7 @@ function AdminLayout() {
     }
   };
 
+  /** 面包屑数据 */
   const breadcrumb = useMemo(() => {
     if (!activeChild || !activeParent) {
       return null;
@@ -304,6 +399,7 @@ function AdminLayout() {
     };
   }, [activeChild, activeParent]);
 
+  /** 内容区域容器样式类名 */
   const containerClassName =
     layoutMode === "dock"
       ? "w-full h-full " +
@@ -317,6 +413,10 @@ function AdminLayout() {
           : "") +
         (boxBorderEnabled ? " border border-[var(--border-color)]" : "");
 
+  /**
+   * 渲染顶部导航（水平/混合布局）
+   * @returns 顶部导航组件
+   */
   const renderTopAdminNav = () => {
     if (layoutMode !== "horizontal" && layoutMode !== "mixed") {
       return null;
@@ -424,6 +524,10 @@ function AdminLayout() {
     );
   };
 
+  /**
+   * 渲染垂直布局侧边栏
+   * @returns 垂直侧边栏组件
+   */
   const renderVerticalSidebar = () => (
     <nav 
       className="flex-1 overflow-y-auto py-4 px-3 space-y-6"
@@ -495,6 +599,10 @@ function AdminLayout() {
     </nav>
   );
 
+  /**
+   * 渲染混合布局侧边栏
+   * @returns 混合布局侧边栏组件
+   */
   const renderMixedSidebar = () => {
     const currentSection =
       adminMenuTree.find(item => item.id === activeSectionKey) ?? adminMenuTree[0];
@@ -536,6 +644,10 @@ function AdminLayout() {
     );
   };
 
+  /**
+   * 渲染双栏布局侧边栏
+   * @returns 双栏布局侧边栏组件
+   */
   const renderDoubleSidebar = () => {
     if (!adminMenuTree.length) {
       return null;
@@ -628,13 +740,11 @@ function AdminLayout() {
     );
   };
 
-  // -------------------------
-  // Render: Dock Mode
-  // -------------------------
   if (!token) {
     return null;
   }
 
+  /** Dock模式渲染 */
   if (layoutMode === "dock") {
     return (
       <div
@@ -645,17 +755,14 @@ function AdminLayout() {
           }
         }}
       >
-        {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto px-5 py-[var(--content-padding)] pb-32 scrollbar-hide">
           <PageTransitionWrapper className={containerClassName}>
             <Outlet />
           </PageTransitionWrapper>
         </main>
 
-        {/* Tabs and Breadcrumbs Container */}
         {showTopNav && (
           <div className="fixed bottom-24 left-0 right-0 z-20 flex flex-col items-center justify-center gap-2 pointer-events-none">
-            {/* Breadcrumbs */}
             {breadcrumbEnabled && breadcrumb && (
               <div 
                 className="pointer-events-auto bg-[var(--bg-elevated)]/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-[var(--border-color)] shadow-sm flex items-center gap-2"
@@ -677,7 +784,6 @@ function AdminLayout() {
               </div>
             )}
 
-            {/* Tabs */}
             {multiTabEnabled && tabs.length > 0 && (
               <div 
                 className="pointer-events-auto max-w-[90vw] overflow-x-auto flex gap-1 p-1.5 bg-[var(--bg-elevated)]/80 backdrop-blur-md rounded-2xl border border-[var(--border-color)] shadow-sm scrollbar-hide"
@@ -724,14 +830,12 @@ function AdminLayout() {
           </div>
         )}
 
-        {/* Operation Bar (Dock) */}
         <OperationBar 
           onOpenSettings={() => setSettingsVisible(true)} 
           isFullscreen={isFullscreen}
           toggleFullscreen={toggleFullscreen}
         />
 
-        {/* Context Menu */}
         {contextMenu.visible && contextMenu.tabKey && (
           <div
             className="fixed z-50 bg-[var(--bg-elevated)] border border-[var(--border-color)] rounded-lg shadow-xl text-xs text-[var(--text-color)] min-w-[100px] overflow-hidden"
@@ -778,9 +882,7 @@ function AdminLayout() {
     );
   }
 
-  // -------------------------
-  // Render: Classic Modes (Vertical, Horizontal, Mixed, Double)
-  // -------------------------
+  /** 经典布局模式渲染（垂直、水平、混合、双栏） */
   return (
     <div
       className="min-h-screen flex bg-[var(--bg-color)] text-[var(--text-color)] icon-rotate-global"
@@ -849,7 +951,6 @@ function AdminLayout() {
               </PopoverTrigger>
               <PopoverContent>
                 <div className="flex w-[280px] h-[400px]">
-                  {/* 左侧分类列 */}
                   <div className="w-[120px] bg-[color-mix(in_srgb,var(--primary-color)_3%,transparent)] border-r border-[var(--border-color)] overflow-y-auto py-2">
                     {adminMenuTree.map(section => {
                       const isActive = section.id === mobileActiveSectionId;
@@ -872,7 +973,6 @@ function AdminLayout() {
                       );
                     })}
                   </div>
-                  {/* 右侧子项列 */}
                   <div className="flex-1 bg-[var(--bg-elevated)] overflow-y-auto py-2">
                     {adminMenuTree
                       .find(s => s.id === mobileActiveSectionId)

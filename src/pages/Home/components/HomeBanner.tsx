@@ -1,12 +1,17 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 首页Banner组件
+ * @module pages/Home/components/HomeBanner
+ * @description 首页英雄区Banner，包含粒子动画背景和CTA按钮
+ */
+
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { routes } from "../../../router/routes";
-import { ShinyButton } from "../../../components/MagicUI/ShinyButton";
+import { routes } from "@/router/routes";
+import { ShinyButton } from "@/components/MagicUI/ShinyButton";
 import { ArrowRight, Box, Layers, Zap, type LucideProps } from "lucide-react";
-import ParticleBanner from "../../../components/Three/ParticleBanner";
-import ColourfulText from "../../../components/Aceternity/ColourfulText";
+import ParticleBanner from "@/components/Three/ParticleBanner";
+import ColourfulText from "@/components/Aceternity/ColourfulText";
 
 // ===== 2. TODO待处理导入区域 =====
 

@@ -1,5 +1,10 @@
-// ===== 1. 依赖导入区域 =====
-import React from "react";
+/**
+ * 全局搜索页面
+ * @module pages/AllSearch
+ * @description 全站搜索页面，支持综合、视频、文档、工具等多类型搜索
+ */
+
+import React, { useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,18 +18,19 @@ import {
 import { FiPlay, FiEye, FiUsers, FiFileText, FiMessageSquare } from "react-icons/fi";
 
 import { AdminTabs } from "@/components/Admin/AdminTabs";
-import { routes } from "../../router/routes";
-import Shuffle from "../../components/Motion/Shuffle";
-import TextType from "../../components/Motion/TextType";
-import { EmptyState } from "../../components/EmptyState";
+import { routes } from "@/router/routes";
+import Shuffle from "@/components/Motion/Shuffle";
+import TextType from "@/components/Motion/TextType";
+import { EmptyState } from "@/components/EmptyState";
 
-import { PlaceholdersAndVanishInput } from "../../components/Aceternity/PlaceholdersAndVanishInput";
+import { PlaceholdersAndVanishInput } from "@/components/Aceternity/PlaceholdersAndVanishInput";
 import {
   type SearchCategory,
   type SearchSortKey as SortKey,
   type SearchResult,
   searchAll,
-} from "../../api/front/search";
+} from "@/api/front/search";
+import { useAdminDataLoader } from "@/hooks";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -126,90 +132,52 @@ function AllSearchPage() {
   const [timeRange, setTimeRange] = React.useState<string | null>(null);
   const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = React.useState(true);
-
-  const [results, setResults] = React.useState<SearchResult[]>([]);
   const [page, setPage] = React.useState(1);
-  const [total, setTotal] = React.useState(0);
-  const [isLoading, setIsLoading] = React.useState(false);
 
   const PAGE_SIZE = 16;
 
-  /**
-   * 加载搜索结果数据
-   * @param signal 用于判断请求是否已被忽略
-   */
-  const loadResults = React.useCallback(async (checkIgnore: () => boolean) => {
-    const currentSearchParams = {
-      keyword: appliedKeyword || undefined,
-      type: activeType,
-      sort: activeSort,
-      duration,
-      timeRange,
-      category: activeCategory,
-      page,
-      pageSize: PAGE_SIZE,
-    };
+  // 使用自定义 hook 加载搜索结果
+  const {
+    data: searchData,
+    loading: isLoading,
+    loadData: loadResults
+  } = useAdminDataLoader<{ list: SearchResult[]; total: number }>();
 
-    // 确保在请求真正开始前设为 loading
-    setIsLoading(true);
+  /** 加载搜索结果 */
+  const loadSearchResults = useCallback(async () => {
+    await loadResults(async () => {
+      const currentSearchParams = {
+        keyword: appliedKeyword || undefined,
+        type: activeType,
+        sort: activeSort,
+        duration,
+        timeRange,
+        category: activeCategory,
+        page,
+        pageSize: PAGE_SIZE,
+      };
 
-    try {
-      // 不直接传递 setIsLoading 给 searchAll，避免它在 handleRequest 的 finally 中过早关闭 loading
       const data = await searchAll(currentSearchParams);
       
-      // 如果请求已被忽略，则不更新状态
-      if (checkIgnore()) return;
-
-      let list: SearchResult[] = [];
-      let totalCount = 0;
-
       if (Array.isArray(data)) {
-        list = data;
-        totalCount = data.length;
+        return { list: data, total: data.length };
       } else if (data && Array.isArray(data.list)) {
-        list = data.list;
-        totalCount = data.total || 0;
+        return { list: data.list, total: data.total || 0 };
       }
+      return { list: [], total: 0 };
+    }, {
+      showErrorToast: true,
+      errorMessage: '加载搜索结果失败'
+    });
+  }, [appliedKeyword, activeType, activeSort, duration, timeRange, activeCategory, page, loadResults]);
 
-      setResults(list);
-      setTotal(totalCount);
-    } catch {
-      if (checkIgnore()) return;
-      setResults([]);
-      setTotal(0);
-    } finally {
-      // 只有在非忽略的情况下才关闭 loading
-      if (!checkIgnore()) {
-        setIsLoading(false);
-      }
-    }
-  }, [
-    appliedKeyword,
-    activeType,
-    activeSort,
-    duration,
-    timeRange,
-    activeCategory,
-    page,
-  ]);
+  const results = searchData?.list || [];
+  const total = searchData?.total || 0;
 
   // 初始化与参数变化加载
   React.useEffect(() => {
-    let ignore = false;
-    
-    // 切换分类或搜索词时，立即进入加载状态并清空当前结果，避免展示过时数据（类似B站体验）
-    setIsLoading(true);
-    setResults([]);
-    
-    const timer = setTimeout(() => {
-      loadResults(() => ignore);
-    }, 0);
-
-    return () => {
-      ignore = true;
-      clearTimeout(timer);
-    };
-  }, [loadResults]);
+    loadSearchResults();
+  }, [loadSearchResults]);
 
   // Reset page when filters change
   React.useEffect(() => {

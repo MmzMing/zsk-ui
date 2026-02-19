@@ -1,8 +1,13 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 首页
+ * @module pages/Home
+ * @description 网站首页，包含Banner、视频推荐、功能特性、文章推荐、评价展示等模块
+ */
+
 import React, { Suspense, useEffect } from "react";
 import HomeBanner from "./components/HomeBanner";
-import { LazyLoadWrapper } from "../../components/LazyLoadWrapper";
-import { Loading } from "../../components/Loading";
+import { LazyLoadWrapper } from "@/components/LazyLoadWrapper";
+import { Loading } from "@/components/Loading";
 
 // ===== 2. TODO待处理导入区域 =====
 const VideoRecommend = React.lazy(() => import("./components/VideoRecommend"));

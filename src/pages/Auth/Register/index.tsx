@@ -1,5 +1,10 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useState, useEffect } from "react";
+/**
+ * 注册页面
+ * @module pages/Auth/Register
+ * @description 用户注册页面，支持邮箱验证、滑块验证码、密码强度检测等功能
+ */
+
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import SliderCaptcha, { type VerifyParam } from "rc-slider-captcha";
@@ -23,188 +28,80 @@ import { TextType } from "@/components/Motion/TextType";
 import InteractiveHoverButton from "@/components/Motion/InteractiveHoverButton";
 import { UserAgreementModal, PrivacyPolicyModal } from "@/components/AgreementModals";
 import { verifySliderCaptcha, preCheckAndGetCaptcha, register, getPublicKey, type SliderCaptchaData } from "@/api/auth";
-import { rsaEncrypt } from "@/lib/rsaEncrypt";
-
-// ===== 2. TODO待处理导入区域 =====
-
-// ===== 3. 状态控制逻辑区域 =====
-const BG_IMAGES = ["/auth/auth-Polling-1.png", "/auth/auth-Polling-2.png", "/auth/auth-Polling-3.png"];
-
-// ===== 4. 通用工具函数区域 =====
-/**
- * 验证邮箱格式
- * @param value 邮箱地址
- */
-const validateEmail = (value: string): string => {
-  const trimmed = value.trim();
-  if (!trimmed) return "请输入邮箱地址";
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(trimmed)) return "邮箱格式不正确";
-  return "";
-};
+import { rsaEncrypt, validateEmail, validateUsername, validatePassword, validateConfirmPassword, validateCaptcha, evaluatePasswordStrength, getPasswordStrengthColor } from "@/utils";
+import { useBgCarousel, useCountdown } from "@/hooks";
 
 /**
- * 验证用户名格式
- * @param value 用户名
+ * 注册页面组件
+ * @returns 注册页面JSX元素
  */
-const validateUsername = (value: string): string => {
-  const trimmed = value.trim();
-  if (!trimmed) return "请输入用户名";
-  const usernamePattern = /^[a-zA-Z0-9_.-]{3,20}$/;
-  if (!usernamePattern.test(trimmed)) return "用户名需为 3-20 位字母、数字或符号 ._-";
-  return "";
-};
-
-/**
- * 评估密码强度
- * @param value 密码
- */
-const evaluatePasswordStrength = (value: string): string => {
-  if (!value) return "";
-  let score = 0;
-  if (value.length >= 8) score += 1;
-  if (/[A-Z]/.test(value)) score += 1;
-  if (/[a-z]/.test(value)) score += 1;
-  if (/\d/.test(value)) score += 1;
-  if (/[^A-Za-z0-9]/.test(value)) score += 1;
-  if (score <= 2) return "弱";
-  if (score === 3 || score === 4) return "中";
-  return "强";
-};
-
-/**
- * 验证密码格式
- * @param value 密码
- */
-const validatePassword = (value: string): string => {
-  if (!value) return "请输入登录密码";
-  if (value.length < 8) return "密码长度至少 8 位";
-  return "";
-};
-
-/**
- * 验证确认密码
- * @param currentPassword 当前密码
- * @param value 确认密码
- */
-const validateConfirmPassword = (currentPassword: string, value: string): string => {
-  if (!value) return "请再次输入密码";
-  if (value !== currentPassword) return "两次输入的密码不一致";
-  return "";
-};
-
-/**
- * 验证验证码格式
- * @param value 验证码
- * @param required 是否必填
- */
-const validateCaptcha = (value: string, required: boolean): string => {
-  if (!value) {
-    return required ? "请输入验证码" : "";
-  }
-  if (!/^\d{6}$/.test(value)) {
-    return "验证码需为 6 位数字";
-  }
-  return "";
-};
-
-// ===== 5. 注释代码函数区 =====
-
-// ===== 6. 错误处理函数区域 =====
-
-// ===== 7. 数据处理函数区域 =====
-
-// ===== 8. UI渲染逻辑区域 =====
-
-// ===== 9. 页面初始化与事件绑定 =====
 function RegisterPage() {
   const navigate = useNavigate();
-  
-  // 背景轮播状态
-  const [currentBgIndex, setCurrentBgIndex] = useState(0);
 
-  // 表单状态
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [captcha, setCaptcha] = useState("");
-  const [agree, setAgree] = useState(false);
-  
-  // UI状态
-  const [submitting, setSubmitting] = useState(false);
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
-  const [showUserAgreement, setShowUserAgreement] = useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
-  
-  // 验证状态
-  const [emailError, setEmailError] = useState("");
-  const [usernameError, setUsernameError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [confirmPasswordError, setConfirmPasswordError] = useState("");
-  const [captchaError, setCaptchaError] = useState("");
-  const [formError, setFormError] = useState("");
-  const [passwordStrength, setPasswordStrength] = useState("");
-  
-  // 滑块验证码状态
-  const [sliderVisible, setSliderVisible] = useState(false);
-  const [sliderVerified, setSliderVerified] = useState(false);
-  const [sliderCaptchaInfo, setSliderCaptchaInfo] = useState<SliderCaptchaData | null>(null);
-  const [sliderError, setSliderError] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const [captchaCountdown, setCaptchaCountdown] = useState(0);
-  const [puzzleTop, setPuzzleTop] = useState(0);
+  /** 背景图片轮播 */
+  const { currentIndex: currentBgIndex, currentImage } = useBgCarousel({
+    preload: true,
+    autoPlay: true
+  });
 
-  useEffect(() => {
-    let ignore = false;
-    const timer = setTimeout(() => {
-      if (!ignore) {
-        // 页面初始化逻辑
-      }
-    }, 0);
-    return () => {
-      ignore = true;
-      clearTimeout(timer);
-    };
-  }, []);
+  /** 验证码倒计时 */
+  const { countdown: captchaCountdown, start: startCountdown, isCounting: isCountingDown } = useCountdown({
+    duration: 60
+  });
 
-  // 背景轮播副作用
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentBgIndex((prev) => (prev + 1) % BG_IMAGES.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+  /** 表单字段状态 */
+  const [email, setEmail] = React.useState("");
+  const [username, setUsername] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [captcha, setCaptcha] = React.useState("");
+  const [agree, setAgree] = React.useState(false);
 
-  // 倒计时副作用
-  useEffect(() => {
-    if (!captchaCountdown) return;
-    const timer = window.setInterval(() => {
-      setCaptchaCountdown((previous) => {
-        if (previous <= 1) {
-          window.clearInterval(timer);
-          return 0;
-        }
-        return previous - 1;
-      });
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [captchaCountdown]);
+  /** UI状态 */
+  const [submitting, setSubmitting] = React.useState(false);
+  const [passwordVisible, setPasswordVisible] = React.useState(false);
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = React.useState(false);
+  const [showUserAgreement, setShowUserAgreement] = React.useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = React.useState(false);
 
-  // 表单变更处理
+  /** 验证错误状态 */
+  const [emailError, setEmailError] = React.useState("");
+  const [usernameError, setUsernameError] = React.useState("");
+  const [passwordError, setPasswordError] = React.useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = React.useState("");
+  const [captchaError, setCaptchaError] = React.useState("");
+  const [formError, setFormError] = React.useState("");
+  const [passwordStrength, setPasswordStrength] = React.useState("");
+
+  /** 滑块验证码状态 */
+  const [sliderVisible, setSliderVisible] = React.useState(false);
+  const [sliderVerified, setSliderVerified] = React.useState(false);
+  const [sliderCaptchaInfo, setSliderCaptchaInfo] = React.useState<SliderCaptchaData | null>(null);
+  const [sliderError, setSliderError] = React.useState("");
+  const [codeSent, setCodeSent] = React.useState(false);
+  const [puzzleTop, setPuzzleTop] = React.useState(0);
+
+  /**
+   * 处理邮箱输入变更
+   */
   const handleEmailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setEmail(value);
     setEmailError(value ? validateEmail(value) : "");
   };
 
+  /**
+   * 处理用户名输入变更
+   */
   const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setUsername(value);
     setUsernameError(value ? validateUsername(value) : "");
   };
 
+  /**
+   * 处理密码输入变更
+   */
   const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setPassword(value);
@@ -220,36 +117,44 @@ function RegisterPage() {
     }
   };
 
+  /**
+   * 处理确认密码输入变更
+   */
   const handleConfirmPasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setConfirmPassword(value);
     setConfirmPasswordError(value ? validateConfirmPassword(password, value) : "");
   };
 
+  /**
+   * 处理验证码输入变更
+   */
   const handleCaptchaChange = (value: string) => {
     const digits = value.replace(/\D/g, "");
     setCaptcha(digits);
     setCaptchaError(validateCaptcha(digits, sliderVerified));
   };
 
-  // 发送验证码前置检查
+  /**
+   * 发送验证码前置检查
+   */
   const handleSendCaptcha = () => {
-    if (captchaCountdown > 0) return;
-    
+    if (isCountingDown) return;
+
     const emailMessage = validateEmail(email);
     const usernameMessage = validateUsername(username);
     const passwordMessage = validatePassword(password);
     const confirmPasswordMessage = validateConfirmPassword(password, confirmPassword);
-    
+
     setEmailError(emailMessage);
     setUsernameError(usernameMessage);
     setPasswordError(passwordMessage);
     setConfirmPasswordError(confirmPasswordMessage);
-    
+
     if (emailMessage || usernameMessage || passwordMessage || confirmPasswordMessage) {
       return;
     }
-    
+
     setFormError("");
     setSliderVisible(true);
     setSliderVerified(false);
@@ -257,7 +162,9 @@ function RegisterPage() {
     setSliderError("");
   };
 
-  // 请求滑块验证码
+  /**
+   * 请求滑块验证码
+   */
   const requestSliderCaptcha = async () => {
     try {
       const data = await preCheckAndGetCaptcha();
@@ -272,12 +179,13 @@ function RegisterPage() {
       };
     } catch {
       setSliderError("滑块验证码加载失败，请稍后重试");
-      // 抛出错误以通知组件
       throw new Error("request slider captcha failed");
     }
   };
 
-  // 处理滑块验证结果
+  /**
+   * 处理滑块验证结果
+   */
   const handleSliderVerify = async (data: VerifyParam) => {
     if (!sliderCaptchaInfo) {
       setSliderError("验证码已失效，请刷新重试");
@@ -295,11 +203,11 @@ function RegisterPage() {
         setSliderError("验证失败，请重新尝试");
         return Promise.reject();
       }
-      
+
       setSliderVerified(true);
       setSliderVisible(false);
       setCodeSent(true);
-      setCaptchaCountdown(60);
+      startCountdown();
       return Promise.resolve();
     } catch {
       setSliderError("网络异常，验证失败，请稍后重试");
@@ -307,7 +215,9 @@ function RegisterPage() {
     }
   };
 
-  // 提交注册
+  /**
+   * 提交注册表单
+   */
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (submitting) return;
@@ -345,7 +255,7 @@ function RegisterPage() {
       const publicKeyData = await getPublicKey();
       const encryptedPassword = await rsaEncrypt(password, publicKeyData.publicKey);
       const encryptedConfirmPassword = await rsaEncrypt(confirmPassword, publicKeyData.publicKey);
-      
+
       await register({
         username,
         email,
@@ -354,8 +264,7 @@ function RegisterPage() {
         code: captcha,
         uuid: sliderCaptchaInfo?.uuid,
       });
-      
-      // 注册成功跳转
+
       addToast({
         title: "注册成功",
         description: "请使用注册的账号登录",
@@ -375,7 +284,7 @@ function RegisterPage() {
         <AnimatePresence mode="wait">
           <motion.img
             key={currentBgIndex}
-            src={BG_IMAGES[currentBgIndex]}
+            src={currentImage}
             alt="Background"
             initial={{ opacity: 0, scale: 1.1 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -542,15 +451,7 @@ function RegisterPage() {
               />
               <div className="flex items-center justify-between text-[11px]">
                 {passwordStrength ? (
-                  <span
-                    className={
-                      passwordStrength === "弱"
-                        ? "text-red-400"
-                        : passwordStrength === "中"
-                          ? "text-amber-300"
-                          : "text-emerald-400"
-                    }
-                  >
+                  <span className={getPasswordStrengthColor(passwordStrength)}>
                     密码强度：{passwordStrength}
                   </span>
                 ) : null}
@@ -620,10 +521,10 @@ function RegisterPage() {
                     radius="full"
                     variant="flat"
                     onPress={handleSendCaptcha}
-                    isDisabled={captchaCountdown > 0}
+                    isDisabled={isCountingDown}
                     className="h-9 w-[8.5rem] justify-center text-[11px] font-medium bg-[color-mix(in_srgb,var(--primary-color)_14%,transparent)] text-[var(--primary-color)] hover:bg-[color-mix(in_srgb,var(--primary-color)_20%,transparent)] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {captchaCountdown > 0 ? `${captchaCountdown}s 后可重发` : "发送邮箱验证码"}
+                    {isCountingDown ? `${captchaCountdown}s 后可重发` : "发送邮箱验证码"}
                   </Button>
                 </div>
                 <div className="text-[10px] text-[var(--text-color-secondary)] pl-1">
@@ -700,7 +601,7 @@ function RegisterPage() {
           </form>
         </div>
       </div>
-      
+
       <Modal
         isOpen={sliderVisible}
         onOpenChange={(open) => {
@@ -759,7 +660,4 @@ function RegisterPage() {
   );
 }
 
-// ===== 10. TODO任务管理区域 =====
-
-// ===== 11. 导出区域 =====
 export default RegisterPage;

@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { motion, useMotionValue, useSpring, useTransform, MotionValue } from "framer-motion";
-import { cn } from "../../lib/utils";
+import { cn } from "@/utils";
 
 export interface DockProps extends VariantProps<typeof dockVariants> {
   className?: string;

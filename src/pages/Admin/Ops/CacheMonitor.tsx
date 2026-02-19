@@ -1,27 +1,29 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 缓存监控页面
+ * @module pages/Admin/Ops/CacheMonitor
+ * @description 缓存实例监控页面，展示缓存命中率、QPS趋势等指标
+ */
+
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Card, Chip, Button, Tab, addToast } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { Loading } from "@/components/Loading";
 import type { ColumnConfig, LineConfig } from "@ant-design/plots";
 import { Column, Line } from "@ant-design/plots";
-import { useAppStore } from "../../../store";
+import { useAppStore } from "@/store";
 import {
   CacheInstanceItem as CacheInstance,
   getCacheMonitorInitialData,
   getCacheInstanceDetailData,
   clearCacheInstanceData,
   CacheLogItem,
-} from "../../../api/admin/ops";
+} from "@/api/admin/ops";
+import { useAdminDataLoader } from "@/hooks";
 
 // ===== 2. TODO待处理导入区域 =====
 
 function CacheMonitorPage() {
   // ===== 3. 状态控制逻辑区域 =====
-  /** 是否正在加载实例列表 */
-  const [loading, setLoading] = useState(false);
-  /** 是否正在加载趋势数据 */
-  const [loadingTrend, setLoadingTrend] = useState(false);
   /** 实例排序顺序 */
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   /** 当前选中的实例 ID */
@@ -36,6 +38,25 @@ function CacheMonitorPage() {
   const [qpsTrendData, setQpsTrendData] = useState<ColumnConfig["data"]>([]);
   /** 缓存操作日志 */
   const [cacheLogs, setCacheLogs] = useState<CacheLogItem[]>([]);
+  
+  /** 初始化数据加载器 */
+  const { loading: loading, loadData: fetchInitialData } = useAdminDataLoader<{
+    instances: CacheInstance[];
+    defaultInstance: CacheInstance | null;
+    detail: {
+      hitRateTrendData: unknown[] | undefined;
+      qpsTrendData: unknown[] | undefined;
+      cacheLogs: CacheLogItem[];
+    } | null;
+  }>();
+  /** 详情数据加载器 */
+  const { loading: loadingTrend, loadData: fetchDetailData } = useAdminDataLoader<{
+    hitRateTrendData: unknown[] | undefined;
+    qpsTrendData: unknown[] | undefined;
+    cacheLogs: CacheLogItem[];
+  }>();
+  /** 清理缓存加载器 */
+  const { loadData: fetchClearCache } = useAdminDataLoader<boolean>();
   /** 应用主题模式 */
   const { themeMode } = useAppStore();
 
@@ -58,22 +79,25 @@ function CacheMonitorPage() {
    * @param error 错误对象
    * @param prefix 错误前缀描述
    */
-  const showErrorFn = (error: unknown, prefix: string) => {
+  const showErrorFn = useCallback((error: unknown, prefix: string) => {
     const message = error instanceof Error ? error.message : String(error);
     addToast({
       title: `${prefix}失败`,
       description: message,
       color: "danger",
     });
-  };
+  }, []);
 
   // ===== 7. 数据处理函数区域 =====
   /** 加载初始实例列表及默认详情 */
   const loadInitialData = useCallback(async () => {
-    const result = await getCacheMonitorInitialData({
-      setLoading,
-      setLoadingTrend,
+    const result = await fetchInitialData(() => getCacheMonitorInitialData({
+      setLoading: () => {},
+      setLoadingTrend: () => {},
       onError: (err) => showErrorFn(err, "加载实例列表"),
+    }), {
+      showErrorToast: true,
+      errorMessage: '加载缓存监控数据失败'
     });
 
     if (result && result.instances.length > 0) {
@@ -86,16 +110,19 @@ function CacheMonitorPage() {
         setCacheLogs(result.detail.cacheLogs || []);
       }
     }
-  }, []);
+  }, [showErrorFn, fetchInitialData]);
 
   /** 加载选中实例的详情数据 */
   const loadDetailData = useCallback(async (instanceId: string) => {
     if (!instanceId) return;
 
-    const result = await getCacheInstanceDetailData({
+    const result = await fetchDetailData(() => getCacheInstanceDetailData({
       instanceId,
-      setLoading: setLoadingTrend,
-      onError: (err) => showErrorFn(err, "加载详情数据"),
+      setLoading: () => {},
+      onError: (err: unknown) => showErrorFn(err, "加载实例详情")
+    }), {
+      showErrorToast: true,
+      errorMessage: '加载缓存实例详情失败'
     });
 
     if (result) {
@@ -103,13 +130,16 @@ function CacheMonitorPage() {
       setQpsTrendData(result.qpsTrendData || []);
       setCacheLogs(result.cacheLogs || []);
     }
-  }, []);
+  }, [showErrorFn, fetchDetailData]);
 
   /** 处理清空缓存操作 */
   const handleClearCache = async () => {
-    const success = await clearCacheInstanceData({
-      setLoading: setLoadingTrend,
+    const success = await fetchClearCache(() => clearCacheInstanceData({
+      setLoading: () => {},
       onError: (err) => showErrorFn(err, "清理缓存"),
+    }), {
+      showErrorToast: true,
+      errorMessage: '清理缓存失败'
     });
 
     if (success) {

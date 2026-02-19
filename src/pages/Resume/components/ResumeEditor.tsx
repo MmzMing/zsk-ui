@@ -1,3 +1,9 @@
+/**
+ * 简历编辑器组件
+ * @module pages/Resume/components/ResumeEditor
+ * @description 简历内容编辑区域，支持模块拖拽排序和内容编辑
+ */
+
 import React from "react";
 import { Accordion, AccordionItem, Tooltip } from "@heroui/react";
 import { useResumeStore } from "@/store/resumeStore";

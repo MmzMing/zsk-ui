@@ -1,3 +1,9 @@
+/**
+ * 基本信息表单组件
+ * @module pages/Resume/components/BasicInfoForm
+ * @description 简历基本信息编辑表单，包含姓名、联系方式、头像等字段
+ */
+
 import React, { useRef } from "react";
 import { Input, Textarea, Avatar } from "@heroui/react";
 import { User, Phone, Mail, Github, MapPin, Briefcase, Camera } from "lucide-react";

@@ -1,23 +1,28 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 视频详情页面
+ * @module pages/VideoDetail
+ * @description 视频播放详情页，支持点赞、收藏、评论等功能
+ */
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Avatar, Textarea, Accordion, AccordionItem, addToast } from "@heroui/react";
 import { FiThumbsUp, FiStar, FiShare2, FiMessageSquare, FiUserPlus, FiX } from "react-icons/fi";
-import { routes } from "../../router/routes";
-import { useUserStore } from "../../store";
-import { Loading } from "../../components/Loading";
+import { routes } from "@/router/routes";
+import { useUserStore } from "@/store";
+import { Loading } from "@/components/Loading";
 import { 
   fetchVideoDetail, 
   toggleVideoLike, 
   toggleVideoFavorite, 
-  toggleCommentLike,
+  toggleVideoCommentLike,
   fetchVideoComments,
   postVideoComment,
   type VideoDetail, 
   type CommentItem 
-} from "../../api/front/video";
-import { toggleFollowUser } from "../../api/front/user";
-import VideoPlayer from "../../components/VideoPlayer";
+} from "@/api/front/video";
+import { toggleFollow } from "@/api/front/user";
+import VideoPlayer from "@/components/VideoPlayer";
 import { useCallback } from "react";
 // ===== 2. TODO待处理导入区域 =====
 
@@ -139,7 +144,7 @@ function VideoDetail() {
       });
     };
 
-    await toggleCommentLike(commentId);
+    await toggleVideoCommentLike(commentId);
     setComments(prev => updateComments(prev));
     if (newIsLiked) {
       addToast({ title: "点赞成功", color: "success" });
@@ -161,7 +166,7 @@ function VideoDetail() {
     if (!handleCheckLogin() || !video) return;
     const newIsFollowing = !video.author.isFollowing;
     
-    await toggleFollowUser(video.author.id);
+    await toggleFollow(video.author.id);
     
     setVideo(prev => prev ? { 
       ...prev, 
@@ -192,8 +197,8 @@ function VideoDetail() {
       replyToId: replyingTo?.id
     });
 
-    if (res && res.data) {
-      const newComment = res.data;
+    if (res) {
+      const newComment = res;
       addToast({ title: "评论成功", color: "success" });
       setCommentText("");
       setReplyingTo(null);
@@ -325,11 +330,11 @@ function VideoDetail() {
 
       const res = await fetchVideoDetail(id, setLoading);
       if (getIgnore()) return;
-      if (res && res.data) setVideo(res.data);
+      if (res) setVideo(res);
 
       const commentsRes = await fetchVideoComments(id, { page: 1, pageSize: 20, sort: commentSort });
       if (getIgnore()) return;
-      if (commentsRes?.data?.list) setComments(commentsRes.data.list);
+      if (commentsRes?.list) setComments(commentsRes.list);
   }, [id, commentSort]);
 
   useEffect(() => {

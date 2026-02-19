@@ -1,3 +1,9 @@
+/**
+ * 简历工具栏组件
+ * @module pages/Resume/components/ResumeToolbar
+ * @description 简历编辑器顶部工具栏，提供保存、导出、缩放、样式设置等功能
+ */
+
 import React from "react";
 import { 
   Button, 

@@ -1,5 +1,10 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useMemo, useEffect, useState, useCallback } from "react";
+/**
+ * 后台管理首页
+ * @module pages/Admin/index
+ * @description 后台管理首页 - 仪表盘总览，展示概览卡片、流量统计和访问趋势
+ */
+
+import React, { useMemo, useEffect, useCallback } from "react";
 import { Card, Chip, Button, Tooltip, Tab } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import {
@@ -12,7 +17,7 @@ import {
 } from "react-icons/fi";
 import type { ColumnConfig, LineConfig } from "@ant-design/plots";
 import { Column, Line } from "@ant-design/plots";
-import { useAppStore } from "../../store";
+import { useAppStore } from "@/store";
 import { 
   fetchDashboardOverview, 
   fetchDashboardTraffic, 
@@ -20,8 +25,10 @@ import {
   type DashboardOverviewItem,
   type DashboardTrafficItem,
   type DashboardTrendItem
-} from "../../api/admin/dashboard";
-import Loading from "../../components/Loading";
+} from "@/api/admin/dashboard";
+import Loading from "@/components/Loading";
+import { useAdminDataLoader } from "@/hooks";
+import { handleError } from "@/utils";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -32,14 +39,15 @@ import Loading from "../../components/Loading";
 function AdminPage() {
   const { themeMode } = useAppStore();
 
-  /** 概览卡片数据 */
-  const [overviewCards, setOverviewCards] = useState<DashboardOverviewItem[]>([]);
-  /** 流量统计数据 */
-  const [trafficData, setTrafficData] = useState<DashboardTrafficItem[]>([]);
-  /** 访问趋势数据 */
-  const [trendData, setTrendData] = useState<DashboardTrendItem[]>([]);
-  /** 加载状态 */
-  const [isLoading, setIsLoading] = useState(true);
+  /** 概览卡片数据加载器 */
+  const { data: overviewCards, loading: overviewLoading, loadData: loadOverviewData } = useAdminDataLoader<DashboardOverviewItem[]>();
+  /** 流量统计数据加载器 */
+  const { data: trafficData, loading: trafficLoading, loadData: loadTrafficData } = useAdminDataLoader<DashboardTrafficItem[]>();
+  /** 访问趋势数据加载器 */
+  const { data: trendData, loading: trendLoading, loadData: loadTrendData } = useAdminDataLoader<DashboardTrendItem[]>();
+
+  /** 整体加载状态 */
+  const isLoading = overviewLoading || trafficLoading || trendLoading;
 
   /** 图表主题配置 */
   const chartTheme = useMemo(() => {
@@ -54,7 +62,7 @@ function AdminPage() {
 
   /** 柱状图配置 */
   const columnConfig: ColumnConfig = useMemo(() => ({
-    data: trafficData,
+    data: trafficData || [],
     isGroup: true,
     xField: "date",
     yField: "value",
@@ -84,7 +92,7 @@ function AdminPage() {
 
   /** 折线图配置 */
   const lineConfig: LineConfig = useMemo(() => ({
-    data: trendData,
+    data: trendData || [],
     xField: "date",
     yField: "value",
     smooth: true,
@@ -120,20 +128,28 @@ function AdminPage() {
    * 获取仪表盘页面初始化数据
    */
   const handleFetchInitData = useCallback(async () => {
-    setIsLoading(true);
     try {
-      const [overviewRes, trafficRes, trendRes] = await Promise.all([
-        fetchDashboardOverview(),
-        fetchDashboardTraffic({ range: "7d" }),
-        fetchDashboardTrend({ range: "7d" })
+      await Promise.all([
+        loadOverviewData(() => fetchDashboardOverview(), {
+          showErrorToast: true,
+          errorMessage: '获取概览数据失败'
+        }),
+        loadTrafficData(() => fetchDashboardTraffic({ range: "7d" }), {
+          showErrorToast: true,
+          errorMessage: '获取流量数据失败'
+        }),
+        loadTrendData(() => fetchDashboardTrend({ range: "7d" }), {
+          showErrorToast: true,
+          errorMessage: '获取趋势数据失败'
+        })
       ]);
-      setOverviewCards(overviewRes);
-      setTrafficData(trafficRes);
-      setTrendData(trendRes);
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: '加载仪表盘数据失败'
+      });
     }
-  }, []);
+  }, [loadOverviewData, loadTrafficData, loadTrendData]);
 
   // ===== 8. UI渲染逻辑区域 =====
   /**
@@ -184,7 +200,7 @@ function AdminPage() {
           </Card>
         ))
       ) : (
-        overviewCards.map(item => {
+        (overviewCards || []).map(item => {
           // 处理图标：如果是组件则直接使用，否则根据 key 映射
           const Icon = (item.icon && typeof item.icon !== 'string')
             ? item.icon

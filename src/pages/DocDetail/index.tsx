@@ -1,13 +1,18 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 文档详情页面
+ * @module pages/DocDetail
+ * @description 文档阅读详情页，支持点赞、收藏、评论、目录导航等功能
+ */
+
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Button, Avatar, Chip, Textarea, addToast } from "@heroui/react";
 import { FiThumbsUp, FiStar, FiShare2, FiMessageSquare, FiBookOpen, FiChevronDown, FiUserPlus, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
-import { routes } from "../../router/routes";
-import { useUserStore } from "../../store";
-import { Loading } from "../../components/Loading";
-import { ScrollProgress } from "../../components/MagicUI/ScrollProgress";
+import { routes } from "@/router/routes";
+import { useUserStore } from "@/store";
+import { Loading } from "@/components/Loading";
+import { ScrollProgress } from "@/components/MagicUI/ScrollProgress";
 import { 
   fetchDocDetail, 
   toggleDocLike, 
@@ -18,8 +23,9 @@ import {
   type DocDetail as DocDetailType,
   type CommentItem,
   type TocItem
-} from "../../api/front/document";
-import { toggleFollowUser } from "../../api/front/user";
+} from "@/api/front/document";
+import { toggleFollow } from "@/api/front/user";
+import DOMPurify from "dompurify";
 // ===== 2. TODO待处理导入区域 =====
 
 // ===== 3. 状态控制逻辑区域 =====
@@ -209,7 +215,7 @@ function DocDetail() {
     if (!handleCheckLogin() || !doc) return;
     const isFollowing = !doc.author.isFollowing;
     
-    await toggleFollowUser(doc.author.id);
+    await toggleFollow(doc.author.id);
 
     setDoc(prev => prev ? { 
       ...prev, 
@@ -641,7 +647,7 @@ function DocDetail() {
           <div 
             ref={contentRef}
             className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-[var(--text-color)] leading-loose tracking-wide"
-            dangerouslySetInnerHTML={{ __html: doc.content }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(doc.content) }}
           />
 
           {/* 评论区 */}

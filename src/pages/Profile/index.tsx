@@ -1,11 +1,17 @@
+/**
+ * 个人中心页面
+ * @module pages/Profile
+ * @description 用户个人中心，支持个人信息展示、设置修改、退出登录等功能
+ */
+
 import React from "react";
 import { Tab, Card, Avatar, Button, Input, Switch } from "@heroui/react";
 import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { FiEdit2, FiSettings, FiHeart, FiStar, FiMessageSquare, FiShield, FiLock, FiLogOut } from "react-icons/fi";
-import { useUserStore } from "../../store/modules/userStore";
-import { logout } from "../../api/auth";
+import { useUserStore } from "@/store/modules/userStore";
+import { logout } from "@/api/auth";
 import { useNavigate } from "react-router-dom";
-import { routes } from "../../router/routes";
+import { routes } from "@/router/routes";
 
 function ProfilePage() {
   const { userId, avatar, reset: resetUser } = useUserStore();

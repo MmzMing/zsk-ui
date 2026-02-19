@@ -1,5 +1,10 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useMemo, useState, useCallback, useEffect } from "react";
+/**
+ * 权限管理页面
+ * @module pages/Admin/System/Permission
+ * @description 系统权限管理，展示权限列表和权限组信息
+ */
+
+import React, { useState, useEffect, useCallback } from "react";
 import {
   SelectItem,
   Button,
@@ -22,6 +27,8 @@ import {
   type PermissionGroup,
   fetchPermissionList
 } from "@/api/admin/system";
+import { useAdminTable, useAdminDataLoader } from "@/hooks";
+
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -63,92 +70,43 @@ function PermissionPage() {
   const [keyword, setKeyword] = useState("");
   /** 模块筛选 */
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
-  /** 当前页码 */
-  const [page, setPage] = useState(1);
-  /** 权限分组数据 */
-  const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
-  /** 是否正在加载 */
-  const [isLoading, setIsLoading] = useState(false);
 
   /** 每页条数 */
   const pageSize = 8;
 
-  /**
-   * 加载权限列表数据
-   */
-  const loadPermissions = useCallback(async () => {
-    const res = await fetchPermissionList(setIsLoading);
-    if (res && res.data) {
-      setPermissionGroups(res.data);
-    }
-  }, []);
+  // 使用自定义 hook 加载权限列表数据
+  const {
+    loading: initialLoading,
+    loadData: loadPermissions
+  } = useAdminDataLoader<PermissionGroup[]>();
+
+  /** 加载权限列表 */
+  const loadPermissionsData = useCallback(async () => {
+    await loadPermissions(async () => {
+      const response = await fetchPermissionList();
+      return response.data || [];
+    }, {
+      showErrorToast: true,
+      errorMessage: '加载权限列表失败'
+    });
+  }, [loadPermissions]);
+
+  // 使用自定义 hook 管理表格数据
+  const {
+    page,
+    total,
+    totalPages,
+    currentPageData: pageItems,
+    handlePageChange: setPage
+  } = useAdminTable<PermissionItem>({
+    initialPageSize: pageSize
+  });
 
   // --- 生命周期钩子 ---
   // 初始化加载
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadPermissions();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadPermissions]);
-
-  /**
-   * 扁平化后的权限列表
-   */
-  const flatPermissions = useMemo(() => {
-    return (permissionGroups || []).flatMap(group => group.items);
-  }, [permissionGroups]);
-
-  /**
-   * 过滤后的列表数据
-   */
-  const filteredItems = useMemo(() => {
-    const trimmed = keyword.trim().toLowerCase();
-    return flatPermissions.filter(item => {
-      if (moduleFilter !== "all") {
-        if (moduleFilter === "dashboard" && !item.key.startsWith("dashboard:")) {
-          return false;
-        }
-        if (moduleFilter === "ops" && !item.key.startsWith("ops:")) {
-          return false;
-        }
-        if (moduleFilter === "personnel" && !item.key.startsWith("personnel:")) {
-          return false;
-        }
-        if (moduleFilter === "system" && !item.key.startsWith("system:")) {
-          return false;
-        }
-        if (moduleFilter === "content" && !item.key.startsWith("content:")) {
-          return false;
-        }
-      }
-      if (trimmed) {
-        const content = `${item.key} ${item.name} ${item.module}`.toLowerCase();
-        if (!content.includes(trimmed)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [flatPermissions, keyword, moduleFilter]);
-
-  /** 总条数 */
-  const total = filteredItems.length;
-  /** 总页数 */
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  /** 当前页显示的条目 */
-  const pageItems = useMemo(() => {
-    const startIndex = (page - 1) * pageSize;
-    return filteredItems.slice(startIndex, startIndex + pageSize);
-  }, [filteredItems, page, pageSize]);
-
-  /**
-   * 处理分页变更
-   * @param next 下一页页码
-   */
-  const handlePageChange = (next: number) => {
-    setPage(next);
-  };
+    loadPermissionsData();
+  }, [loadPermissionsData]);
 
   return (
     <div className="space-y-4">
@@ -252,7 +210,7 @@ function PermissionPage() {
               <TableBody
                 items={pageItems}
                 emptyContent="未找到匹配的权限记录，可调整筛选条件后重试。"
-                isLoading={isLoading}
+                isLoading={initialLoading}
                 loadingContent={<Loading height={200} text="获取权限数据中..." />}
               >
                 {item => (
@@ -320,7 +278,7 @@ function PermissionPage() {
                 size="sm"
                 total={totalPages}
                 page={page}
-                onChange={handlePageChange}
+                onChange={setPage}
                 showControls
               />
             </div>

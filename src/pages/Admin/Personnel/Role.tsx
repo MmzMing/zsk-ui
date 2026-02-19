@@ -1,4 +1,8 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 角色管理页面
+ * @module pages/Admin/Personnel/Role
+ */
+
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Button,
@@ -14,7 +18,7 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  addToast
+  addToast,
 } from "@heroui/react";
 import { FiCopy, FiEdit2, FiKey, FiLayers, FiPlus, FiTrash2, FiX } from "react-icons/fi";
 import { Loading } from "@/components/Loading";
@@ -26,9 +30,9 @@ import {
   updateRole,
   deleteRole,
   batchDeleteRoles,
-  batchCopyRoles
+  batchCopyRoles,
+  fetchPermissionGroups,
 } from "@/api/admin/personnel";
-import { mockPermissionGroups } from "@/api/mock/admin/personnel";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -116,8 +120,8 @@ function RolePage() {
   const [page, setPage] = useState(1);
   const pageSize = 6;
 
-  // 权限常量数据
-  const permissionGroups: PermissionGroup[] = mockPermissionGroups;
+  // 权限数据
+  const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
 
   // 是否有选中的项
   const hasSelection = selectedIds.length > 0;
@@ -143,6 +147,16 @@ function RolePage() {
     }
   }, [page, pageSize]);
 
+  /**
+   * 加载权限分组数据
+   */
+  const loadPermissionGroups = useCallback(async () => {
+    const res = await fetchPermissionGroups();
+    if (res && res.code === 200) {
+      setPermissionGroups(res.data);
+    }
+  }, []);
+
   // 初始化与页码变更监听
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -150,6 +164,14 @@ function RolePage() {
     }, 0);
     return () => clearTimeout(timer);
   }, [loadRoleList]);
+
+  // 初始化权限分组
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadPermissionGroups();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadPermissionGroups]);
 
   /**
    * 处理表格选择变更

@@ -1,4 +1,9 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 视频审核页面
+ * @module pages/Admin/Video/Review
+ * @description 视频内容审核，支持审核队列、审核日志、违规处理等功能
+ */
+
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   SelectItem,
@@ -44,12 +49,14 @@ import {
   fetchViolationReasons,
   fetchVideoDetail,
   type ReviewQueueItem,
-  type ReviewLogItem,
   type ReviewStatus,
   type RiskLevel,
-  type VideoItem
+  type VideoItem,
+  type ReviewLogItem
 } from "@/api/admin/video";
-import { handleRequest } from "@/api/axios";
+
+import { useAdminDataLoader } from "@/hooks";
+import { handleError } from "@/utils";
 
 // ===== 2. TODO待处理导入区域 =====
 import { Checkbox, CheckboxGroup, Textarea } from "@heroui/react";
@@ -64,10 +71,6 @@ type StatusFilter = "all" | ReviewStatus;
 export default function VideoReviewPage() {
   // ===== 3. 状态控制逻辑区域 =====
   
-  /** 加载状态 */
-  const [loading, setLoading] = useState(false);
-  const [logsLoading, setLogsLoading] = useState(false);
-
   /** 当前激活的审核子模块 */
   const [activeModule, setActiveModule] = useState<AuditModule>("video");
   
@@ -83,18 +86,9 @@ export default function VideoReviewPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [dateRange, setDateRange] = useState<any>(null);
 
-  /** 当前页码 */
-  const [page, setPage] = useState(1);
-  /** 审核队列数据 */
-  const [queue, setQueue] = useState<ReviewQueueItem[]>([]);
-  const [total, setTotal] = useState(0);
-
   /** 选中的项目 ID 列表 */
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
-  /** 审核日志数据 */
-  const [logs, setLogs] = useState<ReviewLogItem[]>([]);
-
   /** 审核 Modal 控制 */
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
   /** 当前正在审核的视频详情 */
@@ -116,16 +110,6 @@ export default function VideoReviewPage() {
   const pageSize = 8;
   /** 是否有选中的项 */
   const hasSelection = selectedIds.length > 0;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-  /** 模拟分类数据 (也可以从API获取) */
-  const allCategories = useMemo(
-    () =>
-      Array.from(
-        new Set(queue.map(item => item.category))
-      ),
-    [queue]
-  );
 
   // ===== 4. 通用工具函数区域 =====
   /**
@@ -168,27 +152,48 @@ export default function VideoReviewPage() {
 
   // ===== 6. 错误处理函数区域 =====
 
+  /** 页面状态 */
+  const [page, setPage] = useState(1);
+  /** 审核日志 */
+  const [logs, setLogs] = useState<ReviewLogItem[]>([]);
+
   // ===== 7. 数据处理函数区域 =====
-  /**
-   * 加载审核队列数据
-   */
-  const loadQueue = useCallback(async () => {
-    const res = await handleRequest({
-      requestFn: () => fetchReviewQueue({
+  // 使用自定义 hook 加载审核队列数据
+  const {
+    data: queueData,
+    loading: loading,
+    loadData: loadQueue
+  } = useAdminDataLoader<{ list: ReviewQueueItem[]; total: number }>();
+
+  /** 加载队列数据 */
+  const loadQueueData = useCallback(async () => {
+    await loadQueue(async () => {
+      const response = await fetchReviewQueue({
         page,
         pageSize,
         status: statusFilter === "all" ? undefined : statusFilter,
         keyword: keyword.trim() || undefined,
         queueType: "manual"
-      }),
-      setLoading
+      });
+      return response.data || { list: [], total: 0 };
+    }, {
+      showErrorToast: true,
+      errorMessage: '加载审核队列数据失败'
     });
+  }, [page, pageSize, statusFilter, keyword, loadQueue]);
 
-    if (res && res.data) {
-      setQueue(res.data.list);
-      setTotal(res.data.total);
-    }
-  }, [page, statusFilter, keyword]);
+  const queue = useMemo(() => queueData?.list || [], [queueData]);
+  const total = queueData?.total || 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  /** 模拟分类数据 (也可以从API获取) */
+  const allCategories = useMemo(
+    () =>
+      Array.from(
+        new Set(queue.map((item: ReviewQueueItem) => item.category))
+      ),
+    [queue]
+  );
 
   /**
    * 加载审核日志 (根据选中项)
@@ -199,20 +204,25 @@ export default function VideoReviewPage() {
       return;
     }
     
-    // 使用 video API 获取日志
-    const res = await handleRequest({
-      requestFn: () => fetchReviewLogs({
+    try {
+      // 使用 video API 获取日志
+      const res = await fetchReviewLogs({
         page: 1,
         pageSize: 10
-      }),
-      setLoading: setLogsLoading
-    });
+      });
 
-    if (res && res.data) {
-      // 简单过滤一下模拟数据，匹配选中项
-      const logRows = res.data.rows || [];
-      const filteredLogs = logRows.filter(log => selectedIds.includes(log.videoId));
-      setLogs(filteredLogs.length > 0 ? filteredLogs : logRows);
+      if (res && res.data) {
+        // 简单过滤一下模拟数据，匹配选中项
+        const logRows = res.data.rows || [];
+        const filteredLogs = logRows.filter(log => selectedIds.includes(log.videoId));
+        setLogs(filteredLogs.length > 0 ? filteredLogs : logRows);
+      }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: "加载审核日志失败"
+      });
+      setLogs([]);
     }
   }, [selectedIds, hasSelection]);
 
@@ -221,58 +231,51 @@ export default function VideoReviewPage() {
    */
   const loadReviewDetail = useCallback(async (id: string) => {
     setVideoLoading(true);
-    // 并行请求
-    const [videoRes, reasonsRes] = await Promise.all([
-      handleRequest({
-        requestFn: () => fetchVideoDetail(id),
-        setLoading: undefined // 不控制全局 loading
-      }),
-      handleRequest({
-        requestFn: () => fetchViolationReasons(),
-        setLoading: undefined
-      })
-    ]);
+    try {
+      // 并行请求
+      const [videoRes, reasonsRes] = await Promise.all([
+        fetchVideoDetail(id),
+        fetchViolationReasons()
+      ]);
 
-    if (videoRes && videoRes.data) {
-      setVideoDetail(videoRes.data);
+      if (videoRes && videoRes.data) {
+        setVideoDetail(videoRes.data);
+      }
+      if (reasonsRes && reasonsRes.data) {
+        setViolationReasons(reasonsRes.data);
+      }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: "加载审核详情失败"
+      });
+    } finally {
+      setVideoLoading(false);
     }
-    if (reasonsRes && reasonsRes.data) {
-      setViolationReasons(reasonsRes.data);
-    }
-    setVideoLoading(false);
   }, []);
 
   /**
    * 监听 activeReviewItem 变化加载详情
    */
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (activeReviewItem) {
-        loadReviewDetail(activeReviewItem.id);
-        // 重置表单
-        setSelectedViolationIds([]);
-        setRejectReason("");
-      } else {
-        setVideoDetail(null);
-      }
-    }, 0);
-    return () => clearTimeout(timer);
+    if (activeReviewItem) {
+      loadReviewDetail(activeReviewItem.id);
+      // 重置表单
+      setSelectedViolationIds([]);
+      setRejectReason("");
+    } else {
+      setVideoDetail(null);
+    }
   }, [activeReviewItem, loadReviewDetail]);
 
   // 当选中项变化时加载队列
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadQueue();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadQueue]);
+    loadQueueData();
+  }, [loadQueueData]);
 
   // 当选中项变化时加载日志
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadLogs();
-    }, 0);
-    return () => clearTimeout(timer);
+    loadLogs();
   }, [loadLogs]);
 
   /**
@@ -331,29 +334,35 @@ export default function VideoReviewPage() {
       }
     }
 
-    const res = await handleRequest({
-      requestFn: () => submitReviewResult({
+    try {
+      const res = await submitReviewResult({
         reviewId: id,
         status,
         reason: status === "rejected" ? rejectReason : undefined,
         violationIds: status === "rejected" ? selectedViolationIds : undefined
-      }),
-      setLoading: setSubmitting
-    });
-
-    if (res && res.code === 200) {
-      addToast({
-        title: "操作成功",
-        description: `审核${status === "approved" ? "通过" : "驳回"}操作成功`,
-        color: "success"
       });
-      // 刷新列表
-      loadQueue();
-      // 如果在弹窗中，关闭弹窗
-      if (activeReviewItem?.id === id) {
-        onClose();
-        setActiveReviewItem(null);
+
+      if (res && res.code === 200) {
+        addToast({
+          title: "操作成功",
+          description: `审核${status === "approved" ? "通过" : "驳回"}操作成功`,
+          color: "success"
+        });
+        // 刷新列表
+        loadQueueData();
+        // 如果在弹窗中，关闭弹窗
+        if (activeReviewItem?.id === id) {
+          onClose();
+          setActiveReviewItem(null);
+        }
       }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: `审核${status === "approved" ? "通过" : "驳回"}操作失败`
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -366,22 +375,28 @@ export default function VideoReviewPage() {
     const confirmed = window.confirm("确认批量通过选中的审核任务？");
     if (!confirmed) return;
 
-    const res = await handleRequest({
-      requestFn: () => submitBatchReviewResult({
+    try {
+      const res = await submitBatchReviewResult({
         reviewIds: selectedIds,
         status: "approved"
-      }),
-      setLoading: setSubmitting
-    });
-
-    if (res && res.code === 200) {
-      addToast({
-        title: "批量审核成功",
-        description: "已成功通过选中的视频审核任务。",
-        color: "success"
       });
-      setSelectedIds([]);
-      loadQueue();
+
+      if (res && res.code === 200) {
+        addToast({
+          title: "批量审核成功",
+          description: "已成功通过选中的视频审核任务。",
+          color: "success"
+        });
+        setSelectedIds([]);
+        loadQueueData();
+      }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: "批量通过操作失败"
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -394,22 +409,28 @@ export default function VideoReviewPage() {
     const confirmed = window.confirm("确认批量驳回选中的审核任务？");
     if (!confirmed) return;
 
-    const res = await handleRequest({
-      requestFn: () => submitBatchReviewResult({
+    try {
+      const res = await submitBatchReviewResult({
         reviewIds: selectedIds,
         status: "rejected"
-      }),
-      setLoading: setSubmitting
-    });
-
-    if (res && res.code === 200) {
-      addToast({
-        title: "批量审核成功",
-        description: "已成功驳回选中的视频审核任务。",
-        color: "success"
       });
-      setSelectedIds([]);
-      loadQueue();
+
+      if (res && res.code === 200) {
+        addToast({
+          title: "批量审核成功",
+          description: "已成功驳回选中的视频审核任务。",
+          color: "success"
+        });
+        setSelectedIds([]);
+        loadQueueData();
+      }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: "批量驳回操作失败"
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -839,8 +860,6 @@ export default function VideoReviewPage() {
                         <TableBody
                           items={logs}
                           emptyContent="请选择上方表格项以查看对应的审核日志"
-                          isLoading={logsLoading}
-                          loadingContent={<Loading height={100} text="获取审核日志中..." />}
                         >
                           {item => (
                             <TableRow key={item.id}>

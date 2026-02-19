@@ -1,5 +1,10 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useState, useCallback, useEffect } from "react";
+/**
+ * 字典管理页面
+ * @module pages/Admin/System/Dict
+ * @description 系统字典配置管理，支持新增、编辑、状态切换等操作
+ */
+
+import React, { useCallback } from "react";
 import {
   SelectItem,
   Button,
@@ -31,63 +36,61 @@ import {
   toggleDictStatus,
   batchToggleDictStatus
 } from "@/api/admin/system";
+import { usePageState, useSelection, useModalForm } from "@/hooks";
 
-// ===== 2. TODO待处理导入区域 =====
+/** 每页显示条数 */
+const PAGE_SIZE = 8;
 
-// ===== 3. 状态控制逻辑区域 =====
 /** 状态筛选类型 */
 type StatusFilter = "all" | "enabled" | "disabled";
 
-// ===== 4. 通用工具函数区域 =====
-
-// ===== 5. 注释代码函数区 =====
-
-// ===== 6. 错误处理函数区域 =====
-
-// ===== 7. 数据处理函数区域 =====
-
-// ===== 8. UI渲染逻辑区域 =====
-
-// ===== 9. 页面初始化与事件绑定 =====
 /**
  * 字典管理页面组件
- * @returns 页面渲染内容
+ * @returns 页面JSX元素
  */
 function DictPage() {
-  // --- 列表数据与加载状态 ---
-  /** 搜索关键词 */
-  const [keyword, setKeyword] = useState("");
-  /** 状态筛选 */
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  /** 当前页码 */
-  const [page, setPage] = useState(1);
-  /** 字典列表数据 */
-  const [items, setItems] = useState<DictItem[]>([]);
-  /** 总条数 */
-  const [total, setTotal] = useState(0);
-  /** 是否正在加载 */
-  const [isLoading, setIsLoading] = useState(false);
-  /** 选中项的 ID 集合 */
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  /** 分页状态 */
+  const { page, setPage, total, setTotal, totalPages } = usePageState({ pageSize: PAGE_SIZE });
 
-  // --- 表单相关状态 ---
-  /** 表单是否可见 */
-  const [formVisible, setFormVisible] = useState(false);
-  /** 表单状态数据 */
-  const [formState, setFormState] = useState<SaveDictRequest>({
-    code: "",
-    name: "",
-    category: "",
-    description: "",
-    status: "enabled"
+  /** 表格选择状态 */
+  const { selectedIds, setSelectedIds, hasSelection, handleTableSelectionChange } = useSelection();
+
+  /** 列表数据与加载状态 */
+  const [items, setItems] = React.useState<DictItem[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  /** 筛选条件状态 */
+  const [keyword, setKeyword] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
+
+  /** 表单弹窗状态 */
+  const {
+    visible: formVisible,
+    formData,
+    mode: formMode,
+    formError,
+    setFormError,
+    openCreate,
+    openEdit,
+    close,
+    updateField,
+    updateFields
+  } = useModalForm<SaveDictRequest>({
+    createEmptyForm: () => ({
+      code: "",
+      name: "",
+      category: "",
+      description: "",
+      status: "enabled"
+    }),
+    onSubmit: async (data: SaveDictRequest) => {
+      const res = await saveDict(data);
+      if (res && res.data) {
+        addToast({ title: formMode === "edit" ? "字典更新成功" : "字典新增成功", color: "success" });
+        loadDictList();
+      }
+    }
   });
-  /** 表单错误提示 */
-  const [formError, setFormError] = useState("");
-
-  /** 每页条数 */
-  const pageSize = 8;
-  /** 总页数 */
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   /**
    * 加载字典列表数据
@@ -97,7 +100,7 @@ function DictPage() {
     try {
       const res = await fetchDictList({
         page,
-        pageSize,
+        pageSize: PAGE_SIZE,
         keyword: keyword.trim() || undefined,
         status: statusFilter === "all" ? undefined : statusFilter
       });
@@ -108,11 +111,10 @@ function DictPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, keyword, statusFilter]);
+  }, [page, keyword, statusFilter, setTotal]);
 
-  // --- 生命周期钩子 ---
-  // 初始化加载
-  useEffect(() => {
+  /** 初始化加载 */
+  React.useEffect(() => {
     const timer = setTimeout(() => {
       loadDictList();
     }, 0);
@@ -132,23 +134,14 @@ function DictPage() {
    * 打开新建字典弹窗
    */
   const handleOpenCreate = () => {
-    setFormState({
-      code: "",
-      name: "",
-      category: "",
-      description: "",
-      status: "enabled"
-    });
-    setFormError("");
-    setFormVisible(true);
+    openCreate();
   };
 
   /**
    * 打开编辑字典弹窗
-   * @param item 字典项
    */
   const handleOpenEdit = (item: DictItem) => {
-    setFormState({
+    openEdit({
       id: item.id,
       code: item.code,
       name: item.name,
@@ -156,92 +149,82 @@ function DictPage() {
       description: item.description,
       status: item.status
     });
-    setFormError("");
-    setFormVisible(true);
-  };
-
-  /**
-   * 关闭表单弹窗
-   */
-  const handleCloseForm = () => {
-    setFormVisible(false);
-    setFormError("");
-  };
-
-  /**
-   * 处理表单字段变更
-   * @param patch 变更的字段
-   */
-  const handleFormChange = (patch: Partial<SaveDictRequest>) => {
-    setFormState(previous => ({
-      ...previous,
-      ...patch
-    }));
   };
 
   /**
    * 提交表单数据
    */
   const handleSubmitForm = async () => {
-    const trimmedCode = formState.code.trim();
-    const trimmedName = formState.name.trim();
+    if (!formData) return;
+
+    const trimmedCode = formData.code.trim();
+    const trimmedName = formData.name.trim();
     if (!trimmedCode || !trimmedName) {
       setFormError("请填写完整的字典编码和字典名称。");
       return;
     }
 
-    const res = await saveDict({
-      ...formState,
+    updateFields({
       code: trimmedCode,
       name: trimmedName,
-      category: formState.category.trim() || "未分组",
-      description: formState.description.trim()
+      category: formData.category.trim() || "未分组",
+      description: formData.description.trim()
     });
 
-    if (res && res.data) {
-      addToast({
-        title: formState.id ? "字典更新成功" : "字典新增成功",
-        color: "success"
+    try {
+      const res = await saveDict({
+        ...formData,
+        code: trimmedCode,
+        name: trimmedName,
+        category: formData.category.trim() || "未分组",
+        description: formData.description.trim()
       });
-      setFormVisible(false);
-      loadDictList();
+      if (res && res.data) {
+        addToast({ title: formMode === "edit" ? "字典更新成功" : "字典新增成功", color: "success" });
+        close();
+        loadDictList();
+      }
+    } catch {
+      // 错误已由全局拦截器处理
     }
   };
 
   /**
    * 切换字典启用状态
-   * @param item 字典项
    */
   const handleToggleStatus = async (item: DictItem) => {
     const nextStatus: DictStatus = item.status === "enabled" ? "disabled" : "enabled";
     const res = await toggleDictStatus(item.id, nextStatus);
     if (res && res.data) {
-      addToast({
-        title: "状态更新成功",
-        color: "success"
-      });
+      addToast({ title: "状态更新成功", color: "success" });
       loadDictList();
     }
   };
 
   /**
    * 批量切换字典状态
-   * @param status 目标状态
    */
   const handleBatchToggleStatus = async (status: DictStatus) => {
-    const ids = Array.from(selectedKeys);
-    if (ids.length === 0) return;
+    if (!hasSelection) return;
 
-    const res = await batchToggleDictStatus(ids, status);
+    const res = await batchToggleDictStatus(selectedIds, status);
 
     if (res && res.data) {
-      addToast({
-        title: `成功批量${status === "enabled" ? "启用" : "停用"} ${ids.length} 项`,
-        color: "success"
-      });
-      setSelectedKeys(new Set());
+      addToast({ title: `成功批量${status === "enabled" ? "启用" : "停用"} ${selectedIds.length} 项`, color: "success" });
+      setSelectedIds([]);
       loadDictList();
     }
+  };
+
+  /**
+   * 处理表格选择变更
+   */
+  const handleSelectionChange = (keys: "all" | Set<React.Key>) => {
+    if (keys === "all") {
+      setSelectedIds(items.map(item => item.id));
+      return;
+    }
+    handleTableSelectionChange(keys);
   };
 
   return (
@@ -309,10 +292,10 @@ function DictPage() {
               </Tooltip>
             </div>
             <div className="flex flex-wrap gap-2">
-              {selectedKeys.size > 0 && (
+              {hasSelection && (
                 <div className="flex items-center gap-2 px-2 border-r border-[var(--border-color)] mr-2">
                   <span className="text-[var(--text-color-secondary)]">
-                    已选 {selectedKeys.size} 项:
+                    已选 {selectedIds.length} 项:
                   </span>
                   <Button
                     size="sm"
@@ -356,14 +339,8 @@ function DictPage() {
               aria-label="字典列表"
               className="min-w-full text-xs"
               selectionMode="multiple"
-              selectedKeys={selectedKeys}
-              onSelectionChange={keys => {
-                if (keys === "all") {
-                  setSelectedKeys(new Set(items.map(item => item.id)));
-                } else {
-                  setSelectedKeys(keys as Set<string>);
-                }
-              }}
+              selectedKeys={new Set(selectedIds)}
+              onSelectionChange={handleSelectionChange}
             >
               <TableHeader className="bg-[var(--bg-elevated)]/80">
                 <TableColumn className="px-3 py-2 text-left font-medium">
@@ -479,19 +456,19 @@ function DictPage() {
       </Card>
 
       {/* 新增/编辑弹窗 */}
-      {formVisible && (
+      {formVisible && formData && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md rounded-[var(--radius-base)] bg-[var(--bg-elevated)] border border-[var(--border-color)] shadow-lg">
             <div className="px-4 py-3 border-b border-[var(--border-color)] flex items-center justify-between">
               <div className="text-sm font-medium">
-                {formState.id ? "编辑字典" : "新建字典"}
+                {formMode === "edit" ? "编辑字典" : "新建字典"}
               </div>
               <Button
                 isIconOnly
                 size="sm"
                 variant="light"
                 className="h-8 w-8 text-[var(--text-color-secondary)]"
-                onPress={handleCloseForm}
+                onPress={close}
               >
                 <FiX className="text-base" />
               </Button>
@@ -505,30 +482,30 @@ function DictPage() {
               <div className="space-y-1">
                 <div>字典编码（必填）</div>
                 <AdminInput
-                  value={formState.code}
-                  onValueChange={value => handleFormChange({ code: value })}
+                  value={formData.code}
+                  onValueChange={value => updateField("code", value)}
                 />
               </div>
               <div className="space-y-1">
                 <div>字典名称（必填）</div>
                 <AdminInput
-                  value={formState.name}
-                  onValueChange={value => handleFormChange({ name: value })}
+                  value={formData.name}
+                  onValueChange={value => updateField("name", value)}
                 />
               </div>
               <div className="space-y-1">
                 <div>所属模块</div>
                 <AdminInput
-                  value={formState.category}
-                  onValueChange={value => handleFormChange({ category: value })}
+                  value={formData.category}
+                  onValueChange={value => updateField("category", value)}
                 />
               </div>
               <div className="space-y-1">
                 <div>说明</div>
                 <AdminTextarea
                   minRows={3}
-                  value={formState.description}
-                  onValueChange={value => handleFormChange({ description: value })}
+                  value={formData.description}
+                  onValueChange={value => updateField("description", value)}
                 />
               </div>
               <div className="flex items-center justify-between pt-1">
@@ -536,13 +513,13 @@ function DictPage() {
                 <div className="flex items-center gap-2">
                   <Switch
                     size="sm"
-                    isSelected={formState.status === "enabled"}
+                    isSelected={formData.status === "enabled"}
                     onValueChange={selected =>
-                      handleFormChange({ status: selected ? "enabled" : "disabled" })
+                      updateField("status", selected ? "enabled" : "disabled")
                     }
                   />
                   <span className="text-xs text-[var(--text-color-secondary)]">
-                    {formState.status === "enabled" ? "启用后即可在业务中引用" : "停用后业务端不应继续使用"}
+                    {formData.status === "enabled" ? "启用后即可在业务中引用" : "停用后业务端不应继续使用"}
                   </span>
                 </div>
               </div>
@@ -552,7 +529,7 @@ function DictPage() {
                 size="sm"
                 variant="light"
                 className="h-8 text-xs"
-                onPress={handleCloseForm}
+                onPress={close}
               >
                 取消
               </Button>
@@ -571,7 +548,4 @@ function DictPage() {
   );
 }
 
-// ===== 10. TODO任务管理区域 =====
-
-// ===== 11. 导出区域 =====
 export default DictPage;

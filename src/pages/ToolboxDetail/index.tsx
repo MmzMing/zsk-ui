@@ -1,4 +1,9 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 工具详情页面
+ * @module pages/ToolboxDetail
+ * @description 百宝袋工具详情页，展示工具介绍和使用说明
+ */
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
@@ -20,8 +25,8 @@ import {
   FiBarChart2,
   FiBox
 } from "react-icons/fi";
-import { getToolboxDetail, type ToolboxDetail } from "../../api/front/toolbox";
-import { routes } from "../../router/routes";
+import { getToolboxDetail, type ToolboxDetail } from "@/api/front/toolbox";
+import { routes } from "@/router/routes";
 import { useTitle } from "react-use";
 import { useCallback } from "react";
 

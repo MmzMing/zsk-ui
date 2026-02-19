@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, useScroll, useSpring } from "framer-motion";
-import { cn } from "../../lib/utils";
+import { cn } from "@/utils";
 
 /**
  * 滚动进度条组件

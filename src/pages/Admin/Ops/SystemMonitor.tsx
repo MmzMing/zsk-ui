@@ -1,18 +1,24 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 系统监控页面
+ * @module pages/Admin/Ops/SystemMonitor
+ * @description 系统资源使用情况及实时趋势图展示
+ */
+
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Card, Chip, Button, DateRangePicker } from "@heroui/react";
 import { Loading } from "@/components/Loading";
 import type { LineConfig } from "@ant-design/plots";
 import { Line } from "@ant-design/plots";
-import { useAppStore } from "../../../store";
+import { useAppStore } from "@/store";
 import {
   getSystemMonitorFullData,
   type MonitorPoint,
   type MonitorOverview,
   type MonitorMetric,
-} from "../../../api/admin/ops";
+} from "@/api/admin/ops";
 import { addToast } from "@heroui/react";
-import { handleDebugOutput } from "@/lib/utils";
+import { handleDebugOutput } from "@/utils";
+import { useAdminDataLoader } from "@/hooks";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -22,8 +28,6 @@ import { handleDebugOutput } from "@/lib/utils";
  */
 function SystemMonitorPage() {
   // ===== 3. 状态控制逻辑区域 =====
-  /** 是否正在加载数据 */
-  const [loading, setLoading] = useState(true);
   /** 是否暂停刷新 */
   const [paused, setPaused] = useState(false);
   /** 主题模式 */
@@ -42,6 +46,11 @@ function SystemMonitorPage() {
     hostIp: "",
     osName: "",
   });
+  /** 系统监控数据加载器 */
+  const { loading, loadData: loadSystemData } = useAdminDataLoader<{
+    monitorData: MonitorPoint[];
+    overview: MonitorOverview;
+  }>();
 
   // ===== 4. 通用工具函数区域 =====
   /**
@@ -72,7 +81,7 @@ function SystemMonitorPage() {
   );
 
   /** 过滤后的监控数据 */
-  const filteredData = useMemo(() => monitorData, [monitorData]);
+  const filteredData = useMemo(() => monitorData || [], [monitorData]);
 
   /** 折线图配置对象 */
   const lineConfig: LineConfig = useMemo(
@@ -149,16 +158,19 @@ function SystemMonitorPage() {
   // ===== 7. 数据处理函数区域 =====
   /** 加载监控数据及概览信息 */
   const loadData = useCallback(async () => {
-    const result = await getSystemMonitorFullData({
-      setLoading,
+    const result = await loadSystemData(() => getSystemMonitorFullData({
+      setLoading: () => {},
       onError: (err) => showErrorFn(err, "获取监控数据"),
+    }), {
+      showErrorToast: true,
+      errorMessage: '获取系统监控数据失败'
     });
 
     if (result) {
       if (result.monitorData.length > 0) setMonitorData(result.monitorData);
       if (result.overview) setOverview(result.overview);
     }
-  }, [showErrorFn]);
+  }, [showErrorFn, loadSystemData]);
 
   /** 切换暂停/恢复状态 */
   const handleTogglePaused = useCallback(() => {

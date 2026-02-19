@@ -1,5 +1,10 @@
-// ===== 1. 依赖导入区域 =====
-import React, { useCallback, useMemo, useState, useEffect } from "react";
+/**
+ * 令牌管理页面
+ * @module pages/Admin/System/Token
+ * @description 系统令牌管理，支持令牌列表查看、撤销、删除等操作
+ */
+
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Button,
   SelectItem,
@@ -27,6 +32,8 @@ import {
   batchRevokeTokens,
   batchDeleteTokens
 } from "@/api/admin/system";
+import { useAdminTable, useAdminDataLoader } from "@/hooks";
+import { handleError } from "@/utils";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -82,12 +89,6 @@ function TokenPage() {
   const [keyword, setKeyword] = useState("");
   /** 状态筛选值 */
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  /** 当前页码 */
-  const [page, setPage] = useState(1);
-  /** 令牌原始数据列表 */
-  const [items, setItems] = useState<TokenItem[]>([]);
-  /** 是否正在加载 */
-  const [isLoading, setIsLoading] = useState(false);
   /** 选中项的 ID 集合 */
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
@@ -95,44 +96,39 @@ function TokenPage() {
   /** 每页显示条数 */
   const pageSize = 6;
 
-  // --- 数据计算逻辑 ---
-  /**
-   * 过滤后的列表数据
-   */
-  const filteredItems = useMemo(() => {
-    const trimmed = keyword.trim().toLowerCase();
-    return items.filter(item => {
-      // 关键词搜索：名称、令牌片段、绑定账号
-      if (trimmed) {
-        const content = `${item.name} ${item.token} ${item.boundUser}`.toLowerCase();
-        if (!content.includes(trimmed)) return false;
-      }
-      // 状态筛选
-      if (statusFilter === "active" && item.status !== "active") return false;
-      if (statusFilter === "no_active" && item.status === "active") return false;
-      return true;
+  // 使用自定义 hook 加载令牌列表数据
+  const {
+    data: tokenList,
+    loading: isLoading,
+    loadData: loadTokenList
+  } = useAdminDataLoader<TokenItem[]>();
+
+  /** 加载令牌列表 */
+  const loadTokenListData = useCallback(async () => {
+    await loadTokenList(async () => {
+      const response = await fetchTokenList();
+      return response.data || [];
+    }, {
+      showErrorToast: true,
+      errorMessage: '加载令牌列表失败'
     });
-  }, [items, keyword, statusFilter]);
+  }, [loadTokenList]);
 
-  /** 数据总条数 */
-  const total = filteredItems.length;
-  /** 总页数 */
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  /** 当前页显示的数据 */
-  const pageItems = useMemo(() => {
-    return filteredItems.slice((page - 1) * pageSize, page * pageSize);
-  }, [filteredItems, page, pageSize]);
+  // 使用自定义 hook 管理表格数据
+  const {
+    page,
+    total,
+    totalPages,
+    currentPageData: pageItems,
+    handlePageChange: setPage
+  } = useAdminTable<TokenItem>({
+    initialPageSize: pageSize
+  });
 
-  // --- 业务操作逻辑 ---
-  /**
-   * 加载令牌列表数据
-   */
-  const loadTokenList = useCallback(async () => {
-    const res = await fetchTokenList(setIsLoading);
-    if (res && res.data) {
-      setItems(res.data);
-    }
-  }, []);
+  // 初始化加载
+  useEffect(() => {
+    loadTokenListData();
+  }, [loadTokenListData]);
 
   /**
    * 重置筛选条件
@@ -165,11 +161,17 @@ function TokenPage() {
   const handleRevokeToken = async (item: TokenItem) => {
     if (item.status === "revoked") return;
 
-    const res = await revokeToken(item.id, setIsLoading);
-
-    if (res && res.data) {
-      addToast({ title: "操作成功", color: "success" });
-      loadTokenList();
+    try {
+      const res = await revokeToken(item.id);
+      if (res && res.data) {
+        addToast({ title: "操作成功", color: "success" });
+        loadTokenListData();
+      }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: "吊销令牌失败"
+      });
     }
   };
 
@@ -180,15 +182,21 @@ function TokenPage() {
     const ids = Array.from(selectedKeys);
     if (ids.length === 0) return;
 
-    const res = await batchRevokeTokens(ids, setIsLoading);
-
-    if (res && res.data) {
-      addToast({
-        title: `成功吊销 ${ids.length} 个令牌`,
-        color: "success"
+    try {
+      const res = await batchRevokeTokens(ids);
+      if (res && res.data) {
+        addToast({
+          title: `成功吊销 ${ids.length} 个令牌`,
+          color: "success"
+        });
+        setSelectedKeys(new Set());
+        loadTokenListData();
+      }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: "批量吊销令牌失败"
       });
-      setSelectedKeys(new Set());
-      loadTokenList();
     }
   };
 
@@ -199,15 +207,21 @@ function TokenPage() {
     const ids = Array.from(selectedKeys);
     if (ids.length === 0) return;
 
-    const res = await batchDeleteTokens(ids, setIsLoading);
-
-    if (res && res.data) {
-      addToast({
-        title: `成功删除 ${ids.length} 个令牌`,
-        color: "success"
+    try {
+      const res = await batchDeleteTokens(ids);
+      if (res && res.data) {
+        addToast({
+          title: `成功删除 ${ids.length} 个令牌`,
+          color: "success"
+        });
+        setSelectedKeys(new Set());
+        loadTokenListData();
+      }
+    } catch (error) {
+      handleError(error, {
+        showToast: true,
+        errorMessage: "批量删除令牌失败"
       });
-      setSelectedKeys(new Set());
-      loadTokenList();
     }
   };
 
@@ -225,11 +239,8 @@ function TokenPage() {
 
   // --- 生命周期钩子 ---
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadTokenList();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [loadTokenList]);
+    loadTokenListData();
+  }, [loadTokenListData]);
 
   // --- UI 渲染逻辑 ---
   return (
@@ -350,7 +361,7 @@ function TokenPage() {
               selectedKeys={selectedKeys}
               onSelectionChange={keys => {
                 if (keys === "all") {
-                  setSelectedKeys(new Set(items.map(item => item.id)));
+                  setSelectedKeys(new Set((tokenList || []).map(item => item.id)));
                 } else {
                   setSelectedKeys(keys as Set<string>);
                 }

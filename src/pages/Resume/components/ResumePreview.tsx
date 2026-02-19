@@ -1,7 +1,14 @@
+/**
+ * 简历预览组件
+ * @module pages/Resume/components/ResumePreview
+ * @description 简历实时预览区域，支持缩放、拖拽、打印预览等功能
+ */
+
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useResumeStore } from "@/store/resumeStore";
 import { Phone, Mail, Github, Briefcase } from "lucide-react";
 import { ResumeModule } from "@/api/front/resume";
+import DOMPurify from "dompurify";
 
 const ResumePreview: React.FC = () => {
   const { 
@@ -144,7 +151,7 @@ const ResumePreview: React.FC = () => {
       <div 
         className="prose prose-sm max-w-none text-gray-800 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5 [&_strong]:text-gray-900"
         style={{ lineHeight: lineHeight, fontSize: `${fontSize}px` }}
-        dangerouslySetInnerHTML={{ __html: module.content || "" }} 
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(module.content || "") }} 
       />
     </div>
   );
@@ -217,7 +224,7 @@ const ResumePreview: React.FC = () => {
       <div 
         className="prose prose-sm max-w-none text-gray-700 pl-4 border-l-2 border-indigo-50 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5 [&_strong]:text-gray-900"
         style={{ lineHeight: lineHeight, fontSize: `${fontSize}px` }}
-        dangerouslySetInnerHTML={{ __html: module.content || "" }} 
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(module.content || "") }} 
       />
     </div>
   );
@@ -303,7 +310,7 @@ const ResumePreview: React.FC = () => {
       <div 
         className="prose prose-sm max-w-none text-gray-700 pl-11 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5 [&_strong]:text-gray-900"
         style={{ lineHeight: lineHeight, fontSize: `${fontSize}px` }}
-        dangerouslySetInnerHTML={{ __html: module.content || "" }} 
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(module.content || "") }} 
       />
     </div>
   );

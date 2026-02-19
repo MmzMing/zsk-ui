@@ -5,6 +5,7 @@ import type { MotionValue } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { routes } from "@/router/routes";
 import { ArrowRight } from "lucide-react";
+import { useIsMobile } from "@/hooks";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -343,17 +344,8 @@ export default function HomeFeatures() {
   /** 停止判定定时器 */
   const stopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 响应式状态
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  /** 响应式状态 - 使用共享 Hook */
+  const isMobile = useIsMobile(768);
 
   const smallWidth = isMobile ? SMALL_WIDTH_MOBILE : SMALL_WIDTH_DESKTOP;
   const largeWidth = isMobile ? LARGE_WIDTH_MOBILE : LARGE_WIDTH_DESKTOP;

@@ -1,11 +1,17 @@
+/**
+ * 404页面
+ * @module pages/NotFound
+ * @description 页面未找到提示页面
+ */
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowLeft } from "react-icons/fi";
 import { motion } from "framer-motion";
 import { Button } from "@heroui/react";
-import { routes } from "../../router/routes";
-import FuzzyText from "../../components/Motion/FuzzyText";
-import TrueFocusText from "../../components/Motion/TrueFocusText";
+import { routes } from "@/router/routes";
+import FuzzyText from "@/components/Motion/FuzzyText";
+import TrueFocusText from "@/components/Motion/TrueFocusText";
 
 function NotFoundPage() {
   const navigate = useNavigate();

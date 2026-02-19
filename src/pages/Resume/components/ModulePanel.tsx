@@ -1,3 +1,9 @@
+/**
+ * 模块管理面板组件
+ * @module pages/Resume/components/ModulePanel
+ * @description 简历模块管理面板，支持添加、排序、显示/隐藏、删除模块
+ */
+
 import React from "react";
 import { Button, Card, CardBody, ScrollShadow } from "@heroui/react";
 import { useResumeStore } from "@/store/resumeStore";

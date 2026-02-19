@@ -1,4 +1,9 @@
-// ===== 1. 依赖导入区域 =====
+/**
+ * 简历编辑页面
+ * @module pages/Resume
+ * @description 简历编辑器主页面，支持编辑、预览、导出等功能
+ */
+
 import React, { useEffect, useState } from "react";
 import { useResumeStore } from "@/store/resumeStore";
 import ResumeToolbar from "./components/ResumeToolbar";

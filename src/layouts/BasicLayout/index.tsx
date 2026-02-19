@@ -1,3 +1,13 @@
+/**
+ * 基础布局组件
+ * 提供前台页面的整体布局，包含顶部导航、页脚、回到顶部等功能
+ *
+ * @module layouts/BasicLayout
+ * @author wuhuaming
+ * @date 2026-02-18
+ * @version 1.0
+ */
+
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -50,34 +60,65 @@ import {
 import HsrIntroAnimation from "../../components/Motion/HsrIntroAnimation";
 import SmoothScroll from "../../components/Motion/SmoothScroll";
 
+  /** 站点发布时间戳 */
 const launchedAt = new Date("2026-01-01T00:00:00Z").getTime();
+  /** 站点已运行天数 */
 const initialRunDays = Math.max(
   0,
   Math.floor((Date.now() - launchedAt) / (1000 * 60 * 60 * 24))
 );
 
+/** 头部导航按钮样式类名 */
 const headerNavButtonClass =
   "inline-flex items-center gap-1 px-1 h-12 text-base border-b-2 border-transparent transition-colors duration-150";
 
+/** 头部图标按钮样式类名 */
 const headerIconButtonClass =
   "inline-flex items-center justify-center rounded-full w-10 h-10 text-[var(--text-color-secondary)] transition-colors transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-sm hover:bg-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] hover:text-[var(--primary-color)]";
 
+/**
+ * 导航项类型定义
+ */
 type NavItem = {
+  /** 导航路径 */
   path: string;
+  /** 导航标签 */
   label: string;
+  /** 导航图标 */
   icon: IconType;
 };
 
+/**
+ * 标签项类型定义
+ */
 type TabItem = {
+  /** 标签路径 */
   path: string;
+  /** 标签标签 */
   label: string;
 };
 
+/**
+ * 基础布局组件
+ * 提供前台页面的整体布局，包含顶部导航、页脚、回到顶部等功能
+ *
+ * 功能包括：
+ * - 顶部导航栏（支持隐藏/显示）
+ * - 多标签页
+ * - 面包屑导航
+ * - 页脚信息
+ * - 回到顶部按钮
+ *
+ * @returns 基础布局组件
+ */
 function BasicLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  /** 设置面板是否可见 */
   const [settingsVisible, setSettingsVisible] = useState(false);
+  /** 用户协议弹窗是否可见 */
   const [agreementVisible, setAgreementVisible] = useState(false);
+  /** 隐私政策弹窗是否可见 */
   const [privacyVisible, setPrivacyVisible] = useState(false);
   const { token, avatar, reset: resetUser } = useUserStore();
   const {
@@ -97,16 +138,20 @@ function BasicLayout() {
     setIsLoading
   } = useAppStore();
 
-  // Handle PageTransition for login/nav flow
+  /**
+   * 处理页面过渡动画
+   * 登录/导航流程中显示2秒过渡效果
+   */
   useEffect(() => {
     if (isLoading) {
       const timer = setTimeout(() => {
         setIsLoading(false);
-      }, 2000); // Show transition for 2 seconds
+      }, 2000);
       return () => clearTimeout(timer);
     }
   }, [isLoading, setIsLoading]);
 
+  /** 导航项列表 */
   const navItems: NavItem[] = useMemo(
     () => [
       { path: routes.home, label: "首页", icon: FiHome },
@@ -118,13 +163,22 @@ function BasicLayout() {
     []
   );
 
+  /** 标签页列表 */
   const [tabs, setTabs] = useState<TabItem[]>(() => [
     { path: routes.home, label: "首页" }
   ]);
 
+  /** 是否隐藏头部（滚动时） */
   const [hideHeader, setHideHeader] = useState(false);
+  /** 是否显示回到顶部按钮 */
   const [showBackToTop, setShowBackToTop] = useState(false);
+  /** 上次滚动位置引用 */
   const lastScrollYRef = useRef(0);
+
+  /**
+   * 监听滚动事件
+   * 控制头部显示/隐藏和回到顶部按钮显示
+   */
   useEffect(() => {
     const handleScroll = () => {
       const current = window.scrollY;
@@ -152,11 +206,15 @@ function BasicLayout() {
     };
   }, []);
 
+  /**
+   * 滚动到页面顶部
+   */
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const activePath = location.pathname;
+  /** 是否为后台管理页面 */
   const isAdmin = activePath.startsWith(routes.admin);
   const effectiveLayoutMode = isAdmin ? layoutMode : "horizontal";
   const effectiveBoxBorderEnabled = isAdmin ? boxBorderEnabled : false;
