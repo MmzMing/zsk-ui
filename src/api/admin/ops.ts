@@ -1,226 +1,11 @@
-/**
- * 运维管理相关 API
- * @module api/admin/ops
- * @description 提供系统日志、监控数据、缓存管理、行为审计等运维相关接口
- */
-
 import { request, handleRequest } from "../request";
 import type { ApiResponse } from "../types";
 import type { ColumnConfig, LineConfig } from "@ant-design/plots";
 
-/**
- * 日志级别类型
- * @description 系统日志的级别分类
- */
-export type LogLevel = "INFO" | "ERROR";
+// ===== 类型定义 =====
 
 /**
- * 系统日志项
- * @description 用于展示系统操作日志列表
- */
-export type SystemLogItem = {
-  /** 日志唯一标识 */
-  id: string;
-  /** 日志记录时间，ISO 格式字符串 */
-  time: string;
-  /** 日志级别：INFO-信息、ERROR-错误 */
-  level: LogLevel;
-  /** 所属模块名称，如"用户管理"、"文档管理"等 */
-  module: string;
-  /** 日志消息摘要 */
-  message: string;
-  /** 日志详细内容 */
-  detail: string;
-};
-
-/**
- * 监控指标类型
- * @description 系统监控支持的指标类型
- */
-export type MonitorMetric = "cpu" | "memory" | "disk" | "network" | "jvmHeap";
-
-/**
- * 监控数据点
- * @description 用于监控图表的数据点
- */
-export type MonitorPoint = {
-  /** 数据采集时间，ISO 格式字符串 */
-  time: string;
-  /** 指标数值 */
-  value: number;
-  /** 指标类型：cpu-CPU使用率、memory-内存使用率、disk-磁盘使用率、network-网络IO、jvmHeap-JVM堆内存 */
-  metric: MonitorMetric;
-};
-
-/**
- * 监控概览数据
- * @description 系统监控概览面板数据
- */
-export type MonitorOverview = {
-  /** CPU 使用率百分比 */
-  cpu: number;
-  /** 内存使用率百分比 */
-  memory: number;
-  /** 磁盘使用率百分比 */
-  disk: number;
-  /** 网络 IO 使用率百分比 */
-  network: number;
-  /** JVM 堆内存使用率百分比 */
-  jvmHeap: number;
-  /** JVM 线程数量 */
-  jvmThread: number;
-  /** 主机名称 */
-  hostName: string;
-  /** 主机 IP 地址 */
-  hostIp: string;
-  /** 操作系统名称 */
-  osName: string;
-};
-
-/**
- * 监控趋势数据项
- * @description 用于监控趋势图表的数据点
- */
-export type MonitorTrendItem = {
-  /** 数据采集时间 */
-  time: string;
-  /** 指标数值 */
-  value: number;
-  /** 指标类型名称 */
-  metric: string;
-};
-
-/**
- * 监控趋势请求参数
- * @description 查询监控趋势数据的参数结构
- */
-export type MonitorTrendParams = {
-  /** 指标类型：cpu、memory、disk、network、jvmHeap、jvmThread */
-  metric: "cpu" | "memory" | "disk" | "network" | "jvmHeap" | "jvmThread";
-  /** 时间范围：1h-1小时、24h-24小时、7d-7天 */
-  range: "1h" | "24h" | "7d" | string;
-};
-
-/**
- * 缓存实例项
- * @description 缓存实例列表数据
- */
-export type CacheInstanceItem = {
-  /** 实例唯一标识 */
-  id: string;
-  /** 实例名称，如"主缓存"、"会话缓存"等 */
-  name: string;
-  /** 内存使用率百分比 */
-  usage: number;
-  /** 节点数量 */
-  nodes: number;
-  /** 缓存命中率百分比 */
-  hitRate: number;
-};
-
-/**
- * 缓存日志项
- * @description 缓存操作日志记录
- */
-export type CacheLogItem = {
-  /** 日志唯一标识 */
-  id: string;
-  /** 日志记录时间 */
-  time: string;
-  /** 关联的缓存实例 ID */
-  instanceId: string;
-  /** 日志消息内容 */
-  message: string;
-};
-
-/**
- * 行为事件项
- * @description 用户行为审计事件记录
- */
-export type BehaviorEvent = {
-  /** 事件唯一标识 */
-  id: string;
-  /** 关联用户 ID */
-  userId: string;
-  /** 事件发生时间 */
-  time: string;
-  /** 用户行为动作，如"登录"、"查看文档"等 */
-  action: string;
-  /** 所属模块，如"用户模块"、"文档模块"等 */
-  module: string;
-  /** 行为详细描述 */
-  detail: string;
-  /** 风险等级：low-低风险、medium-中风险、high-高风险 */
-  riskLevel: "low" | "medium" | "high";
-};
-
-/**
- * 行为用户项
- * @description 行为审计中的用户信息
- */
-export type BehaviorUser = {
-  /** 用户唯一标识 */
-  id: string;
-  /** 用户名称 */
-  name: string;
-  /** 用户角色 */
-  role?: string;
-  /** 所属部门 */
-  department?: string;
-  /** 最后登录时间 */
-  lastLoginAt?: string;
-  /** 最后登录 IP 地址 */
-  lastLoginIp?: string;
-  /** 风险等级：low-低风险、medium-中风险、high-高风险 */
-  riskLevel: "low" | "medium" | "high";
-};
-
-/**
- * 行为时间范围类型
- * @description 行为审计查询的时间范围选项
- */
-export type BehaviorRange = "today" | "7d" | "30d";
-
-/**
- * 行为数据点
- * @description 用户行为时间线数据点
- */
-export type BehaviorPoint = {
-  /** 用户 ID */
-  userId: string;
-  /** 时间范围 */
-  range: BehaviorRange;
-  /** 数据点时间 */
-  time: string;
-  /** 行为次数 */
-  count: number;
-};
-
-/**
- * 缓存键项
- * @description 缓存键管理列表数据
- */
-export type CacheKeyItem = {
-  /** 键唯一标识 */
-  id: string;
-  /** 缮存键名 */
-  key: string;
-  /** 数据类型：string-字符串、hash-哈希、list-列表、set-集合、zset-有序集合 */
-  type: "string" | "hash" | "list" | "set" | "zset";
-  /** 数据大小（字节） */
-  size: number;
-  /** 过期时间（秒），null 表示永不过期 */
-  ttl: number | null;
-  /** 所属缓存实例 ID */
-  instanceId: string;
-  /** 所属缓存实例名称 */
-  instanceName: string;
-  /** 最后更新时间 */
-  updatedAt: string;
-};
-
-/**
- * 系统操作日志（后端格式）
+ * 系统操作日志
  * @description 对应后端 SysOperLog 实体
  */
 export type SysOperLog = {
@@ -252,28 +37,154 @@ export type SysOperLog = {
   errorMsg?: string;
   /** 操作时间 */
   operTime?: string;
+  /** 操作时间（别名） */
+  time?: string;
   /** 消耗时间（毫秒） */
   costTime?: number;
+  /** 日志级别 */
+  level?: "info" | "warning" | "error" | "debug";
+  /** 模块名称 */
+  module?: string;
+  /** 消息内容 */
+  message?: string;
+  /** 详细信息 */
+  detail?: string;
 };
 
 /**
- * 后端操作日志转前端格式
- * @param backendData 后端日志数据
- * @returns 前端日志格式
+ * 分页结果类型
  */
-const mapOperLogToFrontend = (backendData: SysOperLog): SystemLogItem => ({
-  id: backendData.id || "",
-  time: backendData.operTime || "",
-  level: backendData.status === 0 ? "INFO" : "ERROR",
-  module: backendData.title || "",
-  message: backendData.operUrl || "",
-  detail: backendData.operParam || "",
-});
+export type PageResult<T> = {
+  rows: T[];
+  total: number;
+};
+
+/**
+ * 监控指标类型
+ */
+export type MonitorMetric = "cpu" | "memory" | "disk" | "network" | "jvmHeap";
+
+/**
+ * 监控数据点
+ */
+export type MonitorPoint = {
+  time: string;
+  value: number;
+  metric: MonitorMetric;
+};
+
+/**
+ * 监控概览数据
+ */
+export type MonitorOverview = {
+  cpu: number;
+  memory: number;
+  disk: number;
+  network: number;
+  jvmHeap: number;
+  jvmThread: number;
+  hostName: string;
+  hostIp: string;
+  osName: string;
+};
+
+/**
+ * 监控趋势数据项
+ */
+export type MonitorTrendItem = {
+  time: string;
+  value: number;
+  metric: string;
+};
+
+/**
+ * 监控趋势请求参数
+ */
+export type MonitorTrendParams = {
+  metric: "cpu" | "memory" | "disk" | "network" | "jvmHeap" | "jvmThread";
+  range: "1h" | "24h" | "7d" | string;
+};
+
+/**
+ * 缓存实例项
+ */
+export type CacheInstanceItem = {
+  id: string;
+  name: string;
+  usage: number;
+  nodes: number;
+  hitRate: number;
+};
+
+/**
+ * 缓存日志项
+ */
+export type CacheLogItem = {
+  id: string;
+  time: string;
+  instanceId: string;
+  message: string;
+};
+
+/**
+ * 缓存键项
+ */
+export type CacheKeyItem = {
+  id: string;
+  key: string;
+  type: "string" | "hash" | "list" | "set" | "zset";
+  size: number;
+  ttl: number | null;
+  instanceId: string;
+  instanceName: string;
+  updatedAt: string;
+};
+
+/**
+ * 行为事件项
+ */
+export type BehaviorEvent = {
+  id: string;
+  userId: string;
+  time: string;
+  action: string;
+  module: string;
+  detail: string;
+  riskLevel: "low" | "medium" | "high";
+};
+
+/**
+ * 行为用户项
+ */
+export type BehaviorUser = {
+  id: string;
+  name: string;
+  role?: string;
+  department?: string;
+  lastLoginAt?: string;
+  lastLoginIp?: string;
+  riskLevel: "low" | "medium" | "high";
+};
+
+/**
+ * 行为时间范围类型
+ */
+export type BehaviorRange = "today" | "7d" | "30d";
+
+/**
+ * 行为数据点
+ */
+export type BehaviorPoint = {
+  userId: string;
+  range: BehaviorRange;
+  time: string;
+  count: number;
+};
+
+// ===== API 函数 =====
 
 /**
  * 获取系统日志列表
- * @param params 查询参数，包含分页、关键字、模块和级别过滤
- * @returns 日志列表及总数
  */
 export async function fetchSystemLogs(params?: {
   page: number;
@@ -281,32 +192,18 @@ export async function fetchSystemLogs(params?: {
   keyword?: string;
   module?: string;
   level?: string;
-}): Promise<ApiResponse<{ list: SystemLogItem[]; total: number }>> {
-  const res = await handleRequest({
+}): Promise<ApiResponse<PageResult<SysOperLog>>> {
+  return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<{ rows: SysOperLog[]; total: number }>>(
-          "/system/operLog/list",
-          { params }
-        )
+        .get<ApiResponse<PageResult<SysOperLog>>>("/system/operLog/list", { params })
         .then((r) => r.data),
     apiName: "fetchSystemLogs",
   });
-
-  return {
-    code: 200,
-    msg: "ok",
-    data: {
-      list: (res.data?.rows || []).map(mapOperLogToFrontend),
-      total: res.data?.total || 0,
-    },
-  };
 }
 
 /**
  * 获取系统监控数据
- * @param setLoading 加载状态回调函数
- * @returns 监控数据点列表
  */
 export async function fetchSystemMonitorData(
   setLoading?: (loading: boolean) => void
@@ -323,8 +220,6 @@ export async function fetchSystemMonitorData(
 
 /**
  * 获取系统监控概览数据
- * @param setLoading 加载状态回调函数
- * @returns 监控概览数据
  */
 export async function fetchSystemMonitorOverview(
   setLoading?: (loading: boolean) => void
@@ -341,9 +236,6 @@ export async function fetchSystemMonitorOverview(
 
 /**
  * 获取监控趋势数据
- * @param params 查询参数，包含指标类型和时间范围
- * @param setLoading 加载状态回调函数
- * @returns 监控趋势数据列表
  */
 export async function fetchMonitorTrend(
   params: MonitorTrendParams,
@@ -352,9 +244,7 @@ export async function fetchMonitorTrend(
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<MonitorTrendItem[]>>("/system/monitor/trend", {
-          params,
-        })
+        .get<ApiResponse<MonitorTrendItem[]>>("/system/monitor/trend", { params })
         .then((r) => r.data),
     apiName: "fetchMonitorTrend",
     setLoading,
@@ -363,8 +253,6 @@ export async function fetchMonitorTrend(
 
 /**
  * 获取缓存实例列表
- * @param setLoading 加载状态回调函数
- * @returns 缓存实例列表
  */
 export async function fetchCacheInstances(
   setLoading?: (loading: boolean) => void
@@ -381,8 +269,6 @@ export async function fetchCacheInstances(
 
 /**
  * 获取缓存日志列表
- * @param params 查询参数，可指定实例 ID
- * @returns 缓存日志列表
  */
 export async function fetchCacheLogs(params?: {
   instanceId?: string;
@@ -403,8 +289,6 @@ export async function fetchCacheLogs(params?: {
 
 /**
  * 获取缓存命中率趋势数据
- * @param params 查询参数，可指定实例 ID
- * @returns 折线图配置数据
  */
 export async function fetchCacheHitRateTrend(params?: {
   instanceId?: string;
@@ -414,10 +298,9 @@ export async function fetchCacheHitRateTrend(params?: {
   return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<LineConfig["data"]>>(
-          "/system/monitor/cache/trend/hitRate",
-          { params: instanceId ? { instanceId } : undefined }
-        )
+        .get<ApiResponse<LineConfig["data"]>>("/system/monitor/cache/trend/hitRate", {
+          params: instanceId ? { instanceId } : undefined,
+        })
         .then((r) => r.data),
     apiName: "fetchCacheHitRateTrend",
     setLoading,
@@ -426,8 +309,6 @@ export async function fetchCacheHitRateTrend(params?: {
 
 /**
  * 获取缓存 QPS 趋势数据
- * @param params 查询参数，可指定实例 ID
- * @returns 柱状图配置数据
  */
 export async function fetchCacheQpsTrend(params?: {
   instanceId?: string;
@@ -448,8 +329,6 @@ export async function fetchCacheQpsTrend(params?: {
 
 /**
  * 刷新缓存键
- * @param params 包含要刷新的键名
- * @returns 是否刷新成功
  */
 export async function refreshCacheKey(params: {
   key: string;
@@ -470,9 +349,6 @@ export async function refreshCacheKey(params: {
 
 /**
  * 删除缓存键
- * @param key 要删除的键名
- * @param setLoading 加载状态回调函数
- * @returns 是否删除成功
  */
 export async function deleteCacheKey(
   key: string,
@@ -481,9 +357,7 @@ export async function deleteCacheKey(
   return handleRequest({
     requestFn: () =>
       request.instance
-        .delete<ApiResponse<boolean>>(
-          `/system/monitor/cache/keys/${encodeURIComponent(key)}`
-        )
+        .delete<ApiResponse<boolean>>(`/system/monitor/cache/keys/${encodeURIComponent(key)}`)
         .then((r) => r.data),
     apiName: "deleteCacheKey",
     setLoading,
@@ -492,9 +366,6 @@ export async function deleteCacheKey(
 
 /**
  * 批量刷新缓存键
- * @param keys 要刷新的键名列表
- * @param setLoading 加载状态回调函数
- * @returns 是否刷新成功
  */
 export async function batchRefreshCacheKeys(
   keys: string[],
@@ -503,10 +374,7 @@ export async function batchRefreshCacheKeys(
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>(
-          "/system/monitor/cache/keys/batchRefresh",
-          keys
-        )
+        .post<ApiResponse<boolean>>("/system/monitor/cache/keys/batchRefresh", keys)
         .then((r) => r.data),
     apiName: "batchRefreshCacheKeys",
     setLoading,
@@ -515,9 +383,6 @@ export async function batchRefreshCacheKeys(
 
 /**
  * 批量删除缓存键
- * @param keys 要删除的键名列表
- * @param setLoading 加载状态回调函数
- * @returns 是否删除成功
  */
 export async function batchDeleteCacheKeys(
   keys: string[],
@@ -526,10 +391,7 @@ export async function batchDeleteCacheKeys(
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>(
-          "/system/monitor/cache/keys/batchDelete",
-          keys
-        )
+        .post<ApiResponse<boolean>>("/system/monitor/cache/keys/batchDelete", keys)
         .then((r) => r.data),
     apiName: "batchDeleteCacheKeys",
     setLoading,
@@ -538,8 +400,6 @@ export async function batchDeleteCacheKeys(
 
 /**
  * 清空缓存实例
- * @param setLoading 加载状态回调函数
- * @returns 是否清空成功
  */
 export async function clearCacheInstance(
   setLoading?: (loading: boolean) => void
@@ -556,8 +416,6 @@ export async function clearCacheInstance(
 
 /**
  * 获取行为审计用户列表
- * @param setLoading 加载状态回调函数
- * @returns 用户列表
  */
 export async function fetchBehaviorUsers(
   setLoading?: (loading: boolean) => void
@@ -574,8 +432,6 @@ export async function fetchBehaviorUsers(
 
 /**
  * 获取行为时间线数据
- * @param params 查询参数，包含用户 ID 和时间范围
- * @returns 时间线数据点列表
  */
 export async function fetchBehaviorTimeline(params: {
   userId: string;
@@ -597,8 +453,6 @@ export async function fetchBehaviorTimeline(params: {
 
 /**
  * 获取行为事件列表
- * @param params 查询参数，包含用户 ID 和关键字
- * @returns 行为事件列表
  */
 export async function fetchBehaviorEvents(params: {
   userId: string;
@@ -620,8 +474,6 @@ export async function fetchBehaviorEvents(params: {
 
 /**
  * 获取缓存键列表
- * @param params 查询参数，包含关键字、实例 ID、TTL 过滤和分页信息
- * @returns 缓存键列表及总数
  */
 export async function fetchCacheKeys(params: {
   keyword?: string;
@@ -630,34 +482,22 @@ export async function fetchCacheKeys(params: {
   page: number;
   pageSize: number;
   setLoading?: (loading: boolean) => void;
-}): Promise<ApiResponse<{ list: CacheKeyItem[]; total: number }>> {
+}): Promise<ApiResponse<PageResult<CacheKeyItem>>> {
   const { keyword, instanceId, ttlFilter, page, pageSize, setLoading } = params;
-  const res = await handleRequest({
+  return handleRequest({
     requestFn: () =>
       request.instance
-        .get<ApiResponse<{ rows: CacheKeyItem[]; total: number }>>(
-          "/system/monitor/cache/keys",
-          { params: { keyword, instanceId, ttlFilter, page, pageSize } }
-        )
+        .get<ApiResponse<PageResult<CacheKeyItem>>>("/system/monitor/cache/keys", {
+          params: { keyword, instanceId, ttlFilter, page, pageSize },
+        })
         .then((r) => r.data),
     apiName: "fetchCacheKeys",
     setLoading,
   });
-
-  return {
-    code: 200,
-    msg: "ok",
-    data: {
-      list: res.data?.rows || [],
-      total: res.data?.total || 0,
-    },
-  };
 }
 
 /**
  * 获取行为审计完整数据
- * @param params 查询参数，包含用户 ID、时间范围、关键字等
- * @returns 包含用户列表、时间线、事件的完整数据
  */
 export async function getBehaviorFullData(params: {
   userId: string;
@@ -691,8 +531,6 @@ export async function getBehaviorFullData(params: {
 
 /**
  * 获取系统监控完整数据
- * @param params 可选参数，包含加载状态回调和错误处理
- * @returns 包含监控数据和概览的完整数据
  */
 export async function getSystemMonitorFullData(params?: {
   setLoading?: (loading: boolean) => void;
@@ -720,8 +558,6 @@ export async function getSystemMonitorFullData(params?: {
 
 /**
  * 获取系统日志列表数据
- * @param params 查询参数，包含分页、关键字、模块和级别过滤
- * @returns 日志列表及总数
  */
 export async function getSystemLogListData(params: {
   page: number;
@@ -735,13 +571,7 @@ export async function getSystemLogListData(params: {
   const { page, pageSize, keyword, module, level, setLoading, onError } = params;
   const { data } = await handleRequest({
     requestFn: () =>
-      fetchSystemLogs({
-        page,
-        pageSize,
-        keyword,
-        module,
-        level,
-      }),
+      fetchSystemLogs({ page, pageSize, keyword, module, level }),
     apiName: "getSystemLogListData",
     setLoading,
     onError,
@@ -751,8 +581,6 @@ export async function getSystemLogListData(params: {
 
 /**
  * 获取缓存监控初始数据
- * @param params 可选参数，包含加载状态回调和错误处理
- * @returns 包含实例列表、默认实例和详情数据
  */
 export async function getCacheMonitorInitialData(params?: {
   setLoading?: (loading: boolean) => void;
@@ -768,8 +596,7 @@ export async function getCacheMonitorInitialData(params?: {
   });
 
   if (instances && instances.length > 0) {
-    const defaultInstance =
-      instances.find((i) => i.id === "redis-main") || instances[0];
+    const defaultInstance = instances.find((i) => i.id === "redis-main") || instances[0];
     const detail = await getCacheInstanceDetailData({
       instanceId: defaultInstance.id,
       setLoading: setLoadingTrend,
@@ -782,8 +609,6 @@ export async function getCacheMonitorInitialData(params?: {
 
 /**
  * 获取缓存实例详情数据
- * @param params 查询参数，包含实例 ID
- * @returns 包含命中率趋势、QPS 趋势和日志的详情数据
  */
 export async function getCacheInstanceDetailData(params: {
   instanceId: string;
@@ -815,8 +640,6 @@ export async function getCacheInstanceDetailData(params: {
 
 /**
  * 清空缓存实例数据
- * @param params 可选参数，包含加载状态回调和错误处理
- * @returns 是否清空成功
  */
 export async function clearCacheInstanceData(params?: {
   setLoading?: (loading: boolean) => void;
@@ -834,8 +657,6 @@ export async function clearCacheInstanceData(params?: {
 
 /**
  * 获取缓存实例列表数据
- * @param params 可选参数，包含加载状态回调和错误处理
- * @returns 缓存实例列表
  */
 export async function getCacheInstancesData(params?: {
   setLoading?: (loading: boolean) => void;
@@ -853,8 +674,6 @@ export async function getCacheInstancesData(params?: {
 
 /**
  * 获取缓存键列表数据
- * @param params 查询参数，包含分页、关键字和实例 ID
- * @returns 缓存键列表及总数
  */
 export async function getCacheKeysListData(params: {
   page: number;
@@ -866,13 +685,7 @@ export async function getCacheKeysListData(params: {
 }) {
   const { page, pageSize, keyword, instanceId, setLoading, onError } = params;
   const { data } = await handleRequest({
-    requestFn: () =>
-      fetchCacheKeys({
-        page,
-        pageSize,
-        keyword,
-        instanceId,
-      }),
+    requestFn: () => fetchCacheKeys({ page, pageSize, keyword, instanceId }),
     apiName: "getCacheKeysListData",
     setLoading,
     onError,
@@ -882,8 +695,6 @@ export async function getCacheKeysListData(params: {
 
 /**
  * 批量刷新缓存
- * @param params 包含要刷新的键 ID 列表
- * @returns 是否刷新成功
  */
 export async function batchRefreshCache(params: {
   ids: string[];
@@ -902,8 +713,6 @@ export async function batchRefreshCache(params: {
 
 /**
  * 批量删除缓存
- * @param params 包含要删除的键 ID 列表
- * @returns 是否删除成功
  */
 export async function batchDeleteCache(params: {
   ids: string[];
@@ -922,8 +731,6 @@ export async function batchDeleteCache(params: {
 
 /**
  * 刷新单个缓存
- * @param params 包含要刷新的键 ID
- * @returns 是否刷新成功
  */
 export async function refreshSingleCache(params: {
   id: string;
@@ -942,8 +749,6 @@ export async function refreshSingleCache(params: {
 
 /**
  * 删除单个缓存
- * @param params 包含要删除的键 ID
- * @returns 是否删除成功
  */
 export async function deleteSingleCache(params: {
   id: string;

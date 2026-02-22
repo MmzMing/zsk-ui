@@ -4,7 +4,7 @@
  * @description 定义状态更新操作的 Action 类型和创建函数
  */
 
-import type { SliderCaptchaData } from "@/api/auth";
+import type { BackendCaptchaResponse } from "@/api/auth";
 import type { AuthFormFields, AuthFormErrors } from "./types";
 
 /**
@@ -91,7 +91,7 @@ interface SetSliderVerifiedAction {
 
 interface SetSliderInfoAction {
   type: AuthFormActionType.SET_SLIDER_INFO;
-  payload: SliderCaptchaData | null;
+  payload: BackendCaptchaResponse | null;
 }
 
 interface SetSliderErrorAction {
@@ -244,7 +244,7 @@ export const setSliderVerified = (verified: boolean): SetSliderVerifiedAction =>
 });
 
 /** 设置滑块验证码信息 */
-export const setSliderInfo = (info: SliderCaptchaData | null): SetSliderInfoAction => ({
+export const setSliderInfo = (info: BackendCaptchaResponse | null): SetSliderInfoAction => ({
   type: AuthFormActionType.SET_SLIDER_INFO,
   payload: info,
 });

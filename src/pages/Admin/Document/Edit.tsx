@@ -25,14 +25,27 @@ import {
 } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Loading } from '@/components/Loading';
-import { getDocumentDetail, createDocument, updateDocument, type DocumentDetail } from '@/api/admin/document';
+import { getDocumentDetail, createDocument, updateDocument, type DocNote } from '@/api/admin/document';
 import { handleRequest } from '@/api/axios';
 import { useDocumentEditor, extractHeadingsFromHtml } from '@/hooks';
 
+interface DocSeoData {
+  title: string;
+  description: string;
+  keywords: string[];
+}
+
+interface DocFormData {
+  noteName: string;
+  content: string;
+  seo: DocSeoData;
+  broadCode: string;
+}
+
 /** SEO 面板组件属性 */
 interface SEOPanelProps {
-  data: NonNullable<DocumentDetail['seo']>;
-  onChange: (seo: NonNullable<DocumentDetail['seo']>) => void;
+  data: DocSeoData;
+  onChange: (seo: DocSeoData) => void;
 }
 
 /**
@@ -121,17 +134,17 @@ export default function DocumentEditPage() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [docData, setDocData] = useState<Partial<DocumentDetail>>({
-    title: '',
+  const [docData, setDocData] = useState<DocFormData>({
+    noteName: '',
     content: '',
     seo: { title: '', description: '', keywords: [] },
-    category: '未分类'
+    broadCode: ''
   });
   const [showSeo, setShowSeo] = useState(false);
 
   const { editorRef, quillRef, content, setContent } = useDocumentEditor({
     initialContent: docData.content,
-    onContentChange: (html) => {
+    onContentChange: (html: string) => {
       setDocData(prev => ({ ...prev, content: html }));
     }
   });
@@ -148,15 +161,25 @@ export default function DocumentEditPage() {
     });
 
     if (res && res.data) {
-      setDocData(res.data);
-      setContent(res.data.content || '');
+      const note = res.data as DocNote;
+      setDocData({
+        noteName: note.noteName || '',
+        content: note.content || '',
+        broadCode: note.broadCode || '',
+        seo: {
+          title: note.seoTitle || '',
+          description: note.seoDescription || '',
+          keywords: note.seoKeywords ? note.seoKeywords.split(',') : []
+        }
+      });
+      setContent(note.content || '');
     }
     setLoading(false);
   }, [id, setContent]);
 
   /** 保存文档 */
   const handleSave = async () => {
-    if (!docData.title) {
+    if (!docData.noteName) {
       addToast({
         title: '保存失败',
         description: '请输入文档标题',
@@ -166,13 +189,22 @@ export default function DocumentEditPage() {
     }
 
     setLoading(true);
+    const saveData: Partial<DocNote> = {
+      noteName: docData.noteName,
+      content: docData.content,
+      broadCode: docData.broadCode,
+      seoTitle: docData.seo.title,
+      seoDescription: docData.seo.description,
+      seoKeywords: docData.seo.keywords.join(',')
+    };
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const res = await handleRequest<any>({
       requestFn: () => {
         if (id && id !== 'new') {
-          return updateDocument(id, docData);
+          return updateDocument(id, saveData);
         }
-        return createDocument(docData);
+        return createDocument(saveData);
       }
     });
 
@@ -206,8 +238,8 @@ export default function DocumentEditPage() {
             <FiChevronLeft className="text-xl" />
           </Button>
           <Input
-            value={docData.title}
-            onChange={(e) => setDocData({ ...docData, title: e.target.value })}
+            value={docData.noteName}
+            onChange={(e) => setDocData({ ...docData, noteName: e.target.value })}
             placeholder="输入文档标题..."
             className="max-w-xl font-bold"
             variant="underlined"
@@ -284,12 +316,10 @@ export default function DocumentEditPage() {
           {/* 右侧：SEO 面板 */}
           {showSeo && (
             <div className="w-80 border-l border-default-200 bg-content1 p-6 overflow-y-auto animate-in slide-in-from-right duration-300">
-              {docData.seo && (
-                <SEOPanel
-                  data={docData.seo}
-                  onChange={(seo) => setDocData({ ...docData, seo })}
-                />
-              )}
+              <SEOPanel
+                data={docData.seo}
+                onChange={(seo) => setDocData({ ...docData, seo })}
+              />
             </div>
           )}
         </div>

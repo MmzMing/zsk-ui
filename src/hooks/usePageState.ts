@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo, useCallback } from "react";
+import { PAGINATION } from "@/constants";
 
 /**
  * 分页配置参数
@@ -55,12 +56,12 @@ interface UsePageStateReturn {
  * @returns 分页状态与操作方法
  * @example
  * ```tsx
- * const { page, pageSize, totalPages, handlePageChange, getPaginatedData } = usePageState({ pageSize: 8 });
+ * const { page, pageSize, totalPages, handlePageChange, getPaginatedData } = usePageState();
  * const pageItems = getPaginatedData(filteredItems);
  * ```
  */
 function usePageState(options: UsePageStateOptions = {}): UsePageStateReturn {
-  const { initialPage = 1, pageSize: defaultPageSize = 10 } = options;
+  const { initialPage = PAGINATION.DEFAULT_PAGE, pageSize: defaultPageSize = PAGINATION.DEFAULT_PAGE_SIZE } = options;
 
   const [page, setPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(defaultPageSize);

@@ -25,8 +25,7 @@ import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { Loading } from "@/components/Loading";
 import {
-  type TokenItem,
-  type TokenStatus,
+  type SysToken,
   fetchTokenList,
   revokeToken,
   batchRevokeTokens,
@@ -34,6 +33,7 @@ import {
 } from "@/api/admin/system";
 import { useAdminTable, useAdminDataLoader } from "@/hooks";
 import { handleError } from "@/utils";
+import { PAGINATION } from "@/constants";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -43,31 +43,15 @@ type StatusFilter = "all" | "active" | "no_active";
 
 // ===== 4. 通用工具函数区域 =====
 /**
- * 获取令牌类型标签
- * @param type 令牌类型
- * @returns 对应的中文标签
- */
-const getTokenTypeLabel = (type: TokenItem["type"]): string => {
-  const typeMap: Record<TokenItem["type"], string> = {
-    api: "公共 API 令牌",
-    personal: "个人访问令牌",
-    internal: "内部系统令牌"
-  };
-  return typeMap[type] || "未知类型";
-};
-
-/**
  * 获取状态标签属性
  * @param status 令牌状态
  * @returns 状态标签的颜色和文字
  */
-const getStatusChipProps = (status: TokenStatus) => {
-  const statusMap: Record<TokenStatus, { color: "success" | "warning" | "danger"; label: string }> = {
-    active: { color: "success", label: "有效" },
-    expired: { color: "warning", label: "已过期" },
-    revoked: { color: "danger", label: "已吊销" }
-  };
-  return statusMap[status] || { color: "danger", label: "未知" };
+const getStatusChipProps = (status: string) => {
+  if (status === "0") {
+    return { color: "success" as const, label: "有效" };
+  }
+  return { color: "danger" as const, label: "已失效" };
 };
 
 // ===== 5. 注释代码函数区 =====
@@ -94,20 +78,20 @@ function TokenPage() {
 
   // --- 常量定义 ---
   /** 每页显示条数 */
-  const pageSize = 6;
+  const pageSize = PAGINATION.DEFAULT_PAGE_SIZE;
 
   // 使用自定义 hook 加载令牌列表数据
   const {
     data: tokenList,
     loading: isLoading,
     loadData: loadTokenList
-  } = useAdminDataLoader<TokenItem[]>();
+  } = useAdminDataLoader<SysToken[]>();
 
   /** 加载令牌列表 */
   const loadTokenListData = useCallback(async () => {
     await loadTokenList(async () => {
       const response = await fetchTokenList();
-      return response.data || [];
+      return response.data?.rows || [];
     }, {
       showErrorToast: true,
       errorMessage: '加载令牌列表失败'
@@ -121,7 +105,7 @@ function TokenPage() {
     totalPages,
     currentPageData: pageItems,
     handlePageChange: setPage
-  } = useAdminTable<TokenItem>({
+  } = useAdminTable<SysToken>({
     initialPageSize: pageSize
   });
 
@@ -143,12 +127,12 @@ function TokenPage() {
    * 复制令牌内容到剪贴板
    * @param item 令牌项
    */
-  const handleCopyToken = (item: TokenItem) => {
+  const handleCopyToken = (item: SysToken) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(item.token);
+      navigator.clipboard.writeText(item.token || "");
       addToast({
         title: "复制成功",
-        description: `已复制令牌 ${item.name} 到剪贴板，请妥善保管。`,
+        description: `已复制令牌 ${item.userName} 到剪贴板，请妥善保管。`,
         color: "success"
       });
     }
@@ -158,11 +142,11 @@ function TokenPage() {
    * 吊销单个令牌
    * @param item 令牌项
    */
-  const handleRevokeToken = async (item: TokenItem) => {
-    if (item.status === "revoked") return;
+  const handleRevokeToken = async (item: SysToken) => {
+    if (item.status === "1") return;
 
     try {
-      const res = await revokeToken(item.id);
+      const res = await revokeToken(item.id || 0);
       if (res && res.data) {
         addToast({ title: "操作成功", color: "success" });
         loadTokenListData();
@@ -183,7 +167,7 @@ function TokenPage() {
     if (ids.length === 0) return;
 
     try {
-      const res = await batchRevokeTokens(ids);
+      const res = await batchRevokeTokens(ids.map(Number));
       if (res && res.data) {
         addToast({
           title: `成功吊销 ${ids.length} 个令牌`,
@@ -208,7 +192,7 @@ function TokenPage() {
     if (ids.length === 0) return;
 
     try {
-      const res = await batchDeleteTokens(ids);
+      const res = await batchDeleteTokens(ids.map(Number));
       if (res && res.data) {
         addToast({
           title: `成功删除 ${ids.length} 个令牌`,
@@ -229,10 +213,10 @@ function TokenPage() {
    * 令牌续期逻辑（演示）
    * @param item 令牌项
    */
-  const handleRefreshToken = (item: TokenItem) => {
+  const handleRefreshToken = (item: SysToken) => {
     addToast({
       title: "申请成功",
-      description: `已为令牌 ${item.name} 触发续期申请，实际逻辑待接入接口。`,
+      description: `已为令牌 ${item.userName} 触发续期申请，实际逻辑待接入接口。`,
       color: "success"
     });
   };
@@ -361,20 +345,17 @@ function TokenPage() {
               selectedKeys={selectedKeys}
               onSelectionChange={keys => {
                 if (keys === "all") {
-                  setSelectedKeys(new Set((tokenList || []).map(item => item.id)));
+                  setSelectedKeys(new Set((tokenList || []).map(item => String(item.id))));
                 } else {
                   setSelectedKeys(keys as Set<string>);
                 }
               }}
             >
               <TableHeader className="bg-[var(--bg-elevated)]/80">
-                <TableColumn className="px-3 py-2 text-left font-medium">令牌名称</TableColumn>
+                <TableColumn className="px-3 py-2 text-left font-medium">用户名</TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">令牌片段</TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">类型</TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">绑定账号</TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">创建时间</TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">过期时间</TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">最近使用时间</TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">状态</TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">操作</TableColumn>
               </TableHeader>
@@ -385,11 +366,12 @@ function TokenPage() {
                 loadingContent={<Loading height={200} text="获取令牌数据中..." />}
               >
                 {item => {
-                  const statusChip = getStatusChipProps(item.status);
-                  const tokenFragment =
-                    item.token.length > 8
+                  const statusChip = getStatusChipProps(item.status || "");
+                  const tokenFragment = item.token
+                    ? item.token.length > 8
                       ? `${item.token.slice(0, 4)}****${item.token.slice(-4)}`
-                      : item.token;
+                      : item.token
+                    : "-";
                   return (
                     <TableRow
                       key={item.id}
@@ -397,7 +379,7 @@ function TokenPage() {
                     >
                       <TableCell className="px-3 py-2">
                         <div className="flex flex-col gap-0.5">
-                          <span>{item.name}</span>
+                          <span>{item.userName}</span>
                           <span className="text-[10px] text-[var(--text-color-secondary)]">
                             ID: {item.id}
                           </span>
@@ -409,19 +391,10 @@ function TokenPage() {
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-2">
-                        <span>{getTokenTypeLabel(item.type)}</span>
+                        <span>{item.createTime}</span>
                       </TableCell>
                       <TableCell className="px-3 py-2">
-                        <span>{item.boundUser}</span>
-                      </TableCell>
-                      <TableCell className="px-3 py-2">
-                        <span>{item.createdAt}</span>
-                      </TableCell>
-                      <TableCell className="px-3 py-2">
-                        <span>{item.expiredAt}</span>
-                      </TableCell>
-                      <TableCell className="px-3 py-2">
-                        <span>{item.lastUsedAt ?? "-"}</span>
+                        <span>{item.expireTime || "-"}</span>
                       </TableCell>
                       <TableCell className="px-3 py-2">
                         <Chip

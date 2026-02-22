@@ -20,7 +20,7 @@ import {
   type DocumentUploadTaskItem,
   type DocCategory,
   type DocTag,
-  type DocumentItem as DraftItem
+  type DocNote
 } from '@/api/admin/document';
 import { formatFileSize } from '@/utils/formatUtils';
 
@@ -50,7 +50,7 @@ interface UseDocumentUploadReturn {
   /** 任务列表 */
   tasks: DocumentUploadTaskItem[];
   /** 草稿列表 */
-  drafts: DraftItem[];
+  drafts: DocNote[];
   /** 消息提示 */
   message: string;
   /** 上传中状态 */
@@ -94,7 +94,7 @@ interface UseDocumentUploadReturn {
     cover: string;
   }) => Promise<boolean>;
   /** 加载草稿 */
-  handleLoadDraft: (draft: DraftItem, callbacks: {
+  handleLoadDraft: (draft: DocNote, callbacks: {
     setTitle: (title: string) => void;
     setCategory: (category: string) => void;
     setDescription: (desc: string) => void;
@@ -129,7 +129,7 @@ export function useDocumentUpload(options: UseDocumentUploadOptions = {}): UseDo
   const [categoryData, setCategoryData] = useState<DocCategory[]>([]);
   const [tagOptions, setTagOptions] = useState<DocTag[]>([]);
   const [tasks, setTasks] = useState<DocumentUploadTaskItem[]>([]);
-  const [drafts, setDrafts] = useState<DraftItem[]>([]);
+  const [drafts, setDrafts] = useState<DocNote[]>([]);
   const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState('');
@@ -152,8 +152,8 @@ export function useDocumentUpload(options: UseDocumentUploadOptions = {}): UseDo
 
       if (catsRes && catsRes.code === 200) setCategoryData(catsRes.data);
       if (tagsRes && tagsRes.code === 200) setTagOptions(tagsRes.data);
-      if (taskListRes && taskListRes.code === 200) setTasks(taskListRes.data.list);
-      if (draftListRes && draftListRes.code === 200) setDrafts(draftListRes.data.list);
+      if (taskListRes && taskListRes.code === 200) setTasks(taskListRes.data);
+      if (draftListRes && draftListRes.code === 200) setDrafts(draftListRes.data.rows);
     } catch {
       addToast({
         title: '数据加载失败',
@@ -367,11 +367,11 @@ export function useDocumentUpload(options: UseDocumentUploadOptions = {}): UseDo
     }
 
     const res = await createDocument({
-      title: trimmedTitle || '未命名文档',
-      category: params.category,
+      noteName: trimmedTitle || '未命名文档',
+      broadCode: params.category,
       content: params.description,
-      status: 'draft',
-      tags: params.tags,
+      status: 3,
+      noteTags: params.tags.join(','),
       cover: params.cover
     });
 
@@ -385,7 +385,7 @@ export function useDocumentUpload(options: UseDocumentUploadOptions = {}): UseDo
 
       const draftRes = await fetchDraftList({ page: 1, pageSize: 10 });
       if (draftRes && draftRes.code === 200) {
-        setDrafts(draftRes.data.list);
+        setDrafts(draftRes.data.rows);
       }
 
       return true;
@@ -395,14 +395,14 @@ export function useDocumentUpload(options: UseDocumentUploadOptions = {}): UseDo
   }, [selectedFileName]);
 
   /** 加载草稿 */
-  const handleLoadDraft = useCallback((draft: DraftItem, callbacks: {
+  const handleLoadDraft = useCallback((draft: DocNote, callbacks: {
     setTitle: (title: string) => void;
     setCategory: (category: string) => void;
     setDescription: (desc: string) => void;
   }) => {
-    callbacks.setTitle(draft.title);
-    callbacks.setCategory(draft.category);
-    callbacks.setDescription(draft.description || '');
+    callbacks.setTitle(draft.noteName || '');
+    callbacks.setCategory(draft.broadCode || '');
+    callbacks.setDescription(draft.content || '');
     setMessage('已加载草稿');
   }, []);
 

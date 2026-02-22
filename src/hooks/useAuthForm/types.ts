@@ -4,7 +4,7 @@
  * @description 定义认证表单的状态、操作和返回类型
  */
 
-import type { SliderCaptchaData } from "@/api/auth";
+import type { BackendCaptchaResponse } from "@/api/auth";
 
 /**
  * 表单模式类型
@@ -70,7 +70,7 @@ export interface SliderCaptchaState {
   /** 是否已验证 */
   verified: boolean;
   /** 验证码数据 */
-  info: SliderCaptchaData | null;
+  info: BackendCaptchaResponse | null;
   /** 错误信息 */
   error: string;
   /** 拼图顶部位置 */

@@ -34,9 +34,7 @@ import {
 } from "@/api/admin/ops";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { usePageState, useSelection } from "@/hooks";
-
-/** 每页显示条数 */
-const PAGE_SIZE = 8;
+import { PAGINATION } from "@/constants";
 
 /**
  * 格式化存储大小
@@ -74,7 +72,7 @@ function formatTtl(ttl: number | null): string {
  */
 function CacheListPage() {
   /** 分页状态 */
-  const { page, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGE_SIZE });
+  const { page, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGINATION.DEFAULT_PAGE_SIZE });
 
   /** 表格选择状态 */
   const { selectedIds, setSelectedIds, hasSelection, handleTableSelectionChange } = useSelection();
@@ -118,12 +116,12 @@ function CacheListPage() {
       keyword,
       instanceId: instanceFilter,
       page,
-      pageSize: PAGE_SIZE,
+      pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
       setLoading,
       onError: (err) => showErrorFn(err, "加载缓存数据")
     });
     if (data) {
-      setItems(data.list);
+      setItems(data.rows);
       setTotal(data.total);
     }
   }, [keyword, instanceFilter, page, showErrorFn, setTotal]);

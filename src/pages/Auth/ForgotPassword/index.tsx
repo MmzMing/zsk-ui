@@ -31,7 +31,7 @@ import {
   verifyResetCode,
   resetPassword,
   getPublicKey,
-  type SliderCaptchaData,
+  type BackendCaptchaResponse,
 } from "@/api/auth";
 import { rsaEncrypt, validateAccount, validateEmail, validateCaptcha, validatePassword, validateConfirmPassword } from "@/utils";
 import { useBgCarousel, useCountdown } from "@/hooks";
@@ -88,7 +88,7 @@ const ForgotPasswordPage: React.FC = () => {
   const [sliderVerified, setSliderVerified] = React.useState(false);
   /** 滑块验证码信息 */
   const [sliderCaptchaInfo, setSliderCaptchaInfo] =
-    React.useState<SliderCaptchaData | null>(null);
+    React.useState<BackendCaptchaResponse | null>(null);
   /** 滑块错误信息 */
   const [sliderError, setSliderError] = React.useState("");
   /** 验证码是否已发送 */

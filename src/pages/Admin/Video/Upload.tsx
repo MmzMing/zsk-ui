@@ -108,7 +108,14 @@ export default function VideoUploadPage() {
       return {
         categories: catsRes.data || [],
         tags: tagsRes.data || [],
-        draft: draftsRes.data?.list?.[0] || null
+        draft: draftsRes.data?.rows?.[0] ? {
+          id: String(draftsRes.data.rows[0].id),
+          title: draftsRes.data.rows[0].videoTitle || '',
+          category: draftsRes.data.rows[0].broadCode || '',
+          description: draftsRes.data.rows[0].fileContent || '',
+          coverImage: draftsRes.data.rows[0].coverUrl || '',
+          updatedAt: draftsRes.data.rows[0].updateTime || ''
+        } : null
       };
     }, {
       showErrorToast: true,
@@ -287,7 +294,7 @@ export default function VideoUploadPage() {
       setCoverUrl(draft.coverImage);
     }
 
-    setDescription(draft.description);
+    setDescription(draft.description || "");
     // 假设草稿不包含文件实体，只包含元数据
     // 这里我们将状态置为 "success" (模拟已上传) 以允许编辑，但实际上没有文件
     // 或者我们应该要求用户重新上传视频？
@@ -326,14 +333,20 @@ export default function VideoUploadPage() {
       }
 
       const res = await saveDraft({
-        title,
-        category: categoryId || "uncategorized",
-        description,
-        coverImage: "" // 暂不支持自定义封面上传
+        videoTitle: title,
+        broadCode: categoryId || "uncategorized",
+        fileContent: description,
+        coverUrl: ""
       });
 
       if (res.data) {
-        setDraft(res.data);
+        setDraft({
+          id: String(res.data),
+          title,
+          category: categoryId || "uncategorized",
+          description,
+          updatedAt: new Date().toISOString()
+        });
         showMessage("草稿保存成功", "success");
       }
     } catch (error) {
@@ -380,14 +393,13 @@ export default function VideoUploadPage() {
       }
 
       await updateVideo({
-        id: videoId,
-        title,
-        category: subCategoryId || categoryId,
-        description,
-        cover: finalCoverUrl,
-        tags: Array.from(selectedTags),
-        password: permission === "password" ? password : "",
-        status: "pending" // 提交审核
+        id: Number(videoId),
+        videoTitle: title,
+        broadCode: subCategoryId || categoryId,
+        fileContent: description,
+        coverUrl: finalCoverUrl,
+        tags: Array.from(selectedTags).join(','),
+        status: 0
       });
       
       // 如果有草稿，提交成功后删除草稿
@@ -442,10 +454,12 @@ export default function VideoUploadPage() {
     const newChapter: ChapterItem = {
       id: Date.now().toString(),
       title: newChapterTitle,
+      startTime: seconds,
+      endTime: seconds + 60,
       time: newChapterTime,
       timeInSeconds: seconds
     };
-    setChapters([...chapters, newChapter].sort((a, b) => a.timeInSeconds - b.timeInSeconds));
+    setChapters([...chapters, newChapter].sort((a, b) => (a.timeInSeconds || 0) - (b.timeInSeconds || 0)));
     setNewChapterTitle("");
     setNewChapterTime("");
   };
@@ -741,7 +755,7 @@ export default function VideoUploadPage() {
               <div key={chapter.id} className="flex items-center justify-between bg-[var(--bg-content)] p-2 rounded border border-[var(--border-color)]">
                 <div className="flex items-center gap-2">
                   <FiClock className="text-[var(--text-color-secondary)]" />
-                  <span className="font-medium">{formatTime(chapter.timeInSeconds)}</span>
+                  <span className="font-medium">{formatTime(chapter.timeInSeconds || 0)}</span>
                   <span>{chapter.title}</span>
                 </div>
                 <Button 

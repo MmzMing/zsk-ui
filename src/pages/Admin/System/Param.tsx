@@ -8,10 +8,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   Button,
   Card,
-  Chip,
   Pagination,
-  SelectItem,
-  Switch,
   Table,
   TableBody,
   TableCell,
@@ -23,20 +20,19 @@ import {
 } from "@heroui/react";
 import { FiEdit2, FiPlus, FiRotateCcw, FiTrash2, FiX } from "react-icons/fi";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
-import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminInput } from "@/components/Admin/AdminInput";
 import { AdminTextarea } from "@/components/Admin/AdminTextarea";
 import { Loading } from "@/components/Loading";
 import {
-  type ParamItem,
-  type ParamScope,
-  fetchParamList,
-  saveParam,
-  deleteParam,
-  batchDeleteParams
+  type SysConfig,
+  fetchConfigList,
+  saveConfig,
+  deleteConfig,
+  batchDeleteConfigs
 } from "@/api/admin/system";
 import { useAdminTable, useAdminDataLoader } from "@/hooks";
 import { handleError } from "@/utils";
+import { PAGINATION } from "@/constants";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -46,34 +42,16 @@ type ParamFormState = {
   /** 参数ID */
   id?: string;
   /** 参数键名 */
-  key: string;
+  configKey: string;
   /** 参数名称 */
-  name: string;
+  configName: string;
   /** 参数值 */
-  value: string;
-  /** 作用域 */
-  scope: ParamScope;
+  configValue: string;
   /** 参数说明 */
-  description: string;
-  /** 是否敏感参数 */
-  sensitive: boolean;
+  remark: string;
 };
 
 // ===== 4. 通用工具函数区域 =====
-/**
- * 获取作用域展示标签
- * @param scope 作用域代码
- * @returns 对应的中文标签
- */
-const getScopeLabel = (scope: ParamScope): string => {
-  const scopeMap: Record<ParamScope, string> = {
-    frontend: "前台配置",
-    backend: "后台配置",
-    task: "任务调度",
-    global: "全局配置"
-  };
-  return scopeMap[scope] || "未知配置";
-};
 
 // ===== 5. 注释代码函数区 =====
 
@@ -92,8 +70,6 @@ function ParamPage() {
   // --- 列表数据与加载状态 ---
   /** 搜索关键词 */
   const [keyword, setKeyword] = useState("");
-  /** 作用域筛选 */
-  const [scopeFilter, setScopeFilter] = useState<ParamScope | "all">("all");
   /** 选中项的 ID 集合 */
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
@@ -102,31 +78,29 @@ function ParamPage() {
   const [formVisible, setFormVisible] = useState(false);
   /** 表单状态数据 */
   const [formState, setFormState] = useState<ParamFormState>({
-    key: "",
-    name: "",
-    value: "",
-    scope: "backend",
-    description: "",
-    sensitive: false
+    configKey: "",
+    configName: "",
+    configValue: "",
+    remark: ""
   });
   /** 表单错误提示 */
   const [formError, setFormError] = useState("");
 
   /** 每页条数 */
-  const pageSize = 8;
+  const pageSize = PAGINATION.DEFAULT_PAGE_SIZE;
 
   // 使用自定义 hook 加载参数列表数据
   const {
     data: paramList,
     loading: isLoading,
     loadData: loadParamList
-  } = useAdminDataLoader<ParamItem[]>();
+  } = useAdminDataLoader<SysConfig[]>();
 
   /** 加载参数列表 */
   const loadParamListData = useCallback(async () => {
     await loadParamList(async () => {
-      const response = await fetchParamList();
-      return response.data || [];
+      const response = await fetchConfigList();
+      return response.data?.rows || [];
     }, {
       showErrorToast: true,
       errorMessage: '加载参数列表失败'
@@ -140,7 +114,7 @@ function ParamPage() {
     totalPages,
     currentPageData: pageItems,
     handlePageChange: setPage
-  } = useAdminTable<ParamItem>({
+  } = useAdminTable<SysConfig>({
     initialPageSize: pageSize
   });
 
@@ -154,7 +128,6 @@ function ParamPage() {
    */
   const handleResetFilter = () => {
     setKeyword("");
-    setScopeFilter("all");
     setPage(1);
   };
 
@@ -163,12 +136,10 @@ function ParamPage() {
    */
   const handleOpenCreate = () => {
     setFormState({
-      key: "",
-      name: "",
-      value: "",
-      scope: "backend",
-      description: "",
-      sensitive: false
+      configKey: "",
+      configName: "",
+      configValue: "",
+      remark: ""
     });
     setFormError("");
     setFormVisible(true);
@@ -178,15 +149,13 @@ function ParamPage() {
    * 打开编辑参数弹窗
    * @param item 参数项
    */
-  const handleOpenEdit = (item: ParamItem) => {
+  const handleOpenEdit = (item: SysConfig) => {
     setFormState({
-      id: item.id,
-      key: item.key,
-      name: item.name,
-      value: item.value,
-      scope: item.scope,
-      description: item.description,
-      sensitive: item.sensitive
+      id: String(item.id),
+      configKey: item.configKey || "",
+      configName: item.configName || "",
+      configValue: item.configValue || "",
+      remark: item.remark || ""
     });
     setFormError("");
     setFormVisible(true);
@@ -215,9 +184,9 @@ function ParamPage() {
    * 删除单个参数
    * @param item 参数项
    */
-  const handleDeleteParam = async (item: ParamItem) => {
+  const handleDeleteParam = async (item: SysConfig) => {
     try {
-      const res = await deleteParam(item.id);
+      const res = await deleteConfig(item.id || 0);
       if (res && res.data) {
         addToast({
           title: "参数删除成功",
@@ -241,7 +210,7 @@ function ParamPage() {
     if (ids.length === 0) return;
 
     try {
-      const res = await batchDeleteParams(ids);
+      const res = await batchDeleteConfigs(ids.map(Number));
       if (res && res.data) {
         addToast({
           title: `成功删除 ${ids.length} 个参数`,
@@ -262,19 +231,20 @@ function ParamPage() {
    * 提交表单数据
    */
   const handleSubmitForm = async () => {
-    const trimmedKey = formState.key.trim();
-    const trimmedName = formState.name.trim();
+    const trimmedKey = formState.configKey.trim();
+    const trimmedName = formState.configName.trim();
     if (!trimmedKey || !trimmedName) {
       setFormError("请填写完整的参数键名与参数名称。");
       return;
     }
 
     try {
-      const res = await saveParam({
-        ...formState,
-        key: trimmedKey,
-        name: trimmedName,
-        description: formState.description.trim()
+      const res = await saveConfig({
+        configKey: formState.configKey,
+        configName: formState.configName,
+        configValue: formState.configValue,
+        remark: formState.remark.trim(),
+        id: formState.id ? Number(formState.id) : undefined
       });
 
       if (res && res.data) {
@@ -322,31 +292,6 @@ function ParamPage() {
                   setPage(1);
                 }}
               />
-              <AdminSelect
-                aria-label="作用域筛选"
-                size="sm"
-                className="w-40"
-                selectedKeys={[scopeFilter]}
-                onSelectionChange={keys => {
-                  const key = Array.from(keys)[0];
-                  setScopeFilter(key ? (String(key) as ParamScope | "all") : "all");
-                  setPage(1);
-                }}
-                items={[
-                  { label: "全部作用域", value: "all" },
-                  { label: "全局配置", value: "global" },
-                  { label: "前台配置", value: "frontend" },
-                  { label: "后台配置", value: "backend" },
-                  { label: "任务调度", value: "task" }
-                ]}
-                isClearable
-              >
-                {(item: { label: string; value: string }) => (
-                  <SelectItem key={item.value}>
-                    {item.label}
-                  </SelectItem>
-                )}
-              </AdminSelect>
               <Tooltip content="重置筛选">
                 <Button
                   isIconOnly
@@ -402,7 +347,7 @@ function ParamPage() {
               selectedKeys={selectedKeys}
               onSelectionChange={keys => {
                 if (keys === "all") {
-                  setSelectedKeys(new Set((paramList || []).map(item => item.id)));
+                  setSelectedKeys(new Set((paramList || []).map(item => String(item.id))));
                 } else {
                   setSelectedKeys(keys as Set<string>);
                 }
@@ -419,10 +364,7 @@ function ParamPage() {
                   参数值
                 </TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">
-                  作用域
-                </TableColumn>
-                <TableColumn className="px-3 py-2 text-left font-medium">
-                  是否敏感
+                  备注
                 </TableColumn>
                 <TableColumn className="px-3 py-2 text-left font-medium">
                   最近更新时间
@@ -445,7 +387,7 @@ function ParamPage() {
                     <TableCell className="px-3 py-2">
                       <div className="flex flex-col gap-0.5">
                         <span className="font-mono text-xs break-all">
-                          {item.key}
+                          {item.configKey}
                         </span>
                         <span className="text-xs text-[var(--text-color-secondary)]">
                           ID: {item.id}
@@ -453,28 +395,18 @@ function ParamPage() {
                       </div>
                     </TableCell>
                     <TableCell className="px-3 py-2">
-                      <span>{item.name}</span>
+                      <span>{item.configName}</span>
                     </TableCell>
                     <TableCell className="px-3 py-2">
                       <span className="font-mono text-xs break-all">
-                        {item.sensitive ? "******" : item.value}
+                        {item.configValue}
                       </span>
                     </TableCell>
                     <TableCell className="px-3 py-2">
-                      <span>{getScopeLabel(item.scope)}</span>
+                      <span>{item.remark || "-"}</span>
                     </TableCell>
                     <TableCell className="px-3 py-2">
-                      <Chip
-                        size="sm"
-                        variant="flat"
-                        className="text-[10px]"
-                        color={item.sensitive ? "danger" : "default"}
-                      >
-                        {item.sensitive ? "敏感" : "普通"}
-                      </Chip>
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      <span>{item.updatedAt}</span>
+                      <span>{item.updateTime}</span>
                     </TableCell>
                     <TableCell className="px-3 py-2">
                       <div className="flex flex-wrap gap-1.5">
@@ -552,73 +484,32 @@ function ParamPage() {
               <div className="space-y-1">
                 <div>参数键名（必填）</div>
                 <AdminInput
-                  value={formState.key}
-                  onValueChange={value => handleFormChange({ key: value })}
+                  value={formState.configKey}
+                  onValueChange={value => handleFormChange({ configKey: value })}
                 />
               </div>
               <div className="space-y-1">
                 <div>参数名称（必填）</div>
                 <AdminInput
-                  value={formState.name}
-                  onValueChange={value => handleFormChange({ name: value })}
+                  value={formState.configName}
+                  onValueChange={value => handleFormChange({ configName: value })}
                 />
               </div>
               <div className="space-y-1">
                 <div>参数值</div>
                 <AdminTextarea
                   minRows={2}
-                  value={formState.value}
-                  onValueChange={value => handleFormChange({ value })}
+                  value={formState.configValue}
+                  onValueChange={value => handleFormChange({ configValue: value })}
                 />
               </div>
               <div className="space-y-1">
-                <div>作用域</div>
-                <AdminSelect
-                  aria-label="参数作用域"
-                  size="sm"
-                  selectedKeys={[formState.scope]}
-                  onSelectionChange={keys => {
-                    const key = Array.from(keys)[0];
-                    if (key) {
-                      handleFormChange({ scope: String(key) as ParamScope });
-                    }
-                  }}
-                  items={[
-                    { label: "全局配置", value: "global" },
-                    { label: "前台配置", value: "frontend" },
-                    { label: "后台配置", value: "backend" },
-                    { label: "任务调度", value: "task" }
-                  ]}
-                  className="w-full"
-                  disallowEmptySelection
-                >
-                  {(item: { label: string; value: string }) => (
-                    <SelectItem key={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  )}
-                </AdminSelect>
-              </div>
-              <div className="space-y-1">
-                <div>参数说明</div>
+                <div>备注</div>
                 <AdminTextarea
                   minRows={2}
-                  value={formState.description}
-                  onValueChange={value => handleFormChange({ description: value })}
+                  value={formState.remark}
+                  onValueChange={value => handleFormChange({ remark: value })}
                 />
-              </div>
-              <div className="flex items-center justify-between pt-1">
-                <div className="text-xs">是否敏感参数</div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    size="sm"
-                    isSelected={formState.sensitive}
-                    onValueChange={selected => handleFormChange({ sensitive: selected })}
-                  />
-                  <span className="text-xs text-[var(--text-color-secondary)]">
-                    标记为敏感后，在列表中将隐藏参数真实值。
-                  </span>
-                </div>
               </div>
             </div>
             <div className="px-4 py-3 border-t border-[var(--border-color)] flex items-center justify-end gap-2">

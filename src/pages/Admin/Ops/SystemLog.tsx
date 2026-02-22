@@ -28,14 +28,11 @@ import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { Loading } from "@/components/Loading";
 import { FiDownload, FiRotateCcw } from "react-icons/fi";
 import {
-  SystemLogItem,
-  LogLevel,
+  SysOperLog,
   getSystemLogListData,
 } from "@/api/admin/ops";
 import { usePageState } from "@/hooks";
-
-/** 每页显示条数 */
-const PAGE_SIZE = 8;
+import { PAGINATION } from "@/constants";
 
 /** 日志模块列表 */
 const LOG_MODULES = [
@@ -49,10 +46,13 @@ const LOG_MODULES = [
   "系统配置",
 ];
 
+/** 日志级别类型 */
+type LogLevel = "info" | "warning" | "error" | "debug";
+
 /**
  * 根据日志级别获取对应的 UI 属性
  */
-function getLevelChipProps(level: LogLevel): { color: "danger" | "default"; className: string; label: string } {
+function getLevelChipProps(level: string): { color: "danger" | "default"; className: string; label: string } {
   if (level === "ERROR") {
     return {
       color: "danger" as const,
@@ -73,14 +73,14 @@ function getLevelChipProps(level: LogLevel): { color: "danger" | "default"; clas
  */
 function SystemLogPage() {
   /** 分页状态 */
-  const { page, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGE_SIZE });
+  const { page, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGINATION.DEFAULT_PAGE_SIZE });
 
   /** 数据与加载状态 */
   const [loading, setLoading] = React.useState(false);
-  const [logs, setLogs] = React.useState<SystemLogItem[]>([]);
+  const [logs, setLogs] = React.useState<SysOperLog[]>([]);
 
   /** 筛选条件状态 */
-  const [activeLevel, setActiveLevel] = React.useState<LogLevel | "all">("all");
+  const [activeLevel, setActiveLevel] = React.useState<string | "all">("all");
   const [activeModule, setActiveModule] = React.useState("全部模块");
   const [keyword, setKeyword] = React.useState("");
 
@@ -104,7 +104,7 @@ function SystemLogPage() {
   const loadData = useCallback(async () => {
     const data = await getSystemLogListData({
       page,
-      pageSize: PAGE_SIZE,
+      pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
       keyword,
       module: activeModule === "全部模块" ? undefined : activeModule,
       level: activeLevel === "all" ? undefined : activeLevel,
@@ -113,7 +113,7 @@ function SystemLogPage() {
     });
 
     if (data) {
-      setLogs(data.list);
+      setLogs(data.rows);
       setTotal(data.total);
     }
   }, [activeLevel, activeModule, keyword, page, showErrorFn, setTotal]);
@@ -255,9 +255,9 @@ function SystemLogPage() {
               }}
             >
               <Tab key="all" title="全部级别" />
-              <Tab key="INFO" title="INFO" />
-              <Tab key="WARN" title="WARN" />
-              <Tab key="ERROR" title="ERROR" />
+              <Tab key="info" title="INFO" />
+              <Tab key="warning" title="WARN" />
+              <Tab key="error" title="ERROR" />
             </AdminTabs>
           </div>
 
@@ -331,14 +331,14 @@ function SystemLogPage() {
                 }
               >
                 {(item) => {
-                  const levelProps = getLevelChipProps(item.level);
+                  const levelProps = getLevelChipProps(item.level || "info");
                   return (
                     <TableRow
                       key={item.id}
                       className="border-t border-[var(--border-color)] hover:bg-[var(--bg-elevated)]/60 align-top"
                     >
                       <TableCell className="px-3 py-2 whitespace-nowrap">
-                        {item.time}
+                        {item.time || item.operTime}
                       </TableCell>
                       <TableCell className="px-3 py-2">
                         <Chip
@@ -351,13 +351,13 @@ function SystemLogPage() {
                         </Chip>
                       </TableCell>
                       <TableCell className="px-3 py-2 whitespace-nowrap">
-                        {item.module}
+                        {item.module || item.title}
                       </TableCell>
                       <TableCell className="px-3 py-2 whitespace-nowrap font-mono text-[11px]">
-                        {item.message}
+                        {item.message || item.operUrl}
                       </TableCell>
                       <TableCell className="px-3 py-2 text-[11px] text-[var(--text-color-secondary)] max-w-xs truncate">
-                        {item.detail}
+                        {item.detail || item.operParam}
                       </TableCell>
                     </TableRow>
                   );

@@ -731,12 +731,12 @@ function DocumentUploadPage() {
                   <TableRow key={draft.id}>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium truncate max-w-[200px]">{draft.title}</span>
-                        <span className="text-[10px] text-[var(--text-color-secondary)]">{draft.category}</span>
+                        <span className="font-medium truncate max-w-[200px]">{draft.noteName}</span>
+                        <span className="text-[10px] text-[var(--text-color-secondary)]">{draft.broadCode}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="text-[10px] text-[var(--text-color-secondary)]">{draft.updatedAt.split(' ')[0]}</span>
+                      <span className="text-[10px] text-[var(--text-color-secondary)]">{(draft.updateTime || '').split(' ')[0]}</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">

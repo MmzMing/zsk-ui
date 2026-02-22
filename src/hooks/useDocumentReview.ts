@@ -6,6 +6,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { addToast } from '@heroui/react';
+import { PAGINATION } from '@/constants';
 import {
   fetchDocumentReviewQueue,
   fetchDocumentReviewLogs,
@@ -121,7 +122,7 @@ interface UseDocumentReviewReturn {
  * ```
  */
 export function useDocumentReview(options: UseDocumentReviewOptions = {}): UseDocumentReviewReturn {
-  const { pageSize = 8 } = options;
+  const { pageSize = PAGINATION.DEFAULT_PAGE_SIZE } = options;
 
   const [queue, setQueue] = useState<DocumentReviewItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -156,7 +157,7 @@ export function useDocumentReview(options: UseDocumentReviewOptions = {}): UseDo
     });
 
     if (res && res.data) {
-      setQueue(res.data.list);
+      setQueue(res.data.rows);
       setTotal(res.data.total);
     }
   }, [page, pageSize, filters.status, filters.keyword]);
@@ -182,8 +183,9 @@ export function useDocumentReview(options: UseDocumentReviewOptions = {}): UseDo
 
   /** 更新审核状态 */
   const updateStatus = useCallback(async (id: string, status: 'approved' | 'rejected'): Promise<boolean> => {
+    const auditStatus = status === 'approved' ? 1 : 2;
     const res = await handleRequest({
-      requestFn: () => submitDocumentReview({ reviewId: id, status })
+      requestFn: () => submitDocumentReview({ reviewId: id, auditStatus })
     });
 
     if (res && res.code === 200) {
@@ -213,7 +215,7 @@ export function useDocumentReview(options: UseDocumentReviewOptions = {}): UseDo
     const results = await Promise.all(
       ids.map(id =>
         handleRequest({
-          requestFn: () => submitDocumentReview({ reviewId: id, status: 'approved' })
+          requestFn: () => submitDocumentReview({ reviewId: id, auditStatus: 1 })
         })
       )
     );
@@ -247,7 +249,7 @@ export function useDocumentReview(options: UseDocumentReviewOptions = {}): UseDo
     const results = await Promise.all(
       ids.map(id =>
         handleRequest({
-          requestFn: () => submitDocumentReview({ reviewId: id, status: 'rejected' })
+          requestFn: () => submitDocumentReview({ reviewId: id, auditStatus: 2 })
         })
       )
     );

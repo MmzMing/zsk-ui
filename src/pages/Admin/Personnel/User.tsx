@@ -12,7 +12,6 @@ import {
   Chip,
   Pagination,
   Switch,
-  Checkbox,
   Table,
   TableHeader,
   TableColumn,
@@ -40,10 +39,7 @@ import { AdminTabs } from "@/components/Admin/AdminTabs";
 import { AdminInput } from "@/components/Admin/AdminInput";
 import { Loading } from "@/components/Loading";
 import {
-  type UserItem,
-  type UserFormState,
-  type RoleAssignState,
-  allRoles,
+  type SysUser,
   fetchUserList,
   createUser,
   updateUser,
@@ -55,9 +51,35 @@ import {
 } from "@/api/admin/personnel";
 import { useUserStore } from "@/store/modules/userStore";
 import { usePageState, useSelection } from "@/hooks";
+import { PAGINATION } from "@/constants";
 
-/** 每页显示条数 */
-const PAGE_SIZE = 8;
+/**
+ * 用户表单状态类型定义
+ */
+type UserFormState = {
+  /** 用户ID（编辑模式） */
+  id?: string;
+  /** 用户名 */
+  userName: string;
+  /** 姓名 */
+  nickName: string;
+  /** 手机号 */
+  phonenumber: string;
+  /** 是否启用 */
+  enabled: boolean;
+};
+
+/**
+ * 角色分配状态类型定义
+ */
+type RoleAssignState = {
+  /** 用户ID */
+  userId: string;
+  /** 用户名 */
+  name: string;
+  /** 已选角色列表 */
+  roles: string[];
+};
 
 /**
  * 创建空的用户表单初始状态
@@ -65,10 +87,9 @@ const PAGE_SIZE = 8;
  */
 function createEmptyUserForm(): UserFormState {
   return {
-    username: "",
-    name: "",
-    phone: "",
-    role: allRoles[0] ?? "",
+    userName: "",
+    nickName: "",
+    phonenumber: "",
     enabled: true
   };
 }
@@ -82,13 +103,13 @@ function UserPage() {
   const { userId: currentUserId } = useUserStore();
 
   /** 分页状态 */
-  const { page, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGE_SIZE });
+  const { page, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGINATION.DEFAULT_PAGE_SIZE });
 
   /** 表格选择状态 */
   const { selectedIds, setSelectedIds, hasSelection, handleTableSelectionChange: handleSelectionChange } = useSelection();
 
   /** 列表数据与加载状态 */
-  const [users, setUsers] = React.useState<UserItem[]>([]);
+  const [users, setUsers] = React.useState<SysUser[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
   /** 筛选条件状态 */
@@ -111,18 +132,17 @@ function UserPage() {
   const loadUserList = React.useCallback(async () => {
     const res = await fetchUserList({
       page,
-      pageSize: PAGE_SIZE,
+      pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
       keyword: keyword.trim() || undefined,
       phone: phoneKeyword.trim() || undefined,
-      role: roleFilter === "all" ? undefined : roleFilter,
       status: statusFilter === "all" ? undefined : statusFilter
     }, setIsLoading);
 
     if (res && res.code === 200) {
-      setUsers(res.data.list);
+      setUsers(res.data.rows);
       setTotal(res.data.total);
     }
-  }, [page, keyword, phoneKeyword, roleFilter, statusFilter, setTotal]);
+  }, [page, keyword, phoneKeyword, statusFilter, setTotal]);
 
   /** 初始化加载 */
   React.useEffect(() => {
@@ -137,7 +157,7 @@ function UserPage() {
    */
   const handleTableSelectionChange = (keys: "all" | Set<React.Key>) => {
     if (keys === "all") {
-      setSelectedIds(users.map(item => item.id));
+      setSelectedIds(users.map(item => String(item.id)));
       return;
     }
     handleSelectionChange(keys);
@@ -167,14 +187,13 @@ function UserPage() {
   /**
    * 打开编辑用户表单
    */
-  const handleOpenEditUser = (user: UserItem) => {
+  const handleOpenEditUser = (user: SysUser) => {
     setUserForm({
-      id: user.id,
-      username: user.username,
-      name: user.name,
-      phone: user.phone,
-      role: user.roles[0] ?? allRoles[0] ?? "",
-      enabled: user.status === "enabled"
+      id: String(user.id),
+      userName: user.userName || "",
+      nickName: user.nickName || "",
+      phonenumber: user.phonenumber || "",
+      enabled: user.status === "0"
     });
     setUserFormMode("edit");
     setUserFormError("");
@@ -201,8 +220,8 @@ function UserPage() {
   const handleSubmitUserForm = async () => {
     if (!userForm) return;
 
-    const trimmedUsername = userForm.username.trim();
-    const trimmedName = userForm.name.trim();
+    const trimmedUsername = userForm.userName.trim();
+    const trimmedName = userForm.nickName.trim();
     if (!trimmedUsername || !trimmedName) {
       setUserFormError("账号与姓名为必填项，请补充完整后再提交。");
       return;
@@ -210,11 +229,10 @@ function UserPage() {
 
     if (userFormMode === "create") {
       const res = await createUser({
-        username: trimmedUsername,
-        name: trimmedName,
-        phone: userForm.phone.trim(),
-        roles: userForm.role ? [userForm.role] : [],
-        status: userForm.enabled ? "enabled" : "disabled"
+        userName: trimmedUsername,
+        nickName: trimmedName,
+        phonenumber: userForm.phonenumber.trim(),
+        status: userForm.enabled ? "0" : "1"
       });
       if (res && res.code === 200) {
         addToast({ title: "用户新增成功", description: `已新增用户 ${trimmedUsername}。`, color: "success" });
@@ -227,12 +245,11 @@ function UserPage() {
         return;
       }
       const res = await updateUser({
-        id: userForm.id,
-        username: trimmedUsername,
-        name: trimmedName,
-        phone: userForm.phone.trim(),
-        roles: userForm.role ? [userForm.role] : [],
-        status: userForm.enabled ? "enabled" : "disabled"
+        id: Number(userForm.id),
+        userName: trimmedUsername,
+        nickName: trimmedName,
+        phonenumber: userForm.phonenumber.trim(),
+        status: userForm.enabled ? "0" : "1"
       });
       if (res && res.code === 200) {
         addToast({ title: "用户更新成功", description: `已更新用户 ${trimmedUsername} 的资料。`, color: "success" });
@@ -245,15 +262,15 @@ function UserPage() {
   /**
    * 删除单个用户
    */
-  const handleDeleteUser = async (user: UserItem) => {
-    const confirmed = window.confirm(`确定要删除用户 ${user.username} 吗？此操作需谨慎。`);
+  const handleDeleteUser = async (user: SysUser) => {
+    const confirmed = window.confirm(`确定要删除用户 ${user.userName} 吗？此操作需谨慎。`);
     if (!confirmed) return;
 
-    const res = await deleteUser(user.id);
+    const res = await deleteUser(String(user.id));
     if (res && res.code === 200) {
-      addToast({ title: "用户删除成功", description: `已删除用户 ${user.username}。`, color: "success" });
+      addToast({ title: "用户删除成功", description: `已删除用户 ${user.userName}。`, color: "success" });
       loadUserList();
-      setSelectedIds(prev => prev.filter(id => id !== user.id));
+      setSelectedIds(prev => prev.filter(id => id !== String(user.id)));
     }
   };
 
@@ -276,15 +293,15 @@ function UserPage() {
   /**
    * 切换用户状态
    */
-  const handleToggleStatus = async (user: UserItem) => {
-    if (user.id === currentUserId) {
+  const handleToggleStatus = async (user: SysUser) => {
+    if (String(user.id) === currentUserId) {
       addToast({ title: "操作受限", description: "不允许调整当前登录账号的状态。", color: "warning" });
       return;
     }
-    const nextStatus = user.status === "enabled" ? "disabled" : "enabled";
-    const res = await toggleUserStatus(user.id, nextStatus);
+    const nextStatus = user.status === "0" ? "1" : "0";
+    const res = await toggleUserStatus(String(user.id), nextStatus);
     if (res && res.code === 200) {
-      addToast({ title: "状态更新成功", description: `用户 ${user.username} 已${nextStatus === "enabled" ? "启用" : "禁用"}。`, color: "success" });
+      addToast({ title: "状态更新成功", description: `用户 ${user.userName} 已${nextStatus === "0" ? "启用" : "禁用"}。`, color: "success" });
       loadUserList();
     }
   };
@@ -292,13 +309,13 @@ function UserPage() {
   /**
    * 重置用户密码
    */
-  const handleResetPwd = async (user: UserItem) => {
-    const confirmed = window.confirm(`确定要重置用户 ${user.username} 的密码吗？`);
+  const handleResetPwd = async (user: SysUser) => {
+    const confirmed = window.confirm(`确定要重置用户 ${user.userName} 的密码吗？`);
     if (!confirmed) return;
 
-    const res = await resetPassword(user.id);
+    const res = await resetPassword(String(user.id));
     if (res && res.code === 200) {
-      addToast({ title: "密码重置成功", description: `用户 ${user.username} 的密码已重置为初始密码。`, color: "success" });
+      addToast({ title: "密码重置成功", description: `用户 ${user.userName} 的密码已重置为初始密码。`, color: "success" });
     }
   };
 
@@ -319,25 +336,21 @@ function UserPage() {
   /**
    * 打开分配角色对话框
    */
-  const handleOpenAssignRole = (user: UserItem) => {
-    setRoleAssign({ userId: user.id, name: user.name, roles: [...user.roles] });
+  const handleOpenAssignRole = (user: SysUser) => {
+    setRoleAssign({ userId: String(user.id), name: user.nickName || "", roles: [] });
   };
 
-  /**
-   * 确认分配角色
-   */
   const handleConfirmAssignRole = async () => {
     if (!roleAssign) return;
-    const user = users.find(u => u.id === roleAssign.userId);
+    const user = users.find(u => String(u.id) === roleAssign.userId);
     if (!user) return;
 
     const res = await updateUser({
-      id: user.id,
-      username: user.username,
-      name: user.name,
-      phone: user.phone,
-      roles: roleAssign.roles,
-      status: user.status
+      id: Number(user.id),
+      userName: user.userName || "",
+      nickName: user.nickName || "",
+      phonenumber: user.phonenumber || "",
+      status: user.status || "0"
     });
     if (res && res.code === 200) {
       addToast({ title: "角色分配成功", description: `已更新用户 ${roleAssign.name} 的角色配置。`, color: "success" });
@@ -408,7 +421,8 @@ function UserPage() {
               }}
               items={[
                 { label: "全部角色", value: "all" },
-                ...allRoles.map(role => ({ label: role, value: role }))
+                { label: "管理员", value: "admin" },
+                { label: "普通用户", value: "user" }
               ]}
               isClearable
               classNames={{
@@ -549,7 +563,7 @@ function UserPage() {
                 isLoading={isLoading}
               >
                 {user => {
-                  const enabled = user.status === "enabled";
+                  const enabled = user.status === "0";
                   return (
                     <TableRow
                       key={user.id}
@@ -558,18 +572,18 @@ function UserPage() {
                       <TableCell className="px-3 py-2">
                         <div className="flex flex-col gap-0.5">
                           <span className="font-mono break-all">
-                            {user.username}
+                            {user.userName}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell className="px-3 py-2">
-                        <span>{user.name}</span>
+                        <span>{user.nickName}</span>
                       </TableCell>
                       <TableCell className="px-3 py-2">
-                        <span>{user.phone}</span>
+                        <span>{user.phonenumber}</span>
                       </TableCell>
                       <TableCell className="px-3 py-2">
-                        <span>{user.roles.join("、") || "-"}</span>
+                        <span>-</span>
                       </TableCell>
                       <TableCell className="px-3 py-2">
                         <div className="flex items-center gap-2">
@@ -590,7 +604,7 @@ function UserPage() {
                         </div>
                       </TableCell>
                       <TableCell className="px-3 py-2">
-                        <span>{user.createdAt}</span>
+                        <span>{user.createTime}</span>
                       </TableCell>
                       <TableCell className="px-3 py-2">
                         <div className="flex flex-wrap gap-1.5">
@@ -684,48 +698,23 @@ function UserPage() {
               <div className="space-y-1">
                 <div>账号（必填）</div>
                 <AdminInput
-                  value={userForm.username}
-                  onValueChange={value => handleUserFormChange({ username: value })}
+                  value={userForm.userName}
+                  onValueChange={value => handleUserFormChange({ userName: value })}
                 />
               </div>
               <div className="space-y-1">
                 <div>姓名（必填）</div>
                 <AdminInput
-                  value={userForm.name}
-                  onValueChange={value => handleUserFormChange({ name: value })}
+                  value={userForm.nickName}
+                  onValueChange={value => handleUserFormChange({ nickName: value })}
                 />
               </div>
               <div className="space-y-1">
                 <div>手机号</div>
                 <AdminInput
-                  value={userForm.phone}
-                  onValueChange={value => handleUserFormChange({ phone: value })}
+                  value={userForm.phonenumber}
+                  onValueChange={value => handleUserFormChange({ phonenumber: value })}
                 />
-              </div>
-              <div className="space-y-1">
-                <div>角色</div>
-                <AdminSelect
-                  aria-label="用户角色"
-                  size="sm"
-                  selectedKeys={userForm.role ? [userForm.role] : []}
-                  onSelectionChange={keys => {
-                    const key = Array.from(keys)[0];
-                    if (key) {
-                      handleUserFormChange({ role: String(key) });
-                    }
-                  }}
-                  items={allRoles.map(role => ({
-                    label: role,
-                    value: role
-                  }))}
-                  className="w-full"
-                >
-                  {(item: { label: string; value: string }) => (
-                    <SelectItem key={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  )}
-                </AdminSelect>
               </div>
               <div className="flex items-center justify-between pt-1">
                 <div className="text-xs">启用状态</div>
@@ -781,35 +770,9 @@ function UserPage() {
               <div className="text-xs text-[var(--text-color-secondary)]">
                 选择该用户在后台系统中的角色，可同时授予多个角色，权限将按角色集合计算。
               </div>
-              <div className="space-y-2">
-                {allRoles.map(role => (
-                  <Checkbox
-                    key={role}
-                    isSelected={roleAssign.roles.includes(role)}
-                    onValueChange={selected => {
-                      setRoleAssign(previous => {
-                        if (!previous) {
-                          return previous;
-                        }
-                        if (selected) {
-                          return {
-                            ...previous,
-                            roles: [...previous.roles, role]
-                          };
-                        }
-                        return {
-                          ...previous,
-                          roles: previous.roles.filter(item => item !== role)
-                        };
-                      });
-                    }}
-                    className="text-xs"
-                  >
-                    {role}
-                  </Checkbox>
-                ))}
+              <div className="text-xs text-[var(--text-color-secondary)]">
+                角色分配功能待完善...
               </div>
-              <div className="text-xs text-[var(--text-color-secondary)]" />
             </div>
             <div className="px-4 py-3 border-t border-[var(--border-color)] flex items-center justify-end gap-2">
               <Button

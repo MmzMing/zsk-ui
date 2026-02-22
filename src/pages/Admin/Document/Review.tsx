@@ -79,7 +79,7 @@ function DocumentReviewPage() {
     getStatusLabel,
     getRiskLabel,
     getRiskColor
-  } = useDocumentReview({ pageSize: 8 });
+  } = useDocumentReview();
 
   const { selectedIds, setSelectedIds, hasSelection, handleTableSelectionChange } = useSelection();
 

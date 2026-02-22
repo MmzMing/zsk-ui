@@ -1,42 +1,25 @@
-// ===== 1. 依赖导入区域 =====
 import { request, handleRequest } from "../axios";
 import type { ApiResponse } from "../types";
 
-// ===== 2. TODO待处理导入区域 =====
-
-// ===== 3. 状态控制逻辑区域 =====
-
-// ===== 4. 通用工具函数区域 =====
-
-// ===== 5. 注释代码函数区 =====
-
-// ===== 6. 错误处理函数区域 =====
-
-// ===== 7. 数据处理函数区域 =====
-
-// ===== 8. UI渲染逻辑区域 =====
-
-// ===== 9. 页面初始化与事件绑定 =====
-
-// ===== 10. TODO任务管理区域 =====
-
-// ===== 11. 导出区域 =====
-
-// ===== 后端类型定义 =====
+// ===== 类型定义 =====
 
 /**
- * 后端菜单类型
- * @description 对应后端 sys_menu 表的实体结构，用于菜单管理模块的数据交互
+ * 菜单类型
+ * @description 对应后端 sys_menu 表的实体结构
  */
 export type SysMenu = {
   /** 主键ID（雪花算法） */
   id?: number;
   /** 菜单名称 */
   menuName?: string;
+  /** 菜单名称（别名） */
+  name?: string;
   /** 父菜单ID */
   parentId?: number;
   /** 显示顺序 */
   orderNum?: number;
+  /** 显示顺序（别名） */
+  order?: number;
   /** 路由地址 */
   path?: string;
   /** 组件路径 */
@@ -55,214 +38,66 @@ export type SysMenu = {
   status?: string;
   /** 权限标识 */
   perms?: string;
+  /** 权限标识（别名） */
+  permissionKey?: string;
   /** 菜单图标 */
   icon?: string;
+  /** 菜单图标名称 */
+  iconName?: string;
   /** 创建时间 */
   createTime?: string;
   /** 更新时间 */
   updateTime?: string;
+  /** 子菜单 */
+  children?: SysMenu[];
 };
-
-// ===== 前端类型定义 =====
-
-/**
- * 菜单节点类型
- * @description 用于前端菜单树形结构展示的单个节点数据
- */
-export type MenuNode = {
-  /** 菜单ID */
-  id: string;
-  /** 菜单名称 */
-  name: string;
-  /** 路由路径 */
-  path: string;
-  /** 图标名称 */
-  iconName: string;
-  /** 排序 */
-  order: number;
-  /** 是否可见 */
-  visible: boolean;
-  /** 权限键名 */
-  permissionKey: string;
-  /** 父级ID */
-  parentId: string | null;
-  /** 子菜单列表 */
-  children?: MenuNode[];
-};
-
-// ===== 字段映射函数 =====
-
-/**
- * 菜单后端转前端字段映射
- * @description 将后端 SysMenu 类型转换为前端 MenuNode 类型
- * @param backendData 后端菜单数据
- * @returns 前端菜单数据
- */
-function mapMenuToFrontend(backendData: SysMenu): MenuNode {
-  return {
-    id: String(backendData.id || ""),
-    name: backendData.menuName || "",
-    path: backendData.path || "",
-    iconName: backendData.icon || "",
-    order: backendData.orderNum || 0,
-    visible: backendData.visible === "0",
-    permissionKey: backendData.perms || "",
-    parentId: backendData.parentId ? String(backendData.parentId) : null,
-    children: [],
-  };
-}
-
-/**
- * 菜单前端转后端字段映射
- * @description 将前端 MenuNode 类型转换为后端 SysMenu 类型
- * @param frontendData 前端菜单数据
- * @returns 后端菜单数据
- */
-function mapMenuToBackend(frontendData: Partial<MenuNode>): Partial<SysMenu> {
-  return {
-    id: frontendData.id ? Number(frontendData.id) : undefined,
-    menuName: frontendData.name,
-    path: frontendData.path,
-    icon: frontendData.iconName,
-    orderNum: frontendData.order,
-    visible: frontendData.visible ? "0" : "1",
-    perms: frontendData.permissionKey,
-    parentId: frontendData.parentId ? Number(frontendData.parentId) : 0,
-  };
-}
-
-/**
- * 构建菜单树形结构
- * @description 将扁平的菜单列表转换为树形结构，按 orderNum 排序
- * @param menuList 菜单列表（扁平结构）
- * @returns 树形结构菜单
- */
-function buildMenuTree(menuList: SysMenu[]): MenuNode[] {
-  /** 按父级ID分组 */
-  const menuMap = new Map<number, SysMenu[]>();
-
-  menuList.forEach((menu) => {
-    const parentId = menu.parentId || 0;
-    if (!menuMap.has(parentId)) {
-      menuMap.set(parentId, []);
-    }
-    menuMap.get(parentId)!.push(menu);
-  });
-
-  /** 递归构建树 */
-  function buildChildren(parentId: number): MenuNode[] {
-    const children = menuMap.get(parentId) || [];
-    return children
-      .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0))
-      .map((menu) => ({
-        ...mapMenuToFrontend(menu),
-        children: buildChildren(menu.id || 0),
-      }));
-  }
-
-  return buildChildren(0);
-}
-
-/**
- * 扁平化菜单树
- * @description 将树形结构的菜单转换为扁平列表，用于批量提交
- * @param tree 菜单树
- * @param parentId 父级ID（默认为0，表示根节点）
- * @returns 扁平化菜单列表
- */
-function flattenMenuTree(tree: MenuNode[], parentId: number = 0): SysMenu[] {
-  const result: SysMenu[] = [];
-
-  function flatten(nodes: MenuNode[], pId: number) {
-    nodes.forEach((node, index) => {
-      result.push({
-        id: Number(node.id),
-        menuName: node.name,
-        path: node.path,
-        icon: node.iconName,
-        orderNum: node.order || index,
-        visible: node.visible ? "0" : "1",
-        perms: node.permissionKey,
-        parentId: pId,
-      });
-
-      if (node.children && node.children.length > 0) {
-        flatten(node.children, Number(node.id));
-      }
-    });
-  }
-
-  flatten(tree, parentId);
-  return result;
-}
 
 // ===== API 函数 =====
 
 /**
- * 获取管理员菜单树
- * @description 获取所有菜单并构建为树形结构，用于菜单管理页面
- * @param setLoading 加载状态回调函数（可选）
- * @returns 菜单树结构
+ * 获取管理员菜单列表
  */
-export async function fetchAdminMenuTree(
+export async function fetchAdminMenuList(
   setLoading?: (loading: boolean) => void
-): Promise<ApiResponse<MenuNode[]>> {
-  const res = await handleRequest({
+): Promise<ApiResponse<SysMenu[]>> {
+  return handleRequest({
     requestFn: () =>
       request.instance
         .get<ApiResponse<SysMenu[]>>("/system/menu/list")
         .then((r) => r.data),
-    apiName: "fetchAdminMenuTree",
+    apiName: "fetchAdminMenuList",
     setLoading,
   });
-
-  /** 构建树形结构 */
-  const tree = buildMenuTree(res.data || []);
-  return { code: 200, msg: "ok", data: tree };
 }
 
 /**
- * 更新菜单树结构（批量更新）
- * @description 批量更新整个菜单树结构，会扁平化后提交
- * @param tree 完整的菜单树结构
- * @param setLoading 加载状态回调函数（可选）
- * @returns 是否成功
+ * 批量更新菜单
  */
-export async function updateMenuTree(
-  tree: MenuNode[],
+export async function batchUpdateMenu(
+  menuList: Partial<SysMenu>[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  /** 扁平化树结构 */
-  const menuList = flattenMenuTree(tree);
-
   return handleRequest({
     requestFn: () =>
       request.instance
         .put<ApiResponse<boolean>>("/system/menu/batch", menuList)
         .then((r) => r.data),
-    apiName: "updateMenuTree",
+    apiName: "batchUpdateMenu",
     setLoading,
   });
 }
 
 /**
- * 创建新菜单项
- * @description 新增一个菜单项到系统中
- * @param data 菜单项详情数据
- * @param setLoading 加载状态回调函数（可选）
- * @returns 是否成功
+ * 创建菜单
  */
 export async function createMenu(
-  data: MenuNode,
+  data: Partial<SysMenu>,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  /** 后端菜单数据 */
-  const backendData = mapMenuToBackend(data);
-
   return handleRequest({
     requestFn: () =>
       request.instance
-        .post<ApiResponse<boolean>>("/system/menu", backendData)
+        .post<ApiResponse<boolean>>("/system/menu", data)
         .then((r) => r.data),
     apiName: "createMenu",
     setLoading,
@@ -270,23 +105,16 @@ export async function createMenu(
 }
 
 /**
- * 更新现有菜单项
- * @description 更新指定菜单项的信息
- * @param data 菜单项详情数据，必须包含 id 字段
- * @param setLoading 加载状态回调函数（可选）
- * @returns 是否成功
+ * 更新菜单
  */
 export async function updateMenu(
-  data: MenuNode,
+  data: Partial<SysMenu>,
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  /** 后端菜单数据 */
-  const backendData = mapMenuToBackend(data);
-
   return handleRequest({
     requestFn: () =>
       request.instance
-        .put<ApiResponse<boolean>>("/system/menu", backendData)
+        .put<ApiResponse<boolean>>("/system/menu", data)
         .then((r) => r.data),
     apiName: "updateMenu",
     setLoading,
@@ -294,11 +122,7 @@ export async function updateMenu(
 }
 
 /**
- * 删除菜单项
- * @description 删除指定的菜单项，如有子菜单需先删除子菜单
- * @param id 菜单项 ID
- * @param setLoading 加载状态回调函数（可选）
- * @returns 是否成功
+ * 删除菜单
  */
 export async function deleteMenu(
   id: string,
@@ -315,19 +139,13 @@ export async function deleteMenu(
 }
 
 /**
- * 批量删除菜单项
- * @description 批量删除多个菜单项，如有子菜单需先删除子菜单
- * @param ids 菜单项 ID 列表
- * @param setLoading 加载状态回调函数（可选）
- * @returns 是否成功
+ * 批量删除菜单
  */
 export async function batchDeleteMenu(
   ids: string[],
   setLoading?: (loading: boolean) => void
 ): Promise<ApiResponse<boolean>> {
-  /** ID列表转逗号分隔字符串 */
   const idsStr = ids.join(",");
-
   return handleRequest({
     requestFn: () =>
       request.instance

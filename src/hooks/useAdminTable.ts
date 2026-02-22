@@ -1,22 +1,23 @@
 import { useState, useCallback, useMemo } from 'react';
 import { addToast } from '@heroui/react';
+import { PAGINATION } from '@/constants';
 
 /**
  * 管理后台表格 Hook
  * 用于处理表格数据、分页、搜索、筛选和选择操作
  */
-export function useAdminTable<T extends { id: string | number }>({
-  initialPageSize = 10,
-  initialPage = 1
+export function useAdminTable<T extends { id?: string | number }>({
+  initialPageSize = PAGINATION.DEFAULT_PAGE_SIZE,
+  initialPage = PAGINATION.DEFAULT_PAGE
 } = {}) {
   /** 表格数据 */
   const [data, setData] = useState<T[]>([]);
   /** 加载状态 */
   const [loading, setLoading] = useState(false);
   /** 分页状态 */
-  const [page, setPage] = useState(initialPage);
+  const [page, setPage] = useState<number>(initialPage);
   /** 每页大小 */
-  const [pageSize, setPageSize] = useState(initialPageSize);
+  const [pageSize, setPageSize] = useState<number>(initialPageSize);
   /** 搜索关键词 */
   const [keyword, setKeyword] = useState('');
   /** 选中的行 */
@@ -114,7 +115,7 @@ export function useAdminTable<T extends { id: string | number }>({
    */
   const handleSelectionChange = useCallback((keys: 'all' | Set<string | number>) => {
     if (keys === 'all') {
-      setSelectedKeys(new Set(data.map(item => item.id)));
+      setSelectedKeys(new Set(data.map(item => item.id).filter((id): id is string | number => id !== undefined)));
     } else {
       setSelectedKeys(keys);
     }
@@ -131,7 +132,7 @@ export function useAdminTable<T extends { id: string | number }>({
    * 获取选中的项
    */
   const getSelectedItems = useCallback(() => {
-    return data.filter(item => selectedKeys.has(item.id));
+    return data.filter(item => item.id !== undefined && selectedKeys.has(item.id));
   }, [data, selectedKeys]);
 
   /**

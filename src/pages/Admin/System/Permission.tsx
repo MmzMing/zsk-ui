@@ -28,6 +28,7 @@ import {
   fetchPermissionList
 } from "@/api/admin/system";
 import { useAdminTable, useAdminDataLoader } from "@/hooks";
+import { PAGINATION } from "@/constants";
 
 
 // ===== 2. TODO待处理导入区域 =====
@@ -72,7 +73,7 @@ function PermissionPage() {
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
 
   /** 每页条数 */
-  const pageSize = 8;
+  const pageSize = PAGINATION.DEFAULT_PAGE_SIZE;
 
   // 使用自定义 hook 加载权限列表数据
   const {

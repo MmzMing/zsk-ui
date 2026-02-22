@@ -56,18 +56,15 @@ import {
   batchUpdateVideoStatus,
   fetchVideoComments,
   deleteVideoComment,
-  type VideoItem,
-  type VideoStatus,
+  type BackendVideoDetail,
   type CommentItem
 } from "@/api/admin/video";
 import { Loading } from "@/components/Loading";
 import { usePageState, useSelection } from "@/hooks";
+import { PAGINATION } from "@/constants";
 
 /** 修复 ReactPlayer 类型问题 */
 const Player = ReactPlayer as unknown as React.ComponentType<Record<string, unknown>>;
-
-/** 每页显示条数 */
-const PAGE_SIZE = 8;
 
 /** 视频分类常量 */
 const VIDEO_CATEGORIES = ["前端基础", "工程实践", "效率方法", "个人成长", "系统设计"];
@@ -84,61 +81,52 @@ const CHART_DATA = [
 ];
 
 /** 视频状态过滤类型 */
-type StatusFilter = "all" | VideoStatus;
+type StatusFilter = "all" | number;
 
 /** 视频表单状态类型 */
 type VideoFormState = {
-  id: string;
+  id: number;
   title: string;
   category: string;
   description: string;
   cover: string;
   videoUrl: string;
   tags: string;
-  status: VideoStatus;
+  status: number;
   duration: string;
   pinned: boolean;
   recommended: boolean;
-  relatedVideos: VideoItem[];
+  relatedVideos: BackendVideoDetail[];
 };
 
 /**
  * 获取状态文本标签
+ * @param status 状态值
+ * @returns 状态文本
  */
-function getStatusLabel(status: VideoStatus): string {
-  const statusMap: Record<VideoStatus, string> = {
-    draft: "草稿",
-    published: "已发布",
-    offline: "已下架",
-    pending: "审核中",
-    approved: "已通过",
-    rejected: "已拒绝",
-    scheduled: "定时发布"
+function getStatusLabel(status: number): string {
+  const statusMap: Record<number, string> = {
+    0: "待审核",
+    1: "已发布",
+    2: "已下架",
+    3: "已拒绝"
   };
   return statusMap[status] || "未知";
 }
 
 /**
  * 获取状态颜色类型
+ * @param status 状态值
+ * @returns 颜色类型
  */
-function getStatusColor(status: VideoStatus): "default" | "primary" | "secondary" | "success" | "warning" | "danger" {
-  const colorMap: Record<VideoStatus, "default" | "primary" | "secondary" | "success" | "warning" | "danger"> = {
-    draft: "default",
-    published: "success",
-    offline: "warning",
-    pending: "primary",
-    approved: "success",
-    rejected: "danger",
-    scheduled: "secondary"
+function getStatusColor(status: number): "default" | "primary" | "secondary" | "success" | "warning" | "danger" {
+  const colorMap: Record<number, "default" | "primary" | "secondary" | "success" | "warning" | "danger"> = {
+    0: "primary",
+    1: "success",
+    2: "warning",
+    3: "danger"
   };
   return colorMap[status] || "default";
-}
-
-/**
- * 处理标签字符串转换为数组
- */
-function processTags(tagsStr: string): string[] {
-  return tagsStr.split(/[,，]/).map(t => t.trim()).filter(Boolean);
 }
 
 /**
@@ -151,13 +139,13 @@ function VideoListPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   /** 分页状态 */
-  const { page, pageSize, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGE_SIZE });
+  const { page, pageSize, setPage, total, setTotal, totalPages, handlePageChange } = usePageState({ pageSize: PAGINATION.DEFAULT_PAGE_SIZE });
 
   /** 表格选择状态 */
   const { selectedIds, setSelectedIds, hasSelection, handleTableSelectionChange } = useSelection();
 
   /** 列表数据与加载状态 */
-  const [videos, setVideos] = React.useState<VideoItem[]>([]);
+  const [videos, setVideos] = React.useState<BackendVideoDetail[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
   /** 筛选条件状态 */
@@ -166,10 +154,10 @@ function VideoListPage() {
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
 
   /** 弹窗状态 */
-  const [activeVideoId, setActiveVideoId] = React.useState<string | null>(null);
+  const [activeVideoId, setActiveVideoId] = React.useState<number | null>(null);
   const [previewVideoUrl, setPreviewVideoUrl] = React.useState<string | null>(null);
   const [editingVideo, setEditingVideo] = React.useState<VideoFormState | null>(null);
-  const [commentVideoId, setCommentVideoId] = React.useState<string | null>(null);
+  const [commentVideoId, setCommentVideoId] = React.useState<number | null>(null);
   const [comments, setComments] = React.useState<CommentItem[]>([]);
   const [isCommentsLoading, setIsCommentsLoading] = React.useState(false);
 
@@ -186,8 +174,8 @@ function VideoListPage() {
     try {
       const res = await fetchVideoList({ page: 1, pageSize: 1000 });
       if (res && res.code === 200) {
-        setVideos(res.data.list);
-        setTotal(res.data.list.length);
+        setVideos(res.data.rows);
+        setTotal(res.data.rows.length);
       }
     } finally {
       setIsLoading(false);
@@ -206,10 +194,10 @@ function VideoListPage() {
   const filteredVideos = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
     return videos.filter(item => {
-      if (categoryFilter !== "all" && item.category !== categoryFilter) return false;
+      if (categoryFilter !== "all" && item.broadCode !== categoryFilter) return false;
       if (statusFilter !== "all" && item.status !== statusFilter) return false;
       if (trimmed) {
-        const content = `${item.title} ${item.category} ${item.id}`.toLowerCase();
+        const content = `${item.videoTitle} ${item.broadCode} ${item.id}`.toLowerCase();
         if (!content.includes(trimmed)) return false;
       }
       return true;
@@ -218,13 +206,13 @@ function VideoListPage() {
 
   /** 分页数据计算 */
   const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const pageItems = filteredVideos.slice(startIndex, startIndex + PAGE_SIZE);
+  const startIndex = (currentPage - 1) * PAGINATION.DEFAULT_PAGE_SIZE;
+  const pageItems = filteredVideos.slice(startIndex, startIndex + PAGINATION.DEFAULT_PAGE_SIZE);
 
   /** 推荐位显示逻辑 */
   const displayRecommended = useMemo(() => {
-    const pinned = videos.filter(v => v.pinned);
-    const recommended = videos.filter(v => v.recommended && !v.pinned);
+    const pinned = videos.filter(v => v.isPinned === 1);
+    const recommended = videos.filter(v => v.isRecommended === 1 && v.isPinned !== 1);
     return [...pinned, ...recommended].slice(0, 4);
   }, [videos]);
 
@@ -241,20 +229,21 @@ function VideoListPage() {
 
   /**
    * 打开编辑弹窗
+   * @param item 视频数据
    */
-  const handleOpenEdit = (item: VideoItem) => {
+  const handleOpenEdit = (item: BackendVideoDetail) => {
     setEditingVideo({
-      id: item.id,
-      title: item.title,
-      category: item.category,
-      description: item.description || "",
-      cover: item.cover || "",
+      id: item.id || 0,
+      title: item.videoTitle || "",
+      category: item.broadCode || "",
+      description: item.fileContent || "",
+      cover: item.coverUrl || "",
       videoUrl: item.videoUrl || "",
-      tags: item.tags?.join(", ") || "",
-      status: item.status,
-      duration: item.duration,
-      pinned: !!item.pinned,
-      recommended: !!item.recommended,
+      tags: item.tags || "",
+      status: item.status || 0,
+      duration: "",
+      pinned: item.isPinned === 1,
+      recommended: item.isRecommended === 1,
       relatedVideos: []
     });
     onEditOpen();
@@ -274,14 +263,14 @@ function VideoListPage() {
     try {
       const res = await updateVideo({
         id: editingVideo.id,
-        title: editingVideo.title,
-        category: editingVideo.category,
-        description: editingVideo.description,
-        cover: editingVideo.cover,
-        tags: processTags(editingVideo.tags),
+        videoTitle: editingVideo.title,
+        broadCode: editingVideo.category,
+        fileContent: editingVideo.description,
+        coverUrl: editingVideo.cover,
+        tags: editingVideo.tags,
         status: editingVideo.status,
-        pinned: editingVideo.pinned,
-        recommended: editingVideo.recommended
+        isPinned: editingVideo.pinned ? 1 : 0,
+        isRecommended: editingVideo.recommended ? 1 : 0
       });
 
       if (res && res.code === 200) {
@@ -296,14 +285,15 @@ function VideoListPage() {
 
   /**
    * 切换置顶状态
+   * @param item 视频数据
    */
-  const handleTogglePinned = async (item: VideoItem) => {
-    const nextPinned = !item.pinned;
+  const handleTogglePinned = async (item: BackendVideoDetail) => {
+    const nextPinned = item.isPinned === 1 ? 0 : 1;
     setIsLoading(true);
     try {
-      const res = await toggleVideoPinned(item.id, nextPinned);
+      const res = await toggleVideoPinned(String(item.id), nextPinned);
       if (res && res.code === 200) {
-        addToast({ title: nextPinned ? "已设为置顶" : "已取消置顶", description: `视频「${item.title}」状态已更新`, color: "success" });
+        addToast({ title: nextPinned === 1 ? "已设为置顶" : "已取消置顶", description: `视频「${item.videoTitle}」状态已更新`, color: "success" });
         loadVideoList();
       }
     } finally {
@@ -313,14 +303,15 @@ function VideoListPage() {
 
   /**
    * 切换推荐状态
+   * @param item 视频数据
    */
-  const handleToggleRecommended = async (item: VideoItem) => {
-    const nextRecommended = !item.recommended;
+  const handleToggleRecommended = async (item: BackendVideoDetail) => {
+    const nextRecommended = item.isRecommended === 1 ? 0 : 1;
     setIsLoading(true);
     try {
-      const res = await toggleVideoRecommended(item.id, nextRecommended);
+      const res = await toggleVideoRecommended(String(item.id), nextRecommended);
       if (res && res.code === 200) {
-        addToast({ title: nextRecommended ? "已设为推荐" : "已取消推荐", description: `视频「${item.title}」状态已更新`, color: "success" });
+        addToast({ title: nextRecommended === 1 ? "已设为推荐" : "已取消推荐", description: `视频「${item.videoTitle}」状态已更新`, color: "success" });
         loadVideoList();
       }
     } finally {
@@ -330,12 +321,13 @@ function VideoListPage() {
 
   /**
    * 批量更新视频状态
+   * @param status 状态值
    */
-  const handleBatchUpdateStatus = async (status: Exclude<VideoStatus, "draft">) => {
+  const handleBatchUpdateStatus = async (status: number) => {
     if (!hasSelection) return;
     setIsLoading(true);
     try {
-      const res = await batchUpdateVideoStatus({ ids: selectedIds, status });
+      const res = await batchUpdateVideoStatus({ ids: selectedIds.map(Number), status });
       if (res && res.code === 200) {
         addToast({ title: "批量操作成功", description: `已成功更新 ${selectedIds.length} 个视频的状态`, color: "success" });
         setSelectedIds([]);
@@ -369,6 +361,7 @@ function VideoListPage() {
 
   /**
    * 处理截图与预览
+   * @param url 视频URL
    */
   const handlePreviewVideo = (url: string) => {
     setPreviewVideoUrl(url);
@@ -377,13 +370,14 @@ function VideoListPage() {
 
   /**
    * 加载视频评论
+   * @param videoId 视频ID
    */
-  const loadComments = async (videoId: string) => {
+  const loadComments = async (videoId: number) => {
     setCommentVideoId(videoId);
     onCommentOpen();
     setIsCommentsLoading(true);
     try {
-      const res = await fetchVideoComments(videoId);
+      const res = await fetchVideoComments(String(videoId));
       if (res && res.code === 200) {
         setComments(res.data);
       }
@@ -394,6 +388,7 @@ function VideoListPage() {
 
   /**
    * 删除评论
+   * @param commentId 评论ID
    */
   const handleDeleteComment = async (commentId: string) => {
     if (!window.confirm("确定要删除这条评论吗？")) return;
@@ -401,7 +396,7 @@ function VideoListPage() {
     if (res && res.code === 200) {
       addToast({ title: "删除成功", description: "该评论已被移除", color: "success" });
       if (commentVideoId) {
-        const resList = await fetchVideoComments(commentVideoId);
+        const resList = await fetchVideoComments(String(commentVideoId));
         if (resList && resList.code === 200) {
           setComments(resList.data);
         }
@@ -515,14 +510,14 @@ function VideoListPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-0.5">
                         <div className="text-xs font-medium line-clamp-2">
-                          {item.title}
+                          {item.videoTitle}
                         </div>
                         <div className="text-[var(--text-color-secondary)]">
                           视频 ID：{item.id}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        {item.pinned && (
+                        {item.isPinned === 1 && (
                           <Chip
                             size="sm"
                             variant="flat"
@@ -533,7 +528,7 @@ function VideoListPage() {
                             置顶
                           </Chip>
                         )}
-                        {item.recommended && (
+                        {item.isRecommended === 1 && (
                           <Chip
                             size="sm"
                             variant="flat"
@@ -547,8 +542,8 @@ function VideoListPage() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between text-[var(--text-color-secondary)]">
-                      <span>分类：{item.category}</span>
-                      <span>播放量：{item.plays.toLocaleString()}</span>
+                      <span>分类：{item.broadCode}</span>
+                      <span>播放量：{(item.viewCount || 0).toLocaleString()}</span>
                     </div>
                   </div>
                 </Card>
@@ -576,7 +571,7 @@ function VideoListPage() {
                 variant="flat"
                 className="h-8 text-[0.6875rem]"
                 isDisabled={!hasSelection}
-                onPress={() => handleBatchUpdateStatus("published")}
+                onPress={() => handleBatchUpdateStatus(1)}
               >
                 批量上架
               </Button>
@@ -585,7 +580,7 @@ function VideoListPage() {
                 variant="flat"
                 className="h-8 text-[0.6875rem]"
                 isDisabled={!hasSelection}
-                onPress={() => handleBatchUpdateStatus("offline")}
+                onPress={() => handleBatchUpdateStatus(2)}
               >
                 批量下架
               </Button>
@@ -669,9 +664,9 @@ function VideoListPage() {
               }}
             >
               <Tab key="all" title="全部状态" />
-              <Tab key="draft" title="草稿" />
-              <Tab key="published" title="已发布" />
-              <Tab key="offline" title="已下架" />
+              <Tab key={0} title="待审核" />
+              <Tab key={1} title="已发布" />
+              <Tab key={2} title="已下架" />
             </AdminTabs>
           </div>
         </div>
@@ -710,10 +705,10 @@ function VideoListPage() {
                       <div className="flex items-center gap-2">
                         <div
                           className="w-16 h-9 rounded bg-[var(--bg-elevated)] border border-[var(--border-color)] overflow-hidden flex-shrink-0 cursor-pointer group relative"
-                          onClick={() => handlePreviewVideo(item.videoUrl || item.url || "")}
+                          onClick={() => handlePreviewVideo(item.videoUrl || "")}
                         >
-                          {item.cover ? (
-                            <img src={item.cover} alt="" className="w-full h-full object-cover" />
+                          {item.coverUrl ? (
+                            <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[var(--text-color-secondary)]">
                               <FiPlayCircle className="text-lg" />
@@ -724,23 +719,23 @@ function VideoListPage() {
                           </div>
                         </div>
                         <div className="flex flex-col gap-0.5 min-w-0">
-                          <span className="font-medium truncate max-w-[200px]">{item.title}</span>
+                          <span className="font-medium truncate max-w-[200px]">{item.videoTitle}</span>
                           <span className="text-[var(--text-color-secondary)] font-mono text-[0.625rem]">
-                            ID: {item.id} · {item.duration}
+                            ID: {item.id}
                           </span>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="px-3 py-2">
                       <div className="flex flex-col gap-1 items-start">
-                        <span className="text-[var(--text-color-secondary)]">{item.category}</span>
+                        <span className="text-[var(--text-color-secondary)]">{item.broadCode}</span>
                         <div className="flex flex-wrap gap-1">
-                          {item.tags?.slice(0, 2).map((tag, idx) => (
+                          {(item.tags || '').split(',').slice(0, 2).map((tag: string, idx: number) => (
                             <span key={idx} className="text-[0.625rem] px-1.5 py-0.5 rounded bg-[var(--bg-elevated)] border border-[var(--border-color)] text-[var(--text-color-secondary)]">
                               {tag}
                             </span>
                           ))}
-                          {(item.tags?.length || 0) > 2 && (
+                          {((item.tags || '').split(',').length > 2) && (
                             <span className="text-[0.625rem] text-[var(--text-color-secondary)]">...</span>
                           )}
                         </div>
@@ -750,23 +745,23 @@ function VideoListPage() {
                       <Chip
                         size="sm"
                         variant="flat"
-                        color={getStatusColor(item.status)}
+                        color={getStatusColor(item.status || 0)}
                         className="h-5 text-[0.625rem]"
                       >
-                        {getStatusLabel(item.status)}
+                        {getStatusLabel(item.status || 0)}
                       </Chip>
                     </TableCell>
                     <TableCell className="px-3 py-2">
                       <div className="flex flex-col gap-0.5 text-[var(--text-color-secondary)]">
-                        <span>播放: {item.plays.toLocaleString()}</span>
-                        <span>点赞: {item.likes + item.comments}</span>
+                        <span>播放: {(item.viewCount || 0).toLocaleString()}</span>
+                        <span>点赞: {(item.likeCount || 0) + (item.commentCount || 0)}</span>
                       </div>
                     </TableCell>
                     <TableCell className="px-3 py-2">
                       <div className="flex flex-col gap-1 items-start">
                         <Switch
                           size="sm"
-                          isSelected={item.pinned}
+                          isSelected={item.isPinned === 1}
                           onValueChange={() => handleTogglePinned(item)}
                           classNames={{ label: "text-[0.625rem]" }}
                         >
@@ -774,7 +769,7 @@ function VideoListPage() {
                         </Switch>
                         <Switch
                           size="sm"
-                          isSelected={item.recommended}
+                          isSelected={item.isRecommended === 1}
                           onValueChange={() => handleToggleRecommended(item)}
                           classNames={{ label: "text-[0.625rem]" }}
                         >
@@ -783,7 +778,7 @@ function VideoListPage() {
                       </div>
                     </TableCell>
                     <TableCell className="px-3 py-2">
-                      <span className="text-[var(--text-color-secondary)]">{item.updatedAt}</span>
+                      <span className="text-[var(--text-color-secondary)]">{item.updateTime}</span>
                     </TableCell>
                     <TableCell className="px-3 py-2">
                       <div className="flex items-center gap-1">
@@ -793,7 +788,7 @@ function VideoListPage() {
                             size="sm"
                             variant="light"
                             className="h-7 w-7"
-                            onPress={() => setActiveVideoId(item.id)}
+                            onPress={() => setActiveVideoId(item.id || null)}
                           >
                             <FiPlayCircle className="text-sm" />
                           </Button>
@@ -804,7 +799,7 @@ function VideoListPage() {
                             size="sm"
                             variant="light"
                             className="h-7 w-7"
-                            onPress={() => loadComments(item.id)}
+                            onPress={() => item.id && loadComments(item.id)}
                           >
                             <FiMessageSquare className="text-sm" />
                           </Button>
@@ -868,7 +863,7 @@ function VideoListPage() {
             return (
               <>
                 <ModalHeader className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold truncate pr-8">{video.title}</span>
+                  <span className="text-sm font-semibold truncate pr-8">{video.videoTitle}</span>
                   <span className="text-[0.625rem] text-[var(--text-color-secondary)] font-normal">
                     数据概览与播放趋势分析
                   </span>
@@ -878,15 +873,15 @@ function VideoListPage() {
                   <div className="grid grid-cols-3 gap-2">
                     <Card className="bg-[var(--bg-elevated)]/50 p-3 border border-[var(--border-color)]">
                       <div className="text-[var(--text-color-secondary)] mb-1">播放总量</div>
-                      <div className="text-lg font-semibold">{video.plays.toLocaleString()}</div>
+                      <div className="text-lg font-semibold">{(video.viewCount || 0).toLocaleString()}</div>
                     </Card>
                     <Card className="bg-[var(--bg-elevated)]/50 p-3 border border-[var(--border-color)]">
                       <div className="text-[var(--text-color-secondary)] mb-1">获赞数</div>
-                      <div className="text-lg font-semibold">{video.likes.toLocaleString()}</div>
+                      <div className="text-lg font-semibold">{(video.likeCount || 0).toLocaleString()}</div>
                     </Card>
                     <Card className="bg-[var(--bg-elevated)]/50 p-3 border border-[var(--border-color)]">
                       <div className="text-[var(--text-color-secondary)] mb-1">评论数</div>
-                      <div className="text-lg font-semibold">{video.comments.toLocaleString()}</div>
+                      <div className="text-lg font-semibold">{(video.commentCount || 0).toLocaleString()}</div>
                     </Card>
                   </div>
 
@@ -913,19 +908,19 @@ function VideoListPage() {
                       </div>
                       <div className="flex justify-between py-1 border-b border-[var(--border-color)] border-dashed">
                         <span className="text-[var(--text-color-secondary)]">所属分类</span>
-                        <span>{video.category}</span>
+                        <span>{video.broadCode}</span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-[var(--border-color)] border-dashed">
                         <span className="text-[var(--text-color-secondary)]">视频状态</span>
-                        <span>{getStatusLabel(video.status)}</span>
+                        <span>{getStatusLabel(video.status || 0)}</span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-[var(--border-color)] border-dashed">
                         <span className="text-[var(--text-color-secondary)]">上传时间</span>
-                        <span>{video.createdAt}</span>
+                        <span>{video.createTime}</span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-[var(--border-color)] border-dashed">
                         <span className="text-[var(--text-color-secondary)]">最后更新</span>
-                        <span>{video.updatedAt}</span>
+                        <span>{video.updateTime}</span>
                       </div>
                     </div>
                   </div>
@@ -963,7 +958,6 @@ function VideoListPage() {
                             height="100%"
                             controls
                             onReady={() => {
-                              // 获取原生 video 引用用于截图
                               if (videoRef.current) {
                                 const internal = (videoRef.current as unknown as { getInternalPlayer: () => HTMLVideoElement }).getInternalPlayer?.();
                                 if (internal) (videoRef.current as unknown as HTMLVideoElement) = internal;
@@ -1108,7 +1102,7 @@ function VideoListPage() {
                   <span className="text-sm font-semibold">视频评论管理</span>
                   {video && (
                     <span className="text-[0.625rem] text-[var(--text-color-secondary)] font-normal">
-                      正在查看视频「{video.title}」的评论
+                      正在查看视频「{video.videoTitle}」的评论
                     </span>
                   )}
                 </ModalHeader>
@@ -1126,13 +1120,13 @@ function VideoListPage() {
                               <img src={comment.avatar} alt="" className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-[0.625rem] text-[var(--text-color-secondary)]">
-                                {comment.username.charAt(0)}
+                                {comment.userName.charAt(0)}
                               </div>
                             )}
                           </div>
                           <div className="flex-1 min-w-0 space-y-1">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium">{comment.username}</span>
+                              <span className="text-xs font-medium">{comment.userName}</span>
                               <span className="text-[0.625rem] text-[var(--text-color-secondary)]">{comment.createdAt}</span>
                             </div>
                             <p className="text-[0.6875rem] text-[var(--text-color-secondary)] leading-relaxed">

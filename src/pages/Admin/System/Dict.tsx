@@ -25,24 +25,30 @@ import { FiEdit2, FiPlus, FiRotateCcw, FiX } from "react-icons/fi";
 import { AdminSearchInput } from "@/components/Admin/AdminSearchInput";
 import { AdminSelect } from "@/components/Admin/AdminSelect";
 import { AdminInput } from "@/components/Admin/AdminInput";
-import { AdminTextarea } from "@/components/Admin/AdminTextarea";
 import { Loading } from "@/components/Loading";
 import {
-  type DictItem,
-  type DictStatus,
-  type SaveDictRequest,
-  fetchDictList,
-  saveDict,
+  type SysDictData,
+  fetchDictDataList,
+  saveDictData,
   toggleDictStatus,
   batchToggleDictStatus
 } from "@/api/admin/system";
 import { usePageState, useSelection, useModalForm } from "@/hooks";
-
-/** 每页显示条数 */
-const PAGE_SIZE = 8;
+import { PAGINATION } from "@/constants";
 
 /** 状态筛选类型 */
 type StatusFilter = "all" | "enabled" | "disabled";
+
+/**
+ * 字典表单请求类型
+ */
+type SaveDictRequest = Partial<SysDictData> & {
+  dictCode: string;
+  dictLabel: string;
+  dictType: string;
+  dictValue: string;
+  status: string;
+};
 
 /**
  * 字典管理页面组件
@@ -50,13 +56,13 @@ type StatusFilter = "all" | "enabled" | "disabled";
  */
 function DictPage() {
   /** 分页状态 */
-  const { page, setPage, total, setTotal, totalPages } = usePageState({ pageSize: PAGE_SIZE });
+  const { page, setPage, total, setTotal, totalPages } = usePageState({ pageSize: PAGINATION.DEFAULT_PAGE_SIZE });
 
   /** 表格选择状态 */
   const { selectedIds, setSelectedIds, hasSelection, handleTableSelectionChange } = useSelection();
 
   /** 列表数据与加载状态 */
-  const [items, setItems] = React.useState<DictItem[]>([]);
+  const [items, setItems] = React.useState<SysDictData[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
   /** 筛选条件状态 */
@@ -77,14 +83,14 @@ function DictPage() {
     updateFields
   } = useModalForm<SaveDictRequest>({
     createEmptyForm: () => ({
-      code: "",
-      name: "",
-      category: "",
-      description: "",
-      status: "enabled"
+      dictCode: "",
+      dictLabel: "",
+      dictType: "",
+      dictValue: "",
+      status: "0"
     }),
     onSubmit: async (data: SaveDictRequest) => {
-      const res = await saveDict(data);
+      const res = await saveDictData(data);
       if (res && res.data) {
         addToast({ title: formMode === "edit" ? "字典更新成功" : "字典新增成功", color: "success" });
         loadDictList();
@@ -98,14 +104,14 @@ function DictPage() {
   const loadDictList = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetchDictList({
+      const res = await fetchDictDataList({
         page,
-        pageSize: PAGE_SIZE,
+        pageSize: PAGINATION.DEFAULT_PAGE_SIZE,
         keyword: keyword.trim() || undefined,
         status: statusFilter === "all" ? undefined : statusFilter
       });
       if (res && res.data) {
-        setItems(res.data.list);
+        setItems(res.data.rows);
         setTotal(res.data.total);
       }
     } finally {
@@ -140,14 +146,14 @@ function DictPage() {
   /**
    * 打开编辑字典弹窗
    */
-  const handleOpenEdit = (item: DictItem) => {
+  const handleOpenEdit = (item: SysDictData) => {
     openEdit({
       id: item.id,
-      code: item.code,
-      name: item.name,
-      category: item.category,
-      description: item.description,
-      status: item.status
+      dictCode: item.dictCode || "",
+      dictLabel: item.dictLabel || "",
+      dictType: item.dictType || "",
+      dictValue: item.dictValue || "",
+      status: item.status || "0"
     });
   };
 
@@ -157,27 +163,27 @@ function DictPage() {
   const handleSubmitForm = async () => {
     if (!formData) return;
 
-    const trimmedCode = formData.code.trim();
-    const trimmedName = formData.name.trim();
-    if (!trimmedCode || !trimmedName) {
+    const trimmedCode = formData.dictCode.trim();
+    const trimmedLabel = formData.dictLabel.trim();
+    if (!trimmedCode || !trimmedLabel) {
       setFormError("请填写完整的字典编码和字典名称。");
       return;
     }
 
     updateFields({
-      code: trimmedCode,
-      name: trimmedName,
-      category: formData.category.trim() || "未分组",
-      description: formData.description.trim()
+      dictCode: trimmedCode,
+      dictLabel: trimmedLabel,
+      dictType: formData.dictType.trim(),
+      dictValue: formData.dictValue.trim()
     });
 
     try {
-      const res = await saveDict({
+      const res = await saveDictData({
         ...formData,
-        code: trimmedCode,
-        name: trimmedName,
-        category: formData.category.trim() || "未分组",
-        description: formData.description.trim()
+        dictCode: trimmedCode,
+        dictLabel: trimmedLabel,
+        dictType: formData.dictType.trim(),
+        dictValue: formData.dictValue.trim()
       });
       if (res && res.data) {
         addToast({ title: formMode === "edit" ? "字典更新成功" : "字典新增成功", color: "success" });
@@ -192,9 +198,9 @@ function DictPage() {
   /**
    * 切换字典启用状态
    */
-  const handleToggleStatus = async (item: DictItem) => {
-    const nextStatus: DictStatus = item.status === "enabled" ? "disabled" : "enabled";
-    const res = await toggleDictStatus(item.id, nextStatus);
+  const handleToggleStatus = async (item: SysDictData) => {
+    const nextStatus = item.status === "0" ? "1" : "0";
+    const res = await toggleDictStatus(item.id || 0, nextStatus);
     if (res && res.data) {
       addToast({ title: "状态更新成功", color: "success" });
       loadDictList();
@@ -204,13 +210,13 @@ function DictPage() {
   /**
    * 批量切换字典状态
    */
-  const handleBatchToggleStatus = async (status: DictStatus) => {
+  const handleBatchToggleStatus = async (status: string) => {
     if (!hasSelection) return;
 
-    const res = await batchToggleDictStatus(selectedIds, status);
+    const res = await batchToggleDictStatus(selectedIds.map(Number), status);
 
     if (res && res.data) {
-      addToast({ title: `成功批量${status === "enabled" ? "启用" : "停用"} ${selectedIds.length} 项`, color: "success" });
+      addToast({ title: `成功批量${status === "0" ? "启用" : "停用"} ${selectedIds.length} 项`, color: "success" });
       setSelectedIds([]);
       loadDictList();
     }
@@ -221,7 +227,7 @@ function DictPage() {
    */
   const handleSelectionChange = (keys: "all" | Set<React.Key>) => {
     if (keys === "all") {
-      setSelectedIds(items.map(item => item.id));
+      setSelectedIds(items.map(item => String(item.id)));
       return;
     }
     handleTableSelectionChange(keys);
@@ -302,7 +308,7 @@ function DictPage() {
                     variant="flat"
                     color="success"
                     className="h-8 text-xs"
-                    onPress={() => handleBatchToggleStatus("enabled")}
+                    onPress={() => handleBatchToggleStatus("0")}
                   >
                     批量启用
                   </Button>
@@ -311,7 +317,7 @@ function DictPage() {
                     variant="flat"
                     color="default"
                     className="h-8 text-xs"
-                    onPress={() => handleBatchToggleStatus("disabled")}
+                    onPress={() => handleBatchToggleStatus("1")}
                   >
                     批量停用
                   </Button>
@@ -379,7 +385,7 @@ function DictPage() {
                     <TableCell className="px-3 py-2">
                       <div className="flex flex-col gap-0.5">
                         <span className="font-mono text-xs break-all">
-                          {item.code}
+                          {item.dictCode}
                         </span>
                         <span className="text-xs text-[var(--text-color-secondary)]">
                           ID: {item.id}
@@ -387,26 +393,26 @@ function DictPage() {
                       </div>
                     </TableCell>
                     <TableCell className="px-3 py-2">
-                      <span>{item.name}</span>
+                      <span>{item.dictLabel}</span>
                     </TableCell>
                     <TableCell className="px-3 py-2">
-                      <span>{item.category}</span>
+                      <span>{item.dictType}</span>
                     </TableCell>
                     <TableCell className="px-3 py-2">
-                      <span>{item.itemCount}</span>
+                      <span>{item.dictValue}</span>
                     </TableCell>
                     <TableCell className="px-3 py-2">
                       <Chip
                         size="sm"
                         variant="flat"
                         className="text-xs"
-                        color={item.status === "enabled" ? "success" : "default"}
+                        color={item.status === "0" ? "success" : "default"}
                       >
-                        {item.status === "enabled" ? "启用" : "停用"}
+                        {item.status === "0" ? "启用" : "停用"}
                       </Chip>
                     </TableCell>
                     <TableCell className="px-3 py-2">
-                      <span>{item.updatedAt}</span>
+                      <span>{item.updateTime}</span>
                     </TableCell>
                     <TableCell className="px-3 py-2">
                       <div className="flex flex-wrap gap-1.5">
@@ -425,7 +431,7 @@ function DictPage() {
                           className="h-7 text-xs"
                           onPress={() => handleToggleStatus(item)}
                         >
-                          {item.status === "enabled" ? "停用" : "启用"}
+                          {item.status === "0" ? "停用" : "启用"}
                         </Button>
                       </div>
                     </TableCell>
@@ -482,30 +488,29 @@ function DictPage() {
               <div className="space-y-1">
                 <div>字典编码（必填）</div>
                 <AdminInput
-                  value={formData.code}
-                  onValueChange={value => updateField("code", value)}
+                  value={formData.dictCode}
+                  onValueChange={value => updateField("dictCode", value)}
                 />
               </div>
               <div className="space-y-1">
                 <div>字典名称（必填）</div>
                 <AdminInput
-                  value={formData.name}
-                  onValueChange={value => updateField("name", value)}
+                  value={formData.dictLabel}
+                  onValueChange={value => updateField("dictLabel", value)}
                 />
               </div>
               <div className="space-y-1">
-                <div>所属模块</div>
+                <div>字典类型</div>
                 <AdminInput
-                  value={formData.category}
-                  onValueChange={value => updateField("category", value)}
+                  value={formData.dictType}
+                  onValueChange={value => updateField("dictType", value)}
                 />
               </div>
               <div className="space-y-1">
-                <div>说明</div>
-                <AdminTextarea
-                  minRows={3}
-                  value={formData.description}
-                  onValueChange={value => updateField("description", value)}
+                <div>字典值</div>
+                <AdminInput
+                  value={formData.dictValue}
+                  onValueChange={value => updateField("dictValue", value)}
                 />
               </div>
               <div className="flex items-center justify-between pt-1">
@@ -513,13 +518,13 @@ function DictPage() {
                 <div className="flex items-center gap-2">
                   <Switch
                     size="sm"
-                    isSelected={formData.status === "enabled"}
+                    isSelected={formData.status === "0"}
                     onValueChange={selected =>
-                      updateField("status", selected ? "enabled" : "disabled")
+                      updateField("status", selected ? "0" : "1")
                     }
                   />
                   <span className="text-xs text-[var(--text-color-secondary)]">
-                    {formData.status === "enabled" ? "启用后即可在业务中引用" : "停用后业务端不应继续使用"}
+                    {formData.status === "0" ? "启用后即可在业务中引用" : "停用后业务端不应继续使用"}
                   </span>
                 </div>
               </div>

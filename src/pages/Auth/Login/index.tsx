@@ -238,7 +238,7 @@ function LoginPage() {
 
       const isEmail = state.fields.account.includes("@");
       const res = await login({
-        type: isEmail ? "email" : "account",
+        loginType: isEmail ? "email" : "password",
         username: !isEmail ? state.fields.account : undefined,
         email: isEmail ? state.fields.account : undefined,
         password: encryptedPassword,
@@ -246,9 +246,9 @@ function LoginPage() {
         uuid: state.slider.info?.uuid,
       });
 
-      setToken(res.token);
-      setUserId(res.user.id);
-      setAvatar(res.user.avatar);
+      setToken(res.accessToken);
+      setUserId(String(res.userId));
+      setAvatar(res.avatar);
       resetLoginFail();
 
       setIsLoading(true);

@@ -4,8 +4,17 @@
  * @description 定义文档管理相关的常量、枚举映射等
  */
 
+import { PAGINATION } from "@/constants";
+
 /** 文档状态类型 */
-export type DocumentStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'offline' | 'scheduled' | 'published';
+export type DocumentStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'offline' | 'scheduled' | 'published' | string;
+
+/** 文档状态数字映射 */
+export const DOCUMENT_STATUS_NUMBER_MAP: Record<number, { label: string; color: 'default' | 'warning' | 'success' | 'danger' | 'secondary' | 'primary' }> = {
+  1: { label: '已发布', color: 'success' },
+  2: { label: '已下架', color: 'secondary' },
+  3: { label: '草稿', color: 'default' }
+};
 
 /** 审核状态类型 */
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
@@ -20,7 +29,7 @@ export type UploadStatus = 'waiting' | 'uploading' | 'success' | 'error';
 export type PermissionType = 'public' | 'private' | 'password';
 
 /** 每页显示条数 */
-export const PAGE_SIZE = 8;
+export const PAGE_SIZE = PAGINATION.DEFAULT_PAGE_SIZE;
 
 /** 上传任务每页显示条数 */
 export const UPLOAD_PAGE_SIZE = 5;
@@ -75,8 +84,11 @@ export const DEFAULT_COVER = '/DefaultImage/MyDefaultImage.jpg';
  * @param status 文档状态
  * @returns 状态标签文本
  */
-export function getDocumentStatusLabel(status: DocumentStatus): string {
-  return DOCUMENT_STATUS_MAP[status]?.label ?? status;
+export function getDocumentStatusLabel(status: DocumentStatus | number): string {
+  if (typeof status === 'number') {
+    return DOCUMENT_STATUS_NUMBER_MAP[status]?.label ?? String(status);
+  }
+  return DOCUMENT_STATUS_MAP[status as Exclude<DocumentStatus, number>]?.label ?? status;
 }
 
 /**
@@ -84,8 +96,11 @@ export function getDocumentStatusLabel(status: DocumentStatus): string {
  * @param status 文档状态
  * @returns 状态颜色
  */
-export function getDocumentStatusColor(status: DocumentStatus): 'default' | 'warning' | 'success' | 'danger' | 'secondary' | 'primary' {
-  return DOCUMENT_STATUS_MAP[status]?.color ?? 'default';
+export function getDocumentStatusColor(status: DocumentStatus | number): 'default' | 'warning' | 'success' | 'danger' | 'secondary' | 'primary' {
+  if (typeof status === 'number') {
+    return DOCUMENT_STATUS_NUMBER_MAP[status]?.color ?? 'default';
+  }
+  return DOCUMENT_STATUS_MAP[status as Exclude<DocumentStatus, number>]?.color ?? 'default';
 }
 
 /**

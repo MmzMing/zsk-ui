@@ -10,6 +10,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { logger } from "@/utils/logger";
+import { PAGINATION } from "@/constants";
 
 /**
  * useRequest 配置选项接口
@@ -176,7 +177,7 @@ export const useRequest = <T, P extends unknown[] = []>(
  * 定义分页请求行为的配置参数
  */
 export interface UsePaginationOptions<T> {
-  /** 每页数据条数，默认为20 */
+  /** 每页数据条数，默认使用 PAGINATION.DEFAULT_PAGE_SIZE */
   pageSize?: number;
   /** 是否立即执行请求，默认为false */
   immediate?: boolean;
@@ -236,7 +237,7 @@ export const usePagination = <T, P = Record<string, unknown>>(
   service: (page: number, pageSize: number, params?: P) => Promise<{ list: T[]; total: number }>,
   options: UsePaginationOptions<T> = {}
 ): UsePaginationReturn<T, P> => {
-  const { pageSize: defaultPageSize = 20, immediate = false, initialData = [], onSuccess, onError } = options;
+  const { pageSize: defaultPageSize = PAGINATION.DEFAULT_PAGE_SIZE, immediate = false, initialData = [], onSuccess, onError } = options;
 
   const [data, setData] = useState<T[]>(initialData);
   const [loading, setLoading] = useState(immediate);

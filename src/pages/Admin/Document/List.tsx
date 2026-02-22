@@ -94,7 +94,7 @@ function DocumentListPage() {
     const trimmed = keyword.trim().toLowerCase();
     return documents.filter(item => {
       if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
-      if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+      if (statusFilter !== 'all' && item.status !== Number(statusFilter)) return false;
       if (trimmed) {
         const content = `${item.title} ${item.category} ${item.id}`.toLowerCase();
         if (!content.includes(trimmed)) return false;
@@ -128,7 +128,7 @@ function DocumentListPage() {
   /** 批量更新文档状态 */
   const handleBatchStatusUpdate = useCallback(async (status: 'published' | 'offline') => {
     if (!hasSelection) return;
-    const success = await batchUpdateStatus(selectedIds, status);
+    const success = await batchUpdateStatus(selectedIds, Number(status));
     if (success) {
       setSelectedIds([]);
     }
@@ -167,7 +167,7 @@ function DocumentListPage() {
 
   /** 当前预览的文档 */
   const previewDoc = useMemo(() => {
-    return documents.find(d => d.id === activeDocumentId);
+    return documents.find(d => String(d.id) === activeDocumentId);
   }, [documents, activeDocumentId]);
 
   return (
@@ -237,7 +237,7 @@ function DocumentListPage() {
                     </div>
                     <div className="flex items-center justify-between text-[var(--text-color-secondary)]">
                       <span>分类：{item.category}</span>
-                      <span>阅读量：{item.readCount.toLocaleString()}</span>
+                      <span>阅读量：{(item.readCount || 0).toLocaleString()}</span>
                     </div>
                   </div>
                 </Card>
@@ -409,7 +409,7 @@ function DocumentListPage() {
                           <div className="min-w-0 flex-1">
                             <div
                               className="font-medium text-[var(--text-color)] truncate mb-0.5 text-[14px] cursor-pointer hover:text-[var(--primary-color)] transition-colors"
-                              onClick={() => handleOpenPreview(item.id)}
+                              onClick={() => handleOpenPreview(String(item.id))}
                             >
                               {item.title}
                             </div>
@@ -423,7 +423,7 @@ function DocumentListPage() {
                         <div className="space-y-1.5">
                           <div className="text-[var(--text-color)]">{item.category}</div>
                           <div className="flex flex-wrap gap-1">
-                            {item.tags?.map(tag => (
+                            {(item.noteTags?.split(',') || []).map((tag: string) => (
                               <Chip key={tag} size="sm" variant="flat" radius="sm" className="h-4 px-1 bg-[var(--bg-elevated)]">
                                 {tag}
                               </Chip>
@@ -435,21 +435,21 @@ function DocumentListPage() {
                         <Chip
                           size="sm"
                           variant="dot"
-                          color={getDocumentStatusColor(item.status)}
+                          color={getDocumentStatusColor(item.status || 0)}
                           className="border-none bg-transparent"
                         >
-                          {getDocumentStatusLabel(item.status)}
+                          {getDocumentStatusLabel(item.status || 0)}
                         </Chip>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1 text-[var(--text-color-secondary)]">
                           <div className="flex items-center gap-1">
                             <span>阅读量:</span>
-                            <span className="text-[var(--text-color)] font-medium">{item.readCount.toLocaleString()}</span>
+                            <span className="text-[var(--text-color)] font-medium">{(item.readCount || 0).toLocaleString()}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <span>点赞量:</span>
-                            <span className="text-[var(--text-color)] font-medium">{item.likeCount.toLocaleString()}</span>
+                            <span className="text-[var(--text-color)] font-medium">{(item.likeCount || 0).toLocaleString()}</span>
                           </div>
                         </div>
                       </TableCell>
@@ -458,8 +458,8 @@ function DocumentListPage() {
                           <div className="flex items-center gap-2">
                             <Switch
                               size="sm"
-                              isSelected={item.pinned}
-                              onValueChange={() => handleTogglePinned(item.id, !!item.pinned)}
+                              isSelected={item.isPinned === 1}
+                              onValueChange={() => handleTogglePinned(String(item.id), item.isPinned === 1)}
                               classNames={{ wrapper: 'h-4 w-8', thumb: 'w-3 h-3 group-data-[selected=true]:ml-4' }}
                             />
                             <span className="text-[var(--text-color-secondary)]">置顶</span>
@@ -467,8 +467,8 @@ function DocumentListPage() {
                           <div className="flex items-center gap-2">
                             <Switch
                               size="sm"
-                              isSelected={item.recommended}
-                              onValueChange={() => handleToggleRecommended(item.id, !!item.recommended)}
+                              isSelected={item.isRecommended === 1}
+                              onValueChange={() => handleToggleRecommended(String(item.id), item.isRecommended === 1)}
                               classNames={{ wrapper: 'h-4 w-8', thumb: 'w-3 h-3 group-data-[selected=true]:ml-4' }}
                             />
                             <span className="text-[var(--text-color-secondary)]">推荐</span>
@@ -477,9 +477,9 @@ function DocumentListPage() {
                       </TableCell>
                       <TableCell>
                         <div className="text-[var(--text-color-secondary)] leading-tight">
-                          {item.updatedAt.split(' ')[0]}
+                          {(item.updatedAt || item.updateTime || '').split(' ')[0]}
                           <br />
-                          <span className="opacity-60">{item.updatedAt.split(' ')[1]}</span>
+                          <span className="opacity-60">{(item.updatedAt || item.updateTime || '').split(' ')[1]}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -501,7 +501,7 @@ function DocumentListPage() {
                               size="sm"
                               variant="light"
                               className="h-7 w-7"
-                              onPress={() => handleLoadComments(item.id)}
+                              onPress={() => handleLoadComments(String(item.id))}
                             >
                               <FiMessageSquare className="text-sm" />
                             </Button>
@@ -541,14 +541,14 @@ function DocumentListPage() {
       <Modal isOpen={isCommentOpen} onOpenChange={onCommentClose} size="2xl" scrollBehavior="inside">
         <ModalContent>
           {() => {
-            const doc = documents.find(d => d.id === activeDocumentId);
+            const doc = documents.find(d => String(d.id) === activeDocumentId);
             return (
               <>
                 <ModalHeader className="flex flex-col gap-1">
                   <span className="text-sm font-semibold">文档评论管理</span>
                   {doc && (
                     <span className="text-[0.625rem] text-[var(--text-color-secondary)] font-normal">
-                      正在查看文档「{doc.title}」的评论
+                      正在查看文档「{doc.title || doc.noteName}」的评论
                     </span>
                   )}
                 </ModalHeader>
@@ -615,9 +615,9 @@ function DocumentListPage() {
             <>
               <ModalHeader className="border-b border-[var(--border-color)]">
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold">{previewDoc?.title || '文档预览'}</span>
+                  <span className="text-sm font-semibold">{previewDoc?.title || previewDoc?.noteName || '文档预览'}</span>
                   <span className="text-[0.625rem] text-[var(--text-color-secondary)] font-normal">
-                    ID: {previewDoc?.id} · 分类: {previewDoc?.category}
+                      ID: {previewDoc?.id} · 分类: {previewDoc?.category || previewDoc?.broadCode}
                   </span>
                 </div>
               </ModalHeader>
@@ -640,11 +640,11 @@ function DocumentListPage() {
                         <div className="grid grid-cols-2 gap-2">
                           <div className="p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-color)]">
                             <div className="text-[0.625rem] text-[var(--text-color-secondary)]">阅读量</div>
-                            <div className="text-sm font-semibold">{previewDoc?.readCount.toLocaleString()}</div>
+                            <div className="text-sm font-semibold">{(previewDoc?.readCount || 0).toLocaleString()}</div>
                           </div>
                           <div className="p-2 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-color)]">
                             <div className="text-[0.625rem] text-[var(--text-color-secondary)]">点赞量</div>
-                            <div className="text-sm font-semibold">{previewDoc?.likeCount.toLocaleString()}</div>
+                            <div className="text-sm font-semibold">{(previewDoc?.likeCount || 0).toLocaleString()}</div>
                           </div>
                         </div>
                       </div>
@@ -655,8 +655,8 @@ function DocumentListPage() {
                       <div className="space-y-2 text-[0.6875rem]">
                         <div className="flex justify-between">
                           <span className="text-[var(--text-color-secondary)]">当前状态</span>
-                          <Chip size="sm" variant="flat" color={getDocumentStatusColor(previewDoc?.status || 'offline')} className="h-5">
-                            {getDocumentStatusLabel(previewDoc?.status || 'offline')}
+                          <Chip size="sm" variant="flat" color={getDocumentStatusColor(previewDoc?.status || 0)} className="h-5">
+                            {getDocumentStatusLabel(previewDoc?.status || 0)}
                           </Chip>
                         </div>
                         <div className="flex justify-between">
@@ -673,7 +673,7 @@ function DocumentListPage() {
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium">标签集合</h3>
                       <div className="flex flex-wrap gap-1">
-                        {previewDoc?.tags?.map(tag => (
+                        {(previewDoc?.noteTags?.split(',') || []).map((tag: string) => (
                           <Chip key={tag} size="sm" variant="flat" className="h-5">{tag}</Chip>
                         ))}
                       </div>

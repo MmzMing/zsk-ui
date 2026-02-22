@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import type { DocumentDetail } from '@/api/admin/document';
+import type { DocNote } from '@/api/admin/document';
 
 /** 文档表单数据类型 */
 export interface DocumentFormData {
@@ -53,7 +53,7 @@ interface UseDocumentFormReturn {
   /** 重置表单 */
   resetForm: () => void;
   /** 从文档详情加载数据 */
-  loadFromDocument: (doc: DocumentDetail) => void;
+  loadFromDocument: (doc: DocNote) => void;
   /** 表单验证 */
   validate: () => FormValidation;
   /** 是否已修改 */
@@ -118,7 +118,7 @@ export function useDocumentForm(options: UseDocumentFormOptions = {}): UseDocume
   }, []);
 
   /** 从文档详情加载数据 */
-  const loadFromDocument = useCallback((doc: DocumentDetail) => {
+  const loadFromDocument = useCallback((doc: DocNote) => {
     setFormData({
       title: doc.title || '',
       content: doc.content || '',

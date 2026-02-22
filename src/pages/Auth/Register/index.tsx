@@ -27,7 +27,7 @@ import { Shuffle } from "@/components/Motion/Shuffle";
 import { TextType } from "@/components/Motion/TextType";
 import InteractiveHoverButton from "@/components/Motion/InteractiveHoverButton";
 import { UserAgreementModal, PrivacyPolicyModal } from "@/components/AgreementModals";
-import { verifySliderCaptcha, preCheckAndGetCaptcha, register, getPublicKey, type SliderCaptchaData } from "@/api/auth";
+import { verifySliderCaptcha, preCheckAndGetCaptcha, register, getPublicKey, type BackendCaptchaResponse } from "@/api/auth";
 import { rsaEncrypt, validateEmail, validateUsername, validatePassword, validateConfirmPassword, validateCaptcha, evaluatePasswordStrength, getPasswordStrengthColor } from "@/utils";
 import { useBgCarousel, useCountdown } from "@/hooks";
 
@@ -76,7 +76,7 @@ function RegisterPage() {
   /** 滑块验证码状态 */
   const [sliderVisible, setSliderVisible] = React.useState(false);
   const [sliderVerified, setSliderVerified] = React.useState(false);
-  const [sliderCaptchaInfo, setSliderCaptchaInfo] = React.useState<SliderCaptchaData | null>(null);
+  const [sliderCaptchaInfo, setSliderCaptchaInfo] = React.useState<BackendCaptchaResponse | null>(null);
   const [sliderError, setSliderError] = React.useState("");
   const [codeSent, setCodeSent] = React.useState(false);
   const [puzzleTop, setPuzzleTop] = React.useState(0);

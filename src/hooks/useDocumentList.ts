@@ -12,7 +12,7 @@ import {
   updateDocument,
   fetchDocumentComments,
   deleteDocumentComment,
-  type DocumentItem,
+  type DocNote,
   type DocCommentItem
 } from '@/api/admin/document';
 import { handleRequest } from '@/api/axios';
@@ -36,7 +36,7 @@ interface UseDocumentListOptions {
 /** useDocumentList 返回值 */
 interface UseDocumentListReturn {
   /** 文档列表数据 */
-  documents: DocumentItem[];
+  documents: DocNote[];
   /** 加载状态 */
   loading: boolean;
   /** 总条数 */
@@ -50,7 +50,7 @@ interface UseDocumentListReturn {
   /** 加载文档列表 */
   loadDocuments: () => Promise<void>;
   /** 批量更新状态 */
-  batchUpdateStatus: (ids: string[], status: 'published' | 'offline') => Promise<boolean>;
+  batchUpdateStatus: (ids: string[], status: number) => Promise<boolean>;
   /** 删除文档 */
   removeDocument: (ids: string[]) => Promise<boolean>;
   /** 切换置顶状态 */
@@ -58,9 +58,9 @@ interface UseDocumentListReturn {
   /** 切换推荐状态 */
   toggleRecommended: (id: string, currentRecommended: boolean) => Promise<boolean>;
   /** 置顶文档列表 */
-  pinnedDocuments: DocumentItem[];
+  pinnedDocuments: DocNote[];
   /** 推荐文档列表 */
-  recommendedDocuments: DocumentItem[];
+  recommendedDocuments: DocNote[];
   /** 评论相关 */
   comments: DocCommentItem[];
   commentsLoading: boolean;
@@ -87,7 +87,7 @@ const DEFAULT_FILTERS: DocumentFilterState = {
 export function useDocumentList(options: UseDocumentListOptions = {}): UseDocumentListReturn {
   const { pageSize = 100 } = options;
 
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [documents, setDocuments] = useState<DocNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [filters, setFiltersState] = useState<DocumentFilterState>(DEFAULT_FILTERS);
@@ -110,8 +110,8 @@ export function useDocumentList(options: UseDocumentListOptions = {}): UseDocume
     });
 
     if (res && res.data) {
-      setDocuments(res.data.list);
-      setTotal(res.data.list.length);
+      setDocuments(res.data.rows);
+      setTotal(res.data.total);
     }
 
     setLoading(false);
@@ -128,19 +128,15 @@ export function useDocumentList(options: UseDocumentListOptions = {}): UseDocume
   }, []);
 
   /** 批量更新状态 */
-  const batchUpdateStatus = useCallback(async (ids: string[], status: 'published' | 'offline'): Promise<boolean> => {
-    const actionName = status === 'published' ? '上架' : '下架';
-    const confirmed = window.confirm(`确认批量${actionName}选中的 ${ids.length} 个文档吗？`);
-    if (!confirmed) return false;
-
+  const batchUpdateStatus = useCallback(async (ids: string[], status: number): Promise<boolean> => {
     const res = await handleRequest({
       requestFn: () => batchUpdateDocumentStatus({ ids, status })
     });
 
     if (res && res.code === 200) {
       addToast({
-        title: `批量${actionName}成功`,
-        description: `已成功${actionName} ${ids.length} 个文档。`,
+        title: '批量操作成功',
+        description: `成功更新 ${ids.length} 个文档的状态`,
         color: 'success'
       });
       loadDocuments();
@@ -177,7 +173,7 @@ export function useDocumentList(options: UseDocumentListOptions = {}): UseDocume
     const nextPinned = !currentPinned;
 
     const res = await handleRequest({
-      requestFn: () => updateDocument(id, { pinned: nextPinned })
+      requestFn: () => updateDocument(id, { isPinned: nextPinned ? 1 : 0 })
     });
 
     if (res && res.code === 200) {
@@ -198,7 +194,7 @@ export function useDocumentList(options: UseDocumentListOptions = {}): UseDocume
     const nextRecommended = !currentRecommended;
 
     const res = await handleRequest({
-      requestFn: () => updateDocument(id, { recommended: nextRecommended })
+      requestFn: () => updateDocument(id, { isRecommended: nextRecommended ? 1 : 0 })
     });
 
     if (res && res.code === 200) {

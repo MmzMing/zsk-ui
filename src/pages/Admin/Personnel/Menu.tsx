@@ -21,10 +21,10 @@ import {
 import Tree from "rc-tree";
 import "rc-tree/assets/index.css";
 import {
-  type MenuNode,
-  fetchAdminMenuTree,
-  updateMenuTree,
+  type SysMenu,
+  fetchAdminMenuList,
   createMenu,
+  batchUpdateMenu,
   batchDeleteMenu
 } from "@/api/admin/menu";
 import { Loading } from "@/components/Loading";
@@ -80,11 +80,11 @@ const iconOptions: IconOption[] = [
  * @param depth 当前深度
  * @returns 扁平化后的带深度信息节点列表
  */
-function flattenMenu(nodes: MenuNode[], depth = 0): Array<MenuNode & { depth: number }> {
-  const result: Array<MenuNode & { depth: number }> = [];
+function flattenMenu(nodes: SysMenu[], depth = 0): Array<SysMenu & { depth: number }> {
+  const result: Array<SysMenu & { depth: number }> = [];
   nodes
     .slice()
-    .sort((a, b) => a.order - b.order)
+    .sort((a, b) => (a.order || a.orderNum || 0) - (b.order || b.orderNum || 0))
     .forEach(node => {
       result.push({ ...node, depth });
       if (node.children && node.children.length) {
@@ -100,9 +100,9 @@ function flattenMenu(nodes: MenuNode[], depth = 0): Array<MenuNode & { depth: nu
  * @param id 目标ID
  * @returns 找到的节点或null
  */
-function findNode(nodes: MenuNode[], id: string): MenuNode | null {
+function findNode(nodes: SysMenu[], id: string): SysMenu | null {
   for (const node of nodes) {
-    if (node.id === id) {
+    if (String(node.id) === id) {
       return node;
     }
     if (node.children && node.children.length) {
@@ -123,17 +123,17 @@ function findNode(nodes: MenuNode[], id: string): MenuNode | null {
  * @returns 父级ID与在父级中的索引
  */
 function findParentInfo(
-  nodes: MenuNode[],
+  nodes: SysMenu[],
   id: string,
   parentId: string | null = null
 ): { parentId: string | null; index: number } | null {
-  const index = nodes.findIndex(node => node.id === id);
+  const index = nodes.findIndex(node => String(node.id) === id);
   if (index !== -1) {
     return { parentId, index };
   }
   for (const node of nodes) {
     if (node.children && node.children.length) {
-      const found = findParentInfo(node.children, id, node.id);
+      const found = findParentInfo(node.children, id, String(node.id));
       if (found) {
         return found;
       }
@@ -149,13 +149,13 @@ function findParentInfo(
  * @returns 更新后的树与被移除的节点
  */
 function removeNode(
-  nodes: MenuNode[],
+  nodes: SysMenu[],
   id: string
-): { tree: MenuNode[]; removed: MenuNode | null } {
-  let removed: MenuNode | null = null;
+): { tree: SysMenu[]; removed: SysMenu | null } {
+  let removed: SysMenu | null = null;
   const next = nodes
     .map(node => {
-      if (node.id === id) {
+      if (String(node.id) === id) {
         removed = node;
         return null;
       }
@@ -171,7 +171,7 @@ function removeNode(
       }
       return node;
     })
-    .filter((node): node is MenuNode => node !== null);
+    .filter((node): node is SysMenu => node !== null);
   return { tree: next, removed };
 }
 
@@ -184,11 +184,11 @@ function removeNode(
  * @returns 更新后的树
  */
 function insertNodeAt(
-  nodes: MenuNode[],
+  nodes: SysMenu[],
   parentId: string | null,
   index: number,
-  newNode: MenuNode
-): MenuNode[] {
+  newNode: SysMenu
+): SysMenu[] {
   if (parentId === null) {
     const list = [...nodes];
     const position = index < 0 ? list.length : index;
@@ -196,7 +196,7 @@ function insertNodeAt(
     return list;
   }
   return nodes.map(node => {
-    if (node.id === parentId) {
+    if (String(node.id) === parentId) {
       const children = node.children ? [...node.children] : [];
       const position = index < 0 ? children.length : index;
       children.splice(position, 0, newNode);
@@ -224,15 +224,15 @@ function insertNodeAt(
  * @param parentId 当前父级ID
  * @returns 更新后的树
  */
-function recalcOrder(nodes: MenuNode[], parentId: string | null = null): MenuNode[] {
+function recalcOrder(nodes: SysMenu[], parentId: string | null = null): SysMenu[] {
   return nodes.map((node, index) => {
-    const next: MenuNode = {
+    const next: SysMenu = {
       ...node,
-      parentId,
+      parentId: parentId ? Number(parentId) : undefined,
       order: index + 1
     };
     if (node.children && node.children.length) {
-      next.children = recalcOrder(node.children, node.id);
+      next.children = recalcOrder(node.children, String(node.id));
     }
     return next;
   });
@@ -246,12 +246,12 @@ function recalcOrder(nodes: MenuNode[], parentId: string | null = null): MenuNod
  * @returns 更新后的树
  */
 function updateNodeInTree(
-  nodes: MenuNode[],
+  nodes: SysMenu[],
   id: string,
-  patch: Partial<MenuNode>
-): MenuNode[] {
+  patch: Partial<SysMenu>
+): SysMenu[] {
   return nodes.map(node => {
-    if (node.id === id) {
+    if (String(node.id) === id) {
       return { ...node, ...patch };
     }
     if (node.children && node.children.length) {
@@ -269,8 +269,9 @@ function updateNodeInTree(
  * @param node 目标节点
  * @returns ID列表
  */
-function collectNodeAndDescendants(node: MenuNode): string[] {
-  const ids = [node.id];
+function collectNodeAndDescendants(node: SysMenu): string[] {
+  const ids: string[] = [];
+  ids.push(String(node.id));
   if (node.children && node.children.length) {
     node.children.forEach(child => {
       ids.push(...collectNodeAndDescendants(child));
@@ -302,15 +303,15 @@ function getIconLabel(iconName: string) {
  * @returns RcTreeDataNode数组
  */
 function buildTreeData(
-  nodes: MenuNode[],
+  nodes: SysMenu[],
   selectedIds: string[],
   toggleNodeChecked: (id: string, checked: boolean) => void
 ): RcTreeDataNode[] {
   return nodes
     .slice()
-    .sort((a, b) => a.order - b.order)
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
     .map(node => ({
-      key: node.id,
+      key: String(node.id),
       title: (
         <div className="flex items-center gap-2 text-[11px] pr-2">
           <span
@@ -320,8 +321,8 @@ function buildTreeData(
             }}
           >
             <Checkbox
-              isSelected={selectedIds.includes(node.id)}
-              onValueChange={value => toggleNodeChecked(node.id, value)}
+              isSelected={selectedIds.includes(String(node.id))}
+              onValueChange={value => toggleNodeChecked(String(node.id), value)}
               size="sm"
               aria-label={`选择菜单 ${node.name}`}
               classNames={{
@@ -357,7 +358,7 @@ function buildTreeData(
  */
 function MenuPage() {
   // 菜单树数据
-  const [menuTree, setMenuTree] = useState<MenuNode[]>([]);
+  const [menuTree, setMenuTree] = useState<SysMenu[]>([]);
   // 加载状态
   const [isLoading, setIsLoading] = useState(true);
   // 当前激活（选中编辑）的菜单ID
@@ -382,12 +383,12 @@ function MenuPage() {
    * 加载菜单树数据
    */
   const loadMenuTree = React.useCallback(async () => {
-    const res = await fetchAdminMenuTree(setIsLoading);
+    const res = await fetchAdminMenuList(setIsLoading);
     if (res && res.code === 200) {
       setMenuTree(res.data);
       setActiveId(prev => {
         if (res.data.length > 0 && !prev) {
-          return res.data[0].id;
+          return String(res.data[0].id);
         }
         return prev;
       });
@@ -407,15 +408,15 @@ function MenuPage() {
    */
   const handleAddRootMenu = async () => {
     const nextId = String(Date.now());
-    const next: MenuNode = {
-      id: nextId,
+    const next: SysMenu = {
+      id: Number(nextId),
       name: "新建菜单",
       path: "/admin/custom",
       iconName: "FiMenu",
       order: flatMenu.length + 1,
-      visible: true,
+      visible: "0",
       permissionKey: `custom:${nextId}`,
-      parentId: null,
+      parentId: undefined,
       children: []
     };
     const res = await createMenu(next);
@@ -441,13 +442,13 @@ function MenuPage() {
       return;
     }
     const nextId = String(Date.now());
-    const next: MenuNode = {
-      id: nextId,
+    const next: SysMenu = {
+      id: Number(nextId),
       name: "新建子菜单",
       path: `${parent.path}/child`,
       iconName: "FiList",
       order: (parent.children?.length ?? 0) + 1,
-      visible: true,
+      visible: "0",
       permissionKey: `${parent.permissionKey}:child${(parent.children?.length ?? 0) + 1}`,
       parentId: parent.id,
       children: []
@@ -566,7 +567,7 @@ function MenuPage() {
   /**
    * 处理表单字段变更（仅更新本地状态）
    */
-  const handleFieldChange = (patch: Partial<MenuNode>) => {
+  const handleFieldChange = (patch: Partial<SysMenu>) => {
     if (!activeId) {
       return;
     }
@@ -598,7 +599,7 @@ function MenuPage() {
    * 保存当前菜单配置到后端
    */
   const handleSave = async () => {
-    const res = await updateMenuTree(menuTree, setIsLoading);
+    const res = await batchUpdateMenu(menuTree as Partial<SysMenu>[], setIsLoading);
     if (res && res.code === 200) {
       addToast({
         title: "配置保存成功",
@@ -889,7 +890,7 @@ function MenuPage() {
                                  return <Icon className="w-4 h-4" />;
                                })()}
                             </span>
-                          <span className="text-xs">{getIconLabel(activeNode.iconName)}</span>
+                          <span className="text-xs">{getIconLabel(activeNode.iconName || activeNode.icon || "")}</span>
                         </div>
                         <Button
                           size="sm"
@@ -913,8 +914,8 @@ function MenuPage() {
                           <Switch
                             size="sm"
                             aria-label="是否在菜单中显示"
-                            isSelected={activeNode.visible}
-                            onValueChange={value => handleFieldChange({ visible: value })}
+                            isSelected={activeNode.visible === "0"}
+                            onValueChange={value => handleFieldChange({ visible: value ? "0" : "1" })}
                           />
                           <span className="text-[11px] text-[var(--text-color-secondary)]">
                             {activeNode.visible ? "在菜单中展示" : "在菜单中隐藏，仅通过路由访问"}

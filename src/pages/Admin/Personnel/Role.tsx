@@ -23,7 +23,7 @@ import {
 import { FiCopy, FiEdit2, FiKey, FiLayers, FiPlus, FiTrash2, FiX } from "react-icons/fi";
 import { Loading } from "@/components/Loading";
 import {
-  type RoleItem,
+  type SysRole,
   type PermissionGroup,
   fetchRoleList,
   createRole,
@@ -33,6 +33,7 @@ import {
   batchCopyRoles,
   fetchPermissionGroups,
 } from "@/api/admin/personnel";
+import { PAGINATION } from "@/constants";
 
 // ===== 2. TODO待处理导入区域 =====
 
@@ -44,7 +45,7 @@ type RoleFormState = {
   /** 角色ID（编辑模式） */
   id?: string;
   /** 角色名称 */
-  name: string;
+  roleName: string;
   /** 角色描述 */
   description: string;
 };
@@ -68,7 +69,7 @@ type PermissionAssignState = {
  */
 function createEmptyRoleForm(): RoleFormState {
   return {
-    name: "",
+    roleName: "",
     description: ""
   };
 }
@@ -103,7 +104,7 @@ function formatPermissionLabel(count: number, total: number): string {
  */
 function RolePage() {
   // 列表数据与加载状态
-  const [roles, setRoles] = useState<RoleItem[]>([]);
+  const [roles, setRoles] = useState<SysRole[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -118,7 +119,7 @@ function RolePage() {
 
   // 分页状态
   const [page, setPage] = useState(1);
-  const pageSize = 6;
+  const pageSize = PAGINATION.DEFAULT_PAGE_SIZE;
 
   // 权限数据
   const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
@@ -142,8 +143,8 @@ function RolePage() {
     const res = await fetchRoleList({ page, pageSize }, setIsLoading);
     
     if (res && res.code === 200) {
-      setRoles(res.data.list);
-      setTotal(res.data.total);
+      setRoles(res.data);
+      setTotal(res.data.length);
     }
   }, [page, pageSize]);
 
@@ -179,7 +180,7 @@ function RolePage() {
    */
   const handleTableSelectionChange = (keys: "all" | Set<React.Key>) => {
     if (keys === "all") {
-      setSelectedIds(roles.map(item => item.id));
+      setSelectedIds(roles.map(item => String(item.id)));
       return;
     }
     setSelectedIds(Array.from(keys).map(String));
@@ -198,11 +199,11 @@ function RolePage() {
    * 打开编辑角色弹窗
    * @param role 目标角色对象
    */
-  const handleOpenEdit = (role: RoleItem) => {
+  const handleOpenEdit = (role: SysRole) => {
     setRoleForm({
-      id: role.id,
-      name: role.name,
-      description: role.description
+      id: String(role.id),
+      roleName: role.roleName || "",
+      description: role.description || ""
     });
     setRoleFormMode("edit");
     setRoleFormError("");
@@ -233,7 +234,7 @@ function RolePage() {
   const handleSubmitRoleForm = async () => {
     if (!roleForm) return;
     
-    const trimmedName = roleForm.name.trim();
+    const trimmedName = roleForm.roleName.trim();
     if (!trimmedName) {
       showRoleFormError("角色名称为必填项，请补充后再提交。", setRoleFormError);
       return;
@@ -241,7 +242,7 @@ function RolePage() {
 
     if (roleFormMode === "create") {
       const res = await createRole({
-        name: trimmedName,
+        roleName: trimmedName,
         description: roleForm.description.trim(),
         permissions: []
       });
@@ -257,8 +258,8 @@ function RolePage() {
       }
     } else if (roleForm.id) {
       const res = await updateRole({
-        id: roleForm.id!,
-        name: trimmedName,
+        id: Number(roleForm.id!),
+        roleName: trimmedName,
         description: roleForm.description.trim(),
         permissions: [] 
       });
@@ -303,22 +304,22 @@ function RolePage() {
    * 删除单个角色
    * @param role 目标角色对象
    */
-  const handleDeleteSingleRole = async (role: RoleItem) => {
+  const handleDeleteSingleRole = async (role: SysRole) => {
     const confirmed = window.confirm(
-      `确定要删除角色「${role.name}」吗？建议在确认无用户绑定该角色后再执行。`
+      `确定要删除角色「${role.roleName}」吗？建议在确认无用户绑定该角色后再执行。`
     );
     if (!confirmed) return;
 
-    const res = await deleteRole(role.id);
+    const res = await deleteRole(String(role.id));
     
     if (res && res.code === 200) {
       addToast({
         title: "角色删除成功",
-        description: `已删除角色「${role.name}」。`,
+        description: `已删除角色「${role.roleName}」。`,
         color: "success"
       });
       loadRoleList();
-      setSelectedIds(previous => previous.filter(id => id !== role.id));
+      setSelectedIds(previous => previous.filter(id => id !== String(role.id)));
     }
   };
 
@@ -326,11 +327,11 @@ function RolePage() {
    * 打开权限分配弹窗
    * @param role 目标角色对象
    */
-  const handleOpenAssignPermission = (role: RoleItem) => {
+  const handleOpenAssignPermission = (role: SysRole) => {
     setPermissionAssign({
-      roleId: role.id,
-      name: role.name,
-      permissions: [...role.permissions]
+      roleId: String(role.id),
+      name: role.roleName || "",
+      permissions: [...(role.permissions || [])]
     });
   };
 
@@ -340,11 +341,12 @@ function RolePage() {
   const handleConfirmAssignPermission = async () => {
     if (!permissionAssign) return;
 
-    const targetRole = roles.find(r => r.id === permissionAssign.roleId);
-    
+    const targetRole = roles.find(r => String(r.id) === permissionAssign.roleId);
+    if (!targetRole) return;
+
     const res = await updateRole({
-      id: permissionAssign.roleId,
-      name: permissionAssign.name,
+      id: Number(permissionAssign.roleId),
+      roleName: permissionAssign.name,
       description: targetRole?.description || "",
       permissions: [...permissionAssign.permissions]
     });
@@ -364,26 +366,26 @@ function RolePage() {
    * 复制单个角色
    * @param role 目标角色对象
    */
-  const handleCopyRole = async (role: RoleItem) => {
-    const baseName = `${role.name}（副本）`;
+  const handleCopyRole = async (role: SysRole) => {
+    const baseName = `${role.roleName}（副本）`;
     let name = baseName;
     let index = 1;
     
-    while (roles.some(item => item.name === name)) {
+    while (roles.some(item => item.roleName === name)) {
       name = `${baseName}${index}`;
       index += 1;
     }
 
     const res = await createRole({
-      name,
+      roleName: name,
       description: role.description,
-      permissions: [...role.permissions]
+      permissions: [...(role.permissions || [])]
     });
     
     if (res && res.code === 200) {
       addToast({
         title: "角色复制成功",
-        description: `已成功复制角色「${role.name}」并创建新角色「${name}」。`,
+        description: `已成功复制角色「${role.roleName}」并创建新角色「${name}」。`,
         color: "success"
       });
       loadRoleList();
@@ -518,7 +520,7 @@ function RolePage() {
                   >
                     <TableCell className="px-3 py-2">
                       <div className="flex flex-col gap-0.5">
-                        <span className="font-medium text-xs break-all">{role.name}</span>
+                        <span className="font-medium text-xs break-all">{role.roleName}</span>
                         <span className="text-xs text-[var(--text-color-secondary)]">
                           ID: {role.id}
                         </span>
@@ -544,11 +546,11 @@ function RolePage() {
                     </TableCell>
                     <TableCell className="px-3 py-2">
                       <Chip size="sm" variant="flat" color="primary" className="text-xs">
-                        {formatPermissionLabel(role.permissions.length, totalPermissionCount)}
+                        {formatPermissionLabel((role.permissions || []).length, totalPermissionCount)}
                       </Chip>
                     </TableCell>
                     <TableCell className="px-3 py-2">
-                      <span>{role.createdAt}</span>
+                      <span>{role.createTime}</span>
                     </TableCell>
                     <TableCell className="px-3 py-2">
                       <div className="flex flex-wrap gap-1.5">
@@ -646,8 +648,8 @@ function RolePage() {
                   size="sm"
                   variant="bordered"
                   placeholder="请输入角色名称"
-                  value={roleForm.name}
-                  onValueChange={value => handleRoleFormChange({ name: value })}
+                  value={roleForm.roleName}
+                  onValueChange={value => handleRoleFormChange({ roleName: value })}
                   classNames={{
                     inputWrapper: [
                       "h-8",
